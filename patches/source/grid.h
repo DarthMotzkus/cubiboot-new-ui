@@ -15,6 +15,8 @@
 #define DRAW_BOUND_BOTTOM 328
 
 #define DRAW_OFFSET_Y 56
+#define DRAW_OFFSET_X_SQUARE_ICONS DRAW_OFFSET_Y
+#define DRAW_OFFSET_X_BANNERS (DRAW_OFFSET_Y * 3)
 #define DRAW_TOTAL_ROWS 4
 
 // ????
@@ -48,6 +50,7 @@ extern line_backing_t browser_lines[];
 // helper
 f32 get_position_after(line_backing_t *line_backing);
 
+void grid_setup_columns_per_line();
 void grid_setup_func();
 int grid_dispatch_navigate_up();
 int grid_dispatch_navigate_down();

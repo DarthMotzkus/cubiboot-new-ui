@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 #include <gctypes.h>
 #include "reloc.h"
 #include "attr.h"
@@ -39,6 +40,21 @@ f32 get_position_after(line_backing_t *line_backing) {
 }
 
 // other stuff
+void grid_setup_columns_per_line() {
+    switch (menu_grid_type) {
+        case MENU_GRID_SQUARE_ICONS:
+        default:
+            columns_per_line = 8;
+            break;
+
+        case MENU_GRID_BANNERS:
+            columns_per_line = 3;
+            break;
+    }
+
+    assert(columns_per_line <= MAX_COLUMNS_PER_LINE);
+}
+
 void grid_setup_func() {
     OSReport("browser_lines = %p\n", browser_lines);
     OSReport("number_of_lines = %d\n", number_of_lines);

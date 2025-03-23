@@ -311,8 +311,12 @@ int top_line_num = 0;
 __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, bool selected) {
     f32 sc = pos->scale;
     guVector scale = {sc, sc, sc};
-    bool has_texture = false;
+    guVector square_scale = {sc, sc, sc};
+    if (menu_grid_type == MENU_GRID_BANNERS) {
+        scale.x *= 3;
+    }
 
+    bool has_texture = false;
     gm_file_entry_t *entry = gm_get_game_entry(slot_num);
     if (entry != NULL) {
         if (entry->type == GM_FILE_TYPE_PROGRAM || entry->type == GM_FILE_TYPE_DIRECTORY) {
@@ -369,6 +373,12 @@ __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, 
             icon_tex->format = GX_TF_RGB5A3;
             icon_tex->width = 32;
             icon_tex->height = 32;
+
+            // Ensure that these square icons are always drawn at a square aspect ratio,
+            // even when stretching the cubes to match the aspect ratio of banners
+            set_obj_pos(m, pos->m, square_scale);
+            set_obj_cam(m, get_camera_mtx());
+            change_model(m);
         } else {
             u16 *source_texture_data = (u16*)entry->asset.banner.buf->data;
             u32 target_texture_data = (u32)source_texture_data;
@@ -469,22 +479,41 @@ void patch_anim_draw() {
 // #define WITH_SPACE 1
 
 void setup_icon_positions() {
+    int base_x;
+    switch (menu_grid_type) {
+        case MENU_GRID_SQUARE_ICONS:
+        default:
 #if defined(WITH_SPACE) && WITH_SPACE
-    const int base_x = -208;
+            base_x = -208;
 #else
-    const int base_x = -196;
+            base_x = -196;
 #endif
+            break;
+
+        case MENU_GRID_BANNERS:
+            base_x = -168;
+            break;
+    }
 
     for (int col = 0; col < columns_per_line; col++) {
         position_t *pos = &icons_positions[col];
         pos->scale = 1.3;
         pos->opacity = 1.0;
 
-
-        f32 pos_x = base_x + (col * DRAW_OFFSET_Y);
+        f32 pos_x = 0.0f;
+        switch (menu_grid_type) {
+            case MENU_GRID_SQUARE_ICONS:
+            default:
+                pos_x = base_x + (col * DRAW_OFFSET_X_SQUARE_ICONS);
 #if defined(WITH_SPACE) && WITH_SPACE
-        if (col >= 4) pos_x += 24; // card spacing
+                if (col >= 4) pos_x += 24; // card spacing
 #endif
+                break;
+
+            case MENU_GRID_BANNERS:
+                pos_x = base_x + (col * DRAW_OFFSET_X_BANNERS);
+                break;
+        }
 
         C_MTXIdentity(pos->m);
         pos->m[0][3] = pos_x;

@@ -937,6 +937,8 @@ void gm_debug_func() {
 #endif
 
 void gm_setup_grid(int line_count, bool initial) {
+    grid_setup_columns_per_line();
+
     number_of_lines = (line_count + (columns_per_line - 1)) / columns_per_line;
     if (number_of_lines < 4) {
         number_of_lines = 4;
