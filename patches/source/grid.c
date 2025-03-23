@@ -50,6 +50,10 @@ void grid_setup_columns_per_line() {
         case MENU_GRID_BANNERS:
             columns_per_line = 3;
             break;
+
+        case MENU_GRID_SMALL_BANNERS:
+            columns_per_line = 4;
+            break;
     }
 
     assert(columns_per_line <= MAX_COLUMNS_PER_LINE);

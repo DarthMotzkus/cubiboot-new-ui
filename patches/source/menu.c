@@ -312,8 +312,25 @@ __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, 
     f32 sc = pos->scale;
     guVector scale = {sc, sc, sc};
     guVector square_scale = {sc, sc, sc};
-    if (menu_grid_type == MENU_GRID_BANNERS) {
-        scale.x *= 3;
+
+    switch (menu_grid_type) {
+        case MENU_GRID_SQUARE_ICONS:
+        default:
+            break;
+
+        case MENU_GRID_BANNERS:
+            scale.x *= 3.0f;
+            break;
+
+        case MENU_GRID_SMALL_BANNERS:
+            scale.x *= 3.0f * 0.75f;
+            scale.y *= 0.75f;
+            scale.z *= 0.75f;
+
+            square_scale.x *= 0.75f;
+            square_scale.y *= 0.75f;
+            square_scale.z *= 0.75f;
+            break;
     }
 
     bool has_texture = false;
@@ -493,6 +510,10 @@ void setup_icon_positions() {
         case MENU_GRID_BANNERS:
             base_x = -168;
             break;
+
+        case MENU_GRID_SMALL_BANNERS:
+            base_x = -189;
+            break;
     }
 
     for (int col = 0; col < columns_per_line; col++) {
@@ -512,6 +533,10 @@ void setup_icon_positions() {
 
             case MENU_GRID_BANNERS:
                 pos_x = base_x + (col * DRAW_OFFSET_X_BANNERS);
+                break;
+
+            case MENU_GRID_SMALL_BANNERS:
+                pos_x = base_x + (col * DRAW_OFFSET_X_SMALL_BANNERS);
                 break;
         }
 

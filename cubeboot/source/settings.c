@@ -159,6 +159,8 @@ void load_settings() {
             settings.menu_grid_type = MENU_GRID_SQUARE_ICONS;
         } else if (strcmp(menu_grid_type, "banners") == 0) {
             settings.menu_grid_type = MENU_GRID_BANNERS;
+        } else if (strcmp(menu_grid_type, "small_banners") == 0) {
+            settings.menu_grid_type = MENU_GRID_SMALL_BANNERS;
         }
     }
 
