@@ -98,7 +98,7 @@ typedef struct {
     Mtx m;
 } position_t;
 
-static position_t icons_positions[8];
+static position_t icons_positions[MAX_COLUMNS_PER_LINE];
 
 typedef struct {
     s32 rot_diff_x;
@@ -475,7 +475,7 @@ void setup_icon_positions() {
     const int base_x = -196;
 #endif
 
-    for (int col = 0; col < 8; col++) {
+    for (int col = 0; col < columns_per_line; col++) {
         position_t *pos = &icons_positions[col];
         pos->scale = 1.3;
         pos->opacity = 1.0;
@@ -538,8 +538,8 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
             if (line_backing->transparency > 0 && line_backing->raw_position_y >= 0 && line_backing->raw_position_y < SCREEN_BOUND_TOTAL_Y) {
                 f32 real_position_y = SCREEN_BOUND_TOP - line_backing->raw_position_y;
                 // OSReport("line %d: %f\n", line_num, real_position_y);
-                for (int col = 0; col < 8; col++) {
-                    int slot_num = (line_num * 8) + col;
+                for (int col = 0; col < columns_per_line; col++) {
+                    int slot_num = (line_num * columns_per_line) + col;
 
                     // bool has_texture = (slot_num < game_backing_count);
                     bool selected = (slot_num == selected_slot);
@@ -846,7 +846,7 @@ __attribute_used__ s32 handle_gameselect_inputs() {
 
     if (current_gameselect_state == SUBMENU_GAMESELECT_LOADER) {
         if (pad_status->analog_down & ANALOG_RIGHT) {
-            if ((selected_slot % 8) == (8 - 1)) {
+            if ((selected_slot % columns_per_line) == (columns_per_line - 1)) {
                 Jac_PlaySe(SOUND_CARD_ERROR);
             }
             else {
@@ -856,7 +856,7 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         }
 
         if (pad_status->analog_down & ANALOG_LEFT) {
-            if ((selected_slot % 8) == 0) {
+            if ((selected_slot % columns_per_line) == 0) {
                 Jac_PlaySe(SOUND_CARD_ERROR);
             }
             else {
@@ -866,39 +866,39 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         }
 
         if (pad_status->analog_down & ANALOG_DOWN) {
-            if (number_of_lines - top_line_num == 4 && (selected_slot + 8) > (number_of_lines * 8 - 1)) {
+            if (number_of_lines - top_line_num == 4 && (selected_slot + columns_per_line) > (number_of_lines * columns_per_line - 1)) {
                 // OSReport("SKIP MOVE DOWN: top_line_num = %d\n", top_line_num);
                 Jac_PlaySe(SOUND_CARD_ERROR);
             } else {
                 Jac_PlaySe(SOUND_CARD_MOVE);
-                line_backing_t *line_backing = &browser_lines[selected_slot / 8];
+                line_backing_t *line_backing = &browser_lines[selected_slot / columns_per_line];
                 if (get_position_after(line_backing) >= DRAW_BOUND_BOTTOM - DRAW_OFFSET_Y - 10) {
                     if (gm_can_move() && grid_dispatch_navigate_down() == GRID_MOVE_SUCCESS) {
                         gm_line_changed(1);
-                        selected_slot += 8;
+                        selected_slot += columns_per_line;
                         top_line_num++;
                     }
                 } else {
-                    selected_slot += 8;
+                    selected_slot += columns_per_line;
                 }
             }
         }
 
         if (pad_status->analog_down & ANALOG_UP) {
-            if (top_line_num == 0 && (selected_slot - 8) < 0) {
+            if (top_line_num == 0 && (selected_slot - columns_per_line) < 0) {
                 // OSReport("SKIP MOVE UP: top_line_num = %d\n", top_line_num);
                 Jac_PlaySe(SOUND_CARD_ERROR);
             } else {
                 Jac_PlaySe(SOUND_CARD_MOVE);
-                line_backing_t *line_backing = &browser_lines[selected_slot / 8];
+                line_backing_t *line_backing = &browser_lines[selected_slot / columns_per_line];
                 if (top_line_num != 0 && get_position_after(line_backing) <= DRAW_BOUND_TOP + DRAW_OFFSET_Y - 10) {
                     if (gm_can_move() && grid_dispatch_navigate_up() == GRID_MOVE_SUCCESS) {
                         gm_line_changed(-1);
-                        selected_slot -= 8;
+                        selected_slot -= columns_per_line;
                         top_line_num--;
                     }
                 } else {
-                    selected_slot -= 8;
+                    selected_slot -= columns_per_line;
                 }
             }
             

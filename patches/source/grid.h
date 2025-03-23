@@ -21,6 +21,8 @@
 #define GRID_MOVE_SUCCESS 0
 #define GRID_MOVE_FAIL 1
 
+#define MAX_COLUMNS_PER_LINE 8
+
 typedef struct {
     int pending_count;
     int direction;
@@ -36,6 +38,7 @@ typedef struct {
     bool moving_in;
 } line_backing_t;
 
+extern int columns_per_line;
 extern line_backing_t browser_lines[];
 
 // helper
