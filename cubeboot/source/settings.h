@@ -2,6 +2,11 @@
 
 #include "const.h"
 
+typedef enum {
+    MENU_GRID_SQUARE_ICONS,
+    MENU_GRID_BANNERS
+} menu_grid_type_t;
+
 typedef struct settings {
     u32 cube_color;
     char *cube_logo;
@@ -13,6 +18,7 @@ typedef struct settings {
     u32 postboot_delay_ms;
     char *default_program;
     char *boot_buttons[MAX_BUTTONS];
+    menu_grid_type_t menu_grid_type;
 } settings_t;
 
 extern char *buttons_names[];

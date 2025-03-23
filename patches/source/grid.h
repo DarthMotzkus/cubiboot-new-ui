@@ -1,5 +1,7 @@
 #include <gctypes.h>
 
+#include "../../cubeboot/source/settings.h"
+
 // SCREEN RANGE
 #define SCREEN_BOUND_TOP 224
 #define SCREEN_BOUND_BOTTOM -224
@@ -37,6 +39,8 @@ typedef struct {
     bool moving_out;
     bool moving_in;
 } line_backing_t;
+
+extern menu_grid_type_t menu_grid_type;
 
 extern int columns_per_line;
 extern line_backing_t browser_lines[];

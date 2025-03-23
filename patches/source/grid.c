@@ -17,6 +17,8 @@
 #define ANIM_DIRECTION_DOWN 1
 #define MAX_LINES 240 // 240 lines * 8 slots = 1920 slots
 
+__attribute_data__ menu_grid_type_t menu_grid_type;
+
 bool grid_setup_done = false;
 int columns_per_line = 8;
 __attribute_data_empty__ line_backing_t browser_lines[MAX_LINES];
