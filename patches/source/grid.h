@@ -1,6 +1,6 @@
 #include <gctypes.h>
 
-#include "../../cubeboot/source/settings.h"
+#include "settings_types.h"
 
 // SCREEN RANGE
 #define SCREEN_BOUND_TOP 224
