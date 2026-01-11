@@ -13,6 +13,7 @@
 #include "grid.h"
 #include "games.h"
 #include "gameid.h"
+#include "extruded_save_cube.h"
 
 #include "dolphin_dvd.h"
 
@@ -298,6 +299,8 @@ __attribute_used__ void custom_gameselect_init() {
     banner_texture.unk9 = 0x00;
     banner_texture.unk10 = 0x00;
 
+    set_up_extruded_cube_vertices(save_icon, save_empty);
+
     // // init anim list
     // ????
 
@@ -308,29 +311,19 @@ __attribute_used__ void custom_gameselect_init() {
 int selected_slot = 0;
 int top_line_num = 0;
 
+static bool using_extruded_cubes() {
+    return menu_grid_type == MENU_GRID_BANNERS || menu_grid_type == MENU_GRID_SMALL_BANNERS;
+}
+
 __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, bool selected) {
     f32 sc = pos->scale;
     guVector scale = {sc, sc, sc};
-    guVector square_scale = {sc, sc, sc};
+    bool use_extruded_models = using_extruded_cubes();
 
-    switch (menu_grid_type) {
-        case MENU_GRID_SQUARE_ICONS:
-        default:
-            break;
-
-        case MENU_GRID_BANNERS:
-            scale.x *= 3.0f;
-            break;
-
-        case MENU_GRID_SMALL_BANNERS:
-            scale.x *= 3.0f * 0.75f;
-            scale.y *= 0.75f;
-            scale.z *= 0.75f;
-
-            square_scale.x *= 0.75f;
-            square_scale.y *= 0.75f;
-            square_scale.z *= 0.75f;
-            break;
+    if (menu_grid_type == MENU_GRID_SMALL_BANNERS) {
+        scale.x *= 0.75f;
+        scale.y *= 0.75f;
+        scale.z *= 0.75f;
     }
 
     bool has_texture = false;
@@ -360,6 +353,10 @@ __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, 
         } else {
             set_empty_icon_unselected();
         }
+    }
+
+    if (use_extruded_models) {
+        use_extruded_save_cubes(textured_icon->data, empty_icon->data);
     }
 
     // setup camera
@@ -393,9 +390,7 @@ __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, 
 
             // Ensure that these square icons are always drawn at a square aspect ratio,
             // even when stretching the cubes to match the aspect ratio of banners
-            set_obj_pos(m, pos->m, square_scale);
-            set_obj_cam(m, get_camera_mtx());
-            change_model(m);
+            use_original_save_cubes(textured_icon->data, empty_icon->data);
         } else {
             u16 *source_texture_data = (u16*)entry->asset.banner.buf->data;
             u32 target_texture_data = (u32)source_texture_data;
@@ -412,6 +407,8 @@ __attribute_used__ void draw_save_icon(position_t *pos, u32 slot_num, u8 alpha, 
     } else {
         draw_model(m);
     }
+
+    use_original_save_cubes(textured_icon->data, empty_icon->data);
 
     return;
 }
