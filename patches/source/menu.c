@@ -545,9 +545,12 @@ void setup_icon_positions() {
 }
 
 __attribute_used__ void update_icon_positions() {
+    // Extruded cubes are about 3x wider, so reduce the rotation accordingly
+    f32 rot_y_multiplier = using_extruded_cubes() ? 1000.0f / 3.0f : 1000.0f;
+
     f32 mult = 0.7; // 1.0 is more accurate
     selected_icon_mod.rot_diff_x = fast_cos(anim_step * 70) * 350 * mult;
-    selected_icon_mod.rot_diff_y = fast_cos(anim_step * 35 - 15000) * 1000 * mult;
+    selected_icon_mod.rot_diff_y = fast_cos(anim_step * 35 - 15000) * rot_y_multiplier * mult;
     selected_icon_mod.rot_diff_z = fast_cos(anim_step * 35) * 1000 * mult;
 
     selected_icon_mod.move_diff_y = fast_sin(35 * anim_step - 0x4000) * 10.0 * mult;
