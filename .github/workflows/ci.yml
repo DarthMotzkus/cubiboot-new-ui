@@ -36,12 +36,18 @@ jobs:
       - name: Build apploader.img
         run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_apploader.sh'
 
+      # cubiboot.iso: bootable GameCube disc image for GC Loader (El-Torito ISO9660
+      # built from cubeboot-tools' gbi.hdr + the freshly built cubeboot loader .dol).
+      - name: Build cubiboot.iso
+        run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.sh'
+
       - name: Assemble release files
         run: |
           set -e
           mkdir -p dist/swiss/patches
           cp cubeboot/cubeboot.dol dist/ipl.dol
           cp apploader.img         dist/swiss/patches/apploader.img
+          cp cubiboot.iso          dist/cubiboot.iso
           # config.ini (byte-exact, no trailing newline)
           printf '[cubeboot]\n\nmenu_grid_type = small_banners' > dist/config.ini
           # EXTRACT_TO_ROOT.zip: extract to the SD card root
@@ -57,6 +63,7 @@ jobs:
             dist/ipl.dol
             dist/swiss/patches/apploader.img
             dist/config.ini
+            dist/cubiboot.iso
             dist/EXTRACT_TO_ROOT.zip
 
       # On a tag push (v*), publish a GitHub Release with the artifacts.
@@ -69,4 +76,5 @@ jobs:
             dist/ipl.dol
             dist/swiss/patches/apploader.img
             dist/config.ini
+            dist/cubiboot.iso
             dist/EXTRACT_TO_ROOT.zip
