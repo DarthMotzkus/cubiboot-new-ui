@@ -1,0 +1,2 @@
+# Normaliza fins de linha: armazena em LF no repositório e força LF no working tree
+* text=auto eol=lf
