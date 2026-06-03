@@ -104,11 +104,19 @@ void bnr_cache_load(BNR* bnr, u32 aram_offset) {
     u32 dest = (u32)bnr;
     u32 length = sizeof(BNR);
 
+    // Drop any stale/dirty cache lines for the destination first, so they can't be
+    // written back over the DMA'd data, then start the ARAM->MRAM transfer.
+    DCInvalidateRange(bnr, sizeof(BNR));
+
     bnr_load_bsy = true;
     dolphin_ARQPostRequest(&req, owner, type, priority, source, dest, length, &bnr_cache_load_cb);
     while (bnr_load_bsy)
         OSYieldThread();
-    DCFlushRange(bnr, sizeof(BNR));
+
+    // The DMA wrote straight to RAM; invalidate (NOT flush) so the CPU re-reads the
+    // fresh banner. Flushing here would write the previous banner's cache lines back
+    // over the DMA'd data, causing the random banner corruption.
+    DCInvalidateRange(bnr, sizeof(BNR));
 }
 
 #define BNR_CACHE_SIZE 1024

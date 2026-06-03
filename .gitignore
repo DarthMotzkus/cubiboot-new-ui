@@ -1,4 +1,5 @@
 .vscode
+.localbuild/
 .DS_Store
 __pycache__
 build/
