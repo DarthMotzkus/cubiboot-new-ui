@@ -37,10 +37,22 @@ Each tagged release (`v*`) publishes:
 3. Press **Z + A + START** while in a game to return to the cubiboot menu.
 
 ## Configuration
-Put a `config.ini` in the SD card root:
+Put a `config.ini` in the SD card root. `menu_grid_type` selects the selection-menu
+grid layout:
+
+| Value | Layout |
+|-------|--------|
+| `square_icons` | square icons, 8 columns (**default**) |
+| `banners` | large banners, 3 columns |
+| `small_banners` | small banners, 4 columns |
+
 ```ini
 [cubeboot]
 
+; Selection-menu grid layout:
+;   square_icons  = square icons, 8 columns   (default)
+;   banners       = large banners, 3 columns
+;   small_banners = small banners, 4 columns
 menu_grid_type = small_banners
 ```
 
