@@ -100,3 +100,5 @@ pal12_EXIDeselect = 0x81367c6c;
 pal12_EXISync = 0x81367428;
 pal12_EXIImm = 0x81367040;
 pal12_EXIImmEx = 0x8136729c;
+
+pal12_is_key_repeat = 0x81302f48;
