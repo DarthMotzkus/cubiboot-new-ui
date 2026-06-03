@@ -9,6 +9,7 @@ entry/data/
 *.elf
 *.iso
 *.gz
+apploader.img
 
 ipl.rom
 *.bin
