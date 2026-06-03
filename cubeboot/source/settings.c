@@ -151,6 +151,19 @@ void load_settings() {
         }
     }
 
+    // menu grid type
+    settings.menu_grid_type = MENU_GRID_SQUARE_ICONS;
+    const char *menu_grid_type = ini_get(conf, "cubeboot", "menu_grid_type");
+    if (menu_grid_type != NULL) {
+        if (strcmp(menu_grid_type, "square_icons") == 0) {
+            settings.menu_grid_type = MENU_GRID_SQUARE_ICONS;
+        } else if (strcmp(menu_grid_type, "banners") == 0) {
+            settings.menu_grid_type = MENU_GRID_BANNERS;
+        } else if (strcmp(menu_grid_type, "small_banners") == 0) {
+            settings.menu_grid_type = MENU_GRID_SMALL_BANNERS;
+        }
+    }
+
     // // must stay allocated!!
     // free(config_buf);
 }

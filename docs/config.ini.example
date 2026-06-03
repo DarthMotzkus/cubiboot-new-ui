@@ -1,0 +1,81 @@
+; ============================================================================
+;  cubiboot - arquivo de configuracao de exemplo
+;
+;  Copie este arquivo para a RAIZ do SD/cartao com o nome:  config.ini
+;  O firmware le exatamente "/config.ini" na raiz (ver cubeboot/source/settings.c).
+;  (A doc antiga cita "cubeboot.ini" - esta DESATUALIZADA; o codigo usa config.ini.)
+;
+;  Regras:
+;   - Tudo fica na secao [cubeboot].
+;   - Omitir uma chave  =  usar o valor padrao.
+;   - 0 = desligado, 1 = ligado.
+;   - As opcoes sao lidas UMA VEZ no boot. NAO ha edicao em runtime no menu.
+;
+;  Convencao deste arquivo:
+;   - As linhas ATIVAS (sem ';') mostram o valor PADRAO.
+;   - As linhas COMENTADAS (';') sao opcionais/alternativas; descomente p/ usar.
+; ============================================================================
+
+[cubeboot]
+
+; --- Aparencia do cubo / logo -----------------------------------------------
+
+; Cor do cubo do logo: codigo hex RGB (sem '#') ou a palavra "random".
+;   Ex.:  cube_color = 00ffff   (ciano)
+;         cube_color = ff0000   (vermelho)
+;         cube_color = random   (sorteia uma cor a cada boot)
+; Padrao: cor interna do firmware (chave ausente).
+;cube_color = 00ffff
+
+; Logo customizado: caminho para um PNG de 352x40px.
+;   /!\ NAO FUNCIONA no cubiboot (bug conhecido - ver README "Known bugs").
+;cube_logo = /logo.png
+
+; --- Tipo de menu  (NOVO: port da branch ui-from-cubeboot) ------------------
+
+; Layout da grade do menu de selecao:
+;   square_icons  = icones quadrados, 8 colunas   (PADRAO)
+;   banners       = banners grandes, 3 colunas
+;   small_banners = banners pequenos, 4 colunas
+menu_grid_type = square_icons
+
+; --- Boot / programa padrao -------------------------------------------------
+
+; DOL a bootar por padrao, em vez de enumerar boot.dol / autoexec.dol.
+;   Ex.:  default_program = swiss.dol
+; Padrao: enumera boot.dol/autoexec.dol (chave ausente).
+;default_program = swiss.dol
+
+; Forca o Swiss como padrao de boot.
+force_swiss_default = 0
+
+; --- Video ------------------------------------------------------------------
+
+; Forca progressive scan. Util em PAL IPL 1.0 / consoles DOL-001 PAL.
+force_progressive = 0
+
+; --- Delays (sync de TV / estetica) -----------------------------------------
+
+; Espera (ms) ANTES da animacao comecar.
+;   Util p/ a TV ou GCVideo travar/sincronizar o sinal de video antes do logo.
+preboot_delay_ms = 0
+
+; Espera (ms) DEPOIS da animacao terminar (deixa o logo na tela mais tempo).
+;   Puramente estetico - "recria" a sensacao de tempo de load de um disco.
+postboot_delay_ms = 0
+
+; --- Outros -----------------------------------------------------------------
+
+; Mostra a marca d'agua na tela.
+show_watermark = 0
+
+; Desabilita a selecao de MemCard PRO (ao tocar discos/jogos).
+disable_mcp_select = 0
+
+; --- Botoes -> DOL (segurar o botao durante o boot) -------------------------
+;   /!\ NAO FUNCIONA no cubiboot (bug conhecido - use gekkoboot para isso).
+;   Botoes permitidos: left, right, down, up, b, y, start
+;   (Z, R, L, A, X e "origin" sao reservados pelo sistema.)
+;button_b     = test.dol
+;button_y     = swiss.dol
+;button_start = boot.dol
