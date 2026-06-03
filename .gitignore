@@ -16,3 +16,7 @@ ipl.rom
 
 patches/include/secret.h
 patches/tests
+
+# build artifact: entry/Makefile copies cubeboot/source/emu -> patches/source/emu
+patches/source/emu/
+.claude/scheduled_tasks.lock
