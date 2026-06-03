@@ -5,6 +5,8 @@ A fork of [makeo/cubiboot](https://github.com/makeo/cubiboot) — itself a fork 
 [TeamOffBroadway](https://github.com/OffBroadway) — with support for SD2SP2, SD Gecko
 or similar SD adapters.
 
+<img width="320" height="240" alt="ezgif-80bc8dbf18a70e39" src="https://github.com/user-attachments/assets/eb1d6fc9-f0eb-4a38-8f93-20daa4a0af19" />
+
 **What this fork adds on top of makeo/cubiboot:**
 - A **grid / banner menu UI** ported from cubeboot (selectable via `menu_grid_type`).
 - A fix for **random banner corruption** (ARAM→MRAM cache-coherency bug in the banner cache).
