@@ -318,6 +318,13 @@ int main(int argc, char **argv) {
     //     strcpy(cube_logo_ptr, settings.cube_logo);
     // }
 
+    // Copy default folder string into the patch
+    void *default_folder_ptr = (void*)get_symbol_value(symshdr, syment, symstringdata, "default_folder");
+    if (default_folder_ptr != NULL && settings.default_folder != NULL) {
+        iprintf("Copying default_folder: %p\n", default_folder_ptr);
+        strcpy(default_folder_ptr, settings.default_folder);
+    }
+
     // Copy other variables
     set_patch_value(symshdr, syment, symstringdata, "is_running_dolphin", is_running_dolphin);
 

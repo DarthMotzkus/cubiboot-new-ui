@@ -77,6 +77,10 @@ optional):
 | `banners` | large banners, 3 columns |
 | `square_icons` | square icons, 8 columns |
 
+`default_folder` sets the directory the menu opens in at startup. Leave it unset (or
+commented) to open the SD card root. A leading `/` is added automatically if you omit
+it, and if the folder can't be opened cubiboot falls back to the root.
+
 ```ini
 [cubeboot]
 
@@ -85,6 +89,9 @@ optional):
 ;   banners       = large banners, 3 columns
 ;   square_icons  = square icons, 8 columns
 menu_grid_type = small_banners
+
+; Folder the menu opens in at startup. Leave commented for the SD card root.
+; default_folder = /games
 ```
 
 ## Building
