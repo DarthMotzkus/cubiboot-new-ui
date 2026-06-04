@@ -81,6 +81,11 @@ optional):
 commented) to open the SD card root. A leading `/` is added automatically if you omit
 it, and if the folder can't be opened cubiboot falls back to the root.
 
+> **Note:** `default_folder` only changes where the menu browses for **games and
+> homebrew** (`.dol`/`.dol.gz`/`.iso`/etc.) — those can live in a subfolder. The
+> system files must still sit at the **SD card root**: `ipl.dol`, `config.ini`, and
+> `swiss/patches/apploader.img`.
+
 ```ini
 [cubeboot]
 
