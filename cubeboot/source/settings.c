@@ -30,6 +30,9 @@ char *buttons_names[] = {
 
 void load_settings() {
     memset(&settings, 0, sizeof(settings));
+    // Default the menu layout in code so the banner grid works even without a
+    // config.ini being present/readable; config.ini can still override it below.
+    settings.menu_grid_type = MENU_GRID_SMALL_BANNERS;
     int config_size = get_file_size("/config.ini");
     if (config_size == SD_FAIL) return;
 
@@ -152,7 +155,7 @@ void load_settings() {
     }
 
     // menu grid type
-    settings.menu_grid_type = MENU_GRID_SQUARE_ICONS;
+    settings.menu_grid_type = MENU_GRID_SMALL_BANNERS;
     const char *menu_grid_type = ini_get(conf, "cubeboot", "menu_grid_type");
     if (menu_grid_type != NULL) {
         if (strcmp(menu_grid_type, "square_icons") == 0) {

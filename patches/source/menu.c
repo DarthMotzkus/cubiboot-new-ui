@@ -581,7 +581,7 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     GXColor white = {0xFF, 0xFF, 0xFF, ui_alpha};
 
     // text
-    draw_text("cubiboot loader", 20, 20, 4, &white);
+    draw_text("Games", 20, 20, 4, &white);
     draw_text("Load Disc (Z)", 20, 320, 4, &white);
 
     // icons
