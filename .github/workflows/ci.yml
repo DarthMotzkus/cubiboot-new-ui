@@ -50,7 +50,8 @@ jobs:
           cp apploader.img         dist/swiss/patches/apploader.img
           cp cubiboot.iso          dist/cubiboot.iso
           # config.ini (byte-exact, no trailing newline)
-          printf '[cubeboot]\n\nmenu_grid_type = small_banners' > dist/config.ini
+          # default_folder ships commented out so the menu opens at the SD root by default.
+          printf '[cubeboot]\n\nmenu_grid_type = small_banners\n\n; Folder the menu opens in at startup. Leave commented for the SD card root.\n; default_folder = /games' > dist/config.ini
           # EXTRACT_TO_ROOT.zip: extract to the SD card root (ipl.dol + config.ini + apploader.img)
           (cd dist && zip -r ../EXTRACT_TO_ROOT.zip ipl.dol config.ini swiss)
           cp EXTRACT_TO_ROOT.zip dist/EXTRACT_TO_ROOT.zip

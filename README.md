@@ -77,6 +77,15 @@ optional):
 | `banners` | large banners, 3 columns |
 | `square_icons` | square icons, 8 columns |
 
+`default_folder` sets the directory the menu opens in at startup. Leave it unset (or
+commented) to open the SD card root. A leading `/` is added automatically if you omit
+it, and if the folder can't be opened cubiboot falls back to the root.
+
+> **Note:** `default_folder` only changes where the menu browses for **games and
+> homebrew** (`.dol`/`.dol.gz`/`.iso`/etc.) — those can live in a subfolder. The
+> system files must still sit at the **SD card root**: `ipl.dol`, `config.ini`, and
+> `swiss/patches/apploader.img`.
+
 ```ini
 [cubeboot]
 
@@ -85,6 +94,9 @@ optional):
 ;   banners       = large banners, 3 columns
 ;   square_icons  = square icons, 8 columns
 menu_grid_type = small_banners
+
+; Folder the menu opens in at startup. Leave commented for the SD card root.
+; default_folder = /games
 ```
 
 ## Building
@@ -128,4 +140,5 @@ This project stands on the work of others — the items below are **not** origin
 - [PicoLoader](https://github.com/makeo/PicoLoader) by [makeo](https://github.com/makeo) — the RP2040 ODE the `.uf2` targets. (GPL-2.0)
 - [apploader / cubeboot-tools](https://github.com/makeo/cubeboot-tools) (GPL-2.0)
 - [packer](https://github.com/emukidid/swiss-gc/tree/master/cube/packer) (from Swiss) — used to build `apploader.img`. (GPL-2.0)
+- The **`default_folder`** config option by [wins1ey](https://github.com/wins1ey), via the [Hazado/cubiboot](https://github.com/Hazado/cubiboot) fork ([merge](https://github.com/Hazado/cubiboot/commit/c91066b4889346fec288393f6a9fe41304652e49)) — ported into this fork. (GPL-2.0)
 - For the full breakdown, see upstream [CREDIT.md](https://github.com/makeo/cubiboot/blob/main/CREDIT.md).
