@@ -65,6 +65,13 @@ static u32 gm_entry_count = 0;
 // bnr_cache). Reset per folder scan in gm_check_files.
 static bool gm_evict_on_scroll = false;
 
+// True only during the startup fill_cache pre-scan that warms the banner cache across
+// every folder. While set, gm_check_files skips reading extra-disc banners (disc_num > 0):
+// each disc now has its own cache entry (banner fix), and re-reading every disc's banner
+// up front is what slowed the scan. Extra discs load lazily when their folder is opened,
+// so proper per-disc banners are kept without paying for them all at startup.
+static bool gm_prescan_phase = false;
+
 gm_file_entry_t *gm_get_game_entry(int index) {
     if (index >= gm_entry_count) return NULL;
     return gm_entry_backing[index];
@@ -556,40 +563,6 @@ void gm_sort_files(int path_count) {
     OSReport("Sort took=%f\n", runtime);
     (void)runtime;
 }
-// The menu title is the .iso/.gcm filename (matching Swiss), so multi-disc sets can be
-// told apart by the "Disc N" in their filename even when their banners/game IDs match.
-// The title box renders at most TITLE_MAX_CHARS glyphs (draw_blob_text len 0x1f); longer
-// names are middle-ellipsised so the tail survives -- that's where the disc marker sits.
-#define TITLE_MAX_CHARS 31
-
-static void gm_set_title_from_path(gm_file_entry_t *entry) {
-    char *out = entry->desc.fullGameName; // BNR_FULL_TEXT_LEN bytes
-
-    // basename, then drop the extension
-    const char *base = strrchr(entry->path, '/');
-    base = base ? base + 1 : entry->path;
-    const char *dot = strrchr(base, '.');
-    int len = dot ? (int)(dot - base) : (int)strlen(base);
-
-    if (len <= TITLE_MAX_CHARS) {
-        memcpy(out, base, len);
-        out[len] = '\0';
-        return;
-    }
-
-    // middle-ellipsis: head + "..." + tail == TITLE_MAX_CHARS, biased to keep the tail
-    static const char ell[] = "...";
-    const int ell_len = sizeof(ell) - 1;
-    int keep = TITLE_MAX_CHARS - ell_len;
-    int tail = keep - (keep / 2);
-    int head = keep - tail;
-
-    memcpy(out, base, head);
-    memcpy(out + head, ell, ell_len);
-    memcpy(out + head + ell_len, base + (len - tail), tail);
-    out[head + ell_len + tail] = '\0';
-}
-
 // returns amount of space used in aram
 static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
     if (entry->extra.dvd_bnr_offset == 0) return false;
@@ -636,10 +609,6 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
 
     // TODO: check current language using extra.dvd_bnr_type
     memcpy(&entry->desc, &banner_buffer.desc[0], sizeof(BNRDesc));
-
-    // Title shows the .iso filename, not the banner's internal name (which is identical
-    // across discs of the same game). The banner's description/company stay for the info line.
-    gm_set_title_from_path(entry);
 
     return true;
 }
@@ -747,7 +716,6 @@ void gm_check_files(int path_count) {
             memset(backing, 0, sizeof(gm_file_entry_t));
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = GM_FILE_TYPE_GAME;
-            gm_set_title_from_path(backing); // title even before the banner loads (>128 sliding window)
 
             // copy the extra info
             memcpy(backing->extra.game_id, info.game_id, sizeof(backing->extra.game_id));
@@ -767,7 +735,11 @@ void gm_check_files(int path_count) {
             if (!gm_evict_on_scroll && gm_count_banner_buf() >= ASSET_BUFFER_COUNT) {
                 gm_evict_on_scroll = true;
             }
-            if (!gm_evict_on_scroll) {
+            // During the startup pre-scan, only warm the cache with each game's first disc;
+            // extra discs (disc_num > 0) are read lazily when their folder is opened, so the
+            // pre-scan isn't slowed by reading every disc's banner (proper banners kept).
+            bool skip_prescan_extra_disc = gm_prescan_phase && backing->extra.disc_num > 0;
+            if (!gm_evict_on_scroll && !skip_prescan_extra_disc) {
                 bool bnr_loaded = gm_load_banner(backing, aram_offset, force_unload, true);
                 if (!bnr_loaded) {
                     OSReport("Failed to load banner %s\n", entry->path);
@@ -1002,6 +974,7 @@ void *gm_thread_worker(void* param) {
     static bool fill_cache = true;
     if (fill_cache) {
         fill_cache = false;
+        gm_prescan_phase = true; // skip extra-disc banner reads while warming the cache
         
         char path_stack[100][128];
         int path_count = 1;
@@ -1040,6 +1013,8 @@ void *gm_thread_worker(void* param) {
                 }
             }
         }
+
+        gm_prescan_phase = false; // pre-scan done; the target folder loads all its discs
     }
 
     gm_list_info list_info = gm_list_files(target);

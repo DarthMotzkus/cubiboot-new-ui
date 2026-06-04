@@ -651,7 +651,16 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
 
         // info
         draw_blob_text(make_type('t','i','t','l'), menu_blob, &white, entry->desc.fullGameName, 0x1f);
-        draw_blob_text(make_type('i','n','f','o'), menu_blob, &white, entry->desc.description, 0x1f);
+        if (entry->second != NULL) {
+            // Multi-disc game: show the disc number on the second line instead of the
+            // description, so discs of the same game (which can share a banner and name)
+            // are distinguishable while browsing.
+            char disc_line[16];
+            snprintf(disc_line, sizeof(disc_line), "Disc %d", entry->extra.disc_num + 1);
+            draw_blob_text(make_type('i','n','f','o'), menu_blob, &white, disc_line, 0x1f);
+        } else {
+            draw_blob_text(make_type('i','n','f','o'), menu_blob, &white, entry->desc.description, 0x1f);
+        }
 
         switch_lang_eng();
         if (entry->type == GM_FILE_TYPE_PROGRAM || entry->type == GM_FILE_TYPE_DIRECTORY) {
