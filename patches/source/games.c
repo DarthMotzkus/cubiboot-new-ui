@@ -556,6 +556,40 @@ void gm_sort_files(int path_count) {
     OSReport("Sort took=%f\n", runtime);
     (void)runtime;
 }
+// The menu title is the .iso/.gcm filename (matching Swiss), so multi-disc sets can be
+// told apart by the "Disc N" in their filename even when their banners/game IDs match.
+// The title box renders at most TITLE_MAX_CHARS glyphs (draw_blob_text len 0x1f); longer
+// names are middle-ellipsised so the tail survives -- that's where the disc marker sits.
+#define TITLE_MAX_CHARS 31
+
+static void gm_set_title_from_path(gm_file_entry_t *entry) {
+    char *out = entry->desc.fullGameName; // BNR_FULL_TEXT_LEN bytes
+
+    // basename, then drop the extension
+    const char *base = strrchr(entry->path, '/');
+    base = base ? base + 1 : entry->path;
+    const char *dot = strrchr(base, '.');
+    int len = dot ? (int)(dot - base) : (int)strlen(base);
+
+    if (len <= TITLE_MAX_CHARS) {
+        memcpy(out, base, len);
+        out[len] = '\0';
+        return;
+    }
+
+    // middle-ellipsis: head + "..." + tail == TITLE_MAX_CHARS, biased to keep the tail
+    static const char ell[] = "...";
+    const int ell_len = sizeof(ell) - 1;
+    int keep = TITLE_MAX_CHARS - ell_len;
+    int tail = keep - (keep / 2);
+    int head = keep - tail;
+
+    memcpy(out, base, head);
+    memcpy(out + head, ell, ell_len);
+    memcpy(out + head + ell_len, base + (len - tail), tail);
+    out[head + ell_len + tail] = '\0';
+}
+
 // returns amount of space used in aram
 static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
     if (entry->extra.dvd_bnr_offset == 0) return false;
@@ -566,7 +600,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     __attribute_aligned_data_lowmem__ static BNR banner_buffer;
     // use_cache keeps makeo's bnr_cache for the resident (<=128) path; the >128 scroll
     // re-reads pass use_cache=false so they read straight from disc and never touch ARAM.
-    if (use_cache && bnr_cache_get(entry->extra.game_id, &banner_buffer))
+    if (use_cache && bnr_cache_get(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer))
         goto cached;
 
     // load the banner
@@ -581,7 +615,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     dvd_threaded_read(&banner_buffer, sizeof(BNR), entry->extra.dvd_bnr_offset, status->fd);
     dvd_custom_close(status->fd);
 
-    if (use_cache) bnr_cache_put(entry->extra.game_id, &banner_buffer);
+    if (use_cache) bnr_cache_put(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer);
     cached:
 
     entry->asset.banner.state = GM_LOAD_STATE_LOADING;
@@ -602,6 +636,10 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
 
     // TODO: check current language using extra.dvd_bnr_type
     memcpy(&entry->desc, &banner_buffer.desc[0], sizeof(BNRDesc));
+
+    // Title shows the .iso filename, not the banner's internal name (which is identical
+    // across discs of the same game). The banner's description/company stay for the info line.
+    gm_set_title_from_path(entry);
 
     return true;
 }
@@ -709,6 +747,7 @@ void gm_check_files(int path_count) {
             memset(backing, 0, sizeof(gm_file_entry_t));
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = GM_FILE_TYPE_GAME;
+            gm_set_title_from_path(backing); // title even before the banner loads (>128 sliding window)
 
             // copy the extra info
             memcpy(backing->extra.game_id, info.game_id, sizeof(backing->extra.game_id));
@@ -761,9 +800,13 @@ void gm_check_files(int path_count) {
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = entry->type;
 
-            // get the basename
+            // get the basename (bounded copy: fullGameName is BNR_FULL_TEXT_LEN bytes)
             char *base = strrchr(entry->path, '/');
-            strcpy(backing->desc.fullGameName, base + 1);
+            const char *name = base ? base + 1 : entry->path;
+            int nlen = (int)strlen(name);
+            if (nlen >= BNR_FULL_TEXT_LEN) nlen = BNR_FULL_TEXT_LEN - 1;
+            memcpy(backing->desc.fullGameName, name, nlen);
+            backing->desc.fullGameName[nlen] = '\0';
             if (entry->type == GM_FILE_TYPE_PROGRAM) {
                 strcpy(backing->desc.description, "Homebrew Program");
             } else {
