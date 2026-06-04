@@ -15,3 +15,10 @@ ipl.rom
 
 patches/include/secret.h
 patches/tests
+
+# build artifacts / local-only
+# entry/Makefile copies cubeboot/source/emu -> patches/source/emu at build time
+patches/source/emu/
+apploader.img
+.localbuild/
+.claude/
