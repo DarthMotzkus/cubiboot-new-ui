@@ -36,9 +36,6 @@
 #include "emu/tweaks.h"
 
 #define PRELOAD_LINE_COUNT 2
-#define ASSETS_PER_LINE 8
-#define ASSETS_PER_PAGE (ASSETS_PER_LINE * DRAW_TOTAL_ROWS)
-#define ASSETS_INITIAL_COUNT (ASSETS_PER_PAGE + (PRELOAD_LINE_COUNT * ASSETS_PER_LINE)) // assuming we start at the top
 #define ASSET_BUFFER_COUNT 128
 
 // Globals
@@ -51,12 +48,22 @@ OSMutex *game_enum_mutex = &game_enum_mutex_obj;
 char game_enum_path[128] = {0};
 bool game_enum_running = false;
 
+int assets_per_page;
+int assets_initial_count;
+
 // TODO: use a log2 malloc copy strategy for this
 __attribute_data_lowmem__ static gm_path_entry_t __gm_early_path_list[2000];
 __attribute_data_lowmem__ static gm_path_entry_t *__gm_sorted_path_list[2000];
 __attribute_data_lowmem__ static gm_file_entry_t *gm_entry_backing[2000];
 
 static u32 gm_entry_count = 0;
+
+// Sliding-window mode for folders with more banners than the pool. While false (<=128
+// banners) every banner stays resident in MRAM (the proven cold-boot-safe path, no
+// per-scroll work). It flips true once the pool fills during gm_check_files; from then
+// banners load/free as lines scroll, re-read straight from disc (bypassing the ARAM
+// bnr_cache). Reset per folder scan in gm_check_files.
+static bool gm_evict_on_scroll = false;
 
 gm_file_entry_t *gm_get_game_entry(int index) {
     if (index >= gm_entry_count) return NULL;
@@ -263,65 +270,26 @@ void gm_icon_free(gm_icon_t *icon) {
     icon->state = GM_LOAD_STATE_UNLOADED;
 }
 
+// Banners are kept resident in MRAM (no ARAM streaming). The original async
+// MRAM<->ARAM unload/reload path corrupts banners on cold boot; with up to
+// ASSET_BUFFER_COUNT buffers the visible set fits in MRAM, so ARAM is never used.
+// The pixels are already in banner->buf->data (memcpy'd + flushed by gm_load_banner),
+// so we just mark the banner LOADED.
 void gm_banner_setup(gm_banner_t *banner, u32 aram_offset) {
-    // OSReport("Setting up banner\n");
     banner->aram_offset = aram_offset;
-    banner->state = GM_LOAD_STATE_SETUP;
-
-    ARQRequest *req = &banner->req;
-    u32 owner = make_type('B', 'X', 'X', 'S');
-    u32 type = ARAM_DIR_MRAM_TO_ARAM;
-    u32 priority = ARQ_PRIORITY_LOW;
-    u32 source = (u32)banner->buf->data;
-    u32 dest = aram_offset;
-    u32 length = BNR_PIXELDATA_LEN;
-
-    dolphin_ARQPostRequest(req, owner, type, priority, source, dest, length, &arq_banner_callback_setup);
+    banner->state = GM_LOAD_STATE_LOADED;
 }
 
 void gm_banner_setup_unload(gm_banner_t *banner, u32 aram_offset) {
+    // No ARAM unload — keep the banner resident in MRAM (see gm_banner_setup).
     banner->aram_offset = aram_offset;
-    banner->state = GM_LOAD_STATE_UNLOADING;
-
-    ARQRequest *req = &banner->req;
-    u32 owner = make_type('I', 'X', 'X', 'U');
-    u32 type = ARAM_DIR_MRAM_TO_ARAM;
-    u32 priority = ARQ_PRIORITY_LOW;
-    u32 source = (u32)banner->buf->data;
-    u32 dest = aram_offset;
-    u32 length = BNR_PIXELDATA_LEN;
-
-    dolphin_ARQPostRequest(req, owner, type, priority, source, dest, length, &arq_banner_callback_unload);
+    banner->state = GM_LOAD_STATE_LOADED;
 }
 
 void gm_banner_load(gm_banner_t *banner) {
-    // OSReport("Loading banner %d\n", banner->state);
-    if (banner->state == GM_LOAD_STATE_SETUP) {
-        OSReport("ERROR: banner is still in setup\n");
-    }
-    if (banner->state == GM_LOAD_STATE_UNLOADING) {
-        OSReport("ERROR: banner is still in unload\n");
-    }
-    if (banner->state == GM_LOAD_STATE_NONE || banner->state == GM_LOAD_STATE_LOADED) return;
-    banner->state = GM_LOAD_STATE_LOADING;
-
-    gm_banner_buf_t *banner_ptr = gm_get_banner_buf();
-    if (banner_ptr == NULL) {
-        OSReport("ERROR: could not allocate memory\n");
-        return;
-    }
-    banner->buf = banner_ptr;
-    DCFlushRange(banner, sizeof(gm_banner_t));
-
-    ARQRequest *req = &banner->req;
-    u32 owner = make_type('I', 'X', 'X', 'L');
-    u32 type = ARAM_DIR_ARAM_TO_MRAM;
-    u32 priority = ARQ_PRIORITY_LOW;
-    u32 source = banner->aram_offset;
-    u32 dest = (u32)banner->buf->data;
-    u32 length = BNR_PIXELDATA_LEN;
-
-    dolphin_ARQPostRequest(req, owner, type, priority, source, dest, length, &arq_banner_callback_load);
+    // No ARAM reload: banners are loaded straight into MRAM by gm_load_banner and kept
+    // resident, so on scroll they are already LOADED and there is nothing to reload.
+    (void)banner;
 }
 
 void gm_banner_free(gm_banner_t *banner) {
@@ -354,7 +322,16 @@ __attribute_aligned_data_lowmem__ static u8 gm_heap_buffer[2 * 1024 * 1024];
 
 void gm_init_heap() {
     OSReport("Initializing heap [%x]\n", sizeof(gm_heap_buffer));
-    
+
+    // The asset pools live in the custom .data_lowmem section, which is NOT
+    // zero-cleared on a cold boot (PicoBoot/gekko doesn't clear it). Their .used
+    // flags therefore come up as random garbage -> gm_get_*_buf either hands out a
+    // slot already in use (banner aliasing/corruption) or finds none free (blank
+    // banners), and it gets worse the colder the RAM. Zero them explicitly before
+    // any asset is loaded.
+    memset(gm_banner_pool, 0, sizeof(gm_banner_pool));
+    memset(gm_icon_pool, 0, sizeof(gm_icon_pool));
+
     // Initialise our pmalloc
 	pmalloc_init(pm);
 	pmalloc_addblock(pm, &gm_heap_buffer[0], sizeof(gm_heap_buffer));
@@ -580,11 +557,16 @@ void gm_sort_files(int path_count) {
     (void)runtime;
 }
 // returns amount of space used in aram
-static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload) {
+static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
     if (entry->extra.dvd_bnr_offset == 0) return false;
+    // Already resident: never re-read or re-allocate. Guards the scroll re-read path so
+    // a still-loaded banner can't leak its pool buffer.
+    if (entry->asset.banner.state == GM_LOAD_STATE_LOADED) return true;
 
     __attribute_aligned_data_lowmem__ static BNR banner_buffer;
-    if (bnr_cache_get(entry->extra.game_id, &banner_buffer))
+    // use_cache keeps makeo's bnr_cache for the resident (<=128) path; the >128 scroll
+    // re-reads pass use_cache=false so they read straight from disc and never touch ARAM.
+    if (use_cache && bnr_cache_get(entry->extra.game_id, &banner_buffer))
         goto cached;
 
     // load the banner
@@ -599,7 +581,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     dvd_threaded_read(&banner_buffer, sizeof(BNR), entry->extra.dvd_bnr_offset, status->fd);
     dvd_custom_close(status->fd);
 
-    bnr_cache_put(entry->extra.game_id, &banner_buffer);
+    if (use_cache) bnr_cache_put(entry->extra.game_id, &banner_buffer);
     cached:
 
     entry->asset.banner.state = GM_LOAD_STATE_LOADING;
@@ -694,6 +676,9 @@ void gm_check_files(int path_count) {
     // Here we will also check for override assets and matching save icons
     u32 aram_offset = (1 * 1024 * 1024); // 1MB mark
 
+    // Re-evaluate resident-vs-sliding per folder scan (pool is empty here after dealloc).
+    gm_evict_on_scroll = false;
+
     // Enumerate all of the games
     u64 start_time = gettime();
     for (int i = 0; i < path_count; i++) {
@@ -701,7 +686,7 @@ void gm_check_files(int path_count) {
         // OSReport("Checking header %s [%d]\n", entry->path, entry->type);
 
         bool force_unload = false;
-        if (gm_entry_count - (top_line_num * ASSETS_PER_LINE) > ASSETS_INITIAL_COUNT) {
+        if (gm_entry_count - (top_line_num * columns_per_line) > assets_initial_count) {
             force_unload = true;
         }
 
@@ -736,10 +721,18 @@ void gm_check_files(int path_count) {
             backing->extra.dvd_fst_size = info.fst_size;
             backing->extra.dvd_max_fst_size = info.max_fst_size;
 
-            // load the banner
-            bool bnr_loaded = gm_load_banner(backing, aram_offset, force_unload);
-            if (!bnr_loaded) {
-                OSReport("Failed to load banner %s\n", entry->path);
+            // load the banner, keeping it resident in MRAM. Once the pool fills (folder
+            // has more than ASSET_BUFFER_COUNT games) switch to the sliding window: leave
+            // the rest unloaded and let gm_line_load read them from disc on scroll.
+            // <=128 games => all resident (the proven, cold-boot-safe path, unchanged).
+            if (!gm_evict_on_scroll && gm_count_banner_buf() >= ASSET_BUFFER_COUNT) {
+                gm_evict_on_scroll = true;
+            }
+            if (!gm_evict_on_scroll) {
+                bool bnr_loaded = gm_load_banner(backing, aram_offset, force_unload, true);
+                if (!bnr_loaded) {
+                    OSReport("Failed to load banner %s\n", entry->path);
+                }
             }
             aram_offset += BNR_PIXELDATA_LEN;
 
@@ -828,14 +821,20 @@ void gm_check_files(int path_count) {
 void gm_line_load(int line_num) {
     // OSReport("Line load %d\n", line_num);
 
-    for (int i = 0; i < ASSETS_PER_LINE; i++) {
-        int index = (line_num * ASSETS_PER_LINE) + i;
+    for (int i = 0; i < columns_per_line; i++) {
+        int index = (line_num * columns_per_line) + i;
         if (index >= gm_entry_count) break;
 
         gm_file_entry_t *entry = gm_entry_backing[index];
         if (entry->type == GM_FILE_TYPE_GAME) {
             gm_icon_load(&entry->asset.icon);
-            gm_banner_load(&entry->asset.banner);
+            if (gm_evict_on_scroll) {
+                // sliding window (>128): re-read from disc, no bnr_cache => no ARAM.
+                // gm_load_banner guards against re-loading an already-resident banner.
+                gm_load_banner(entry, 0, false, false);
+            } else {
+                gm_banner_load(&entry->asset.banner); // no-op: <=128 stays resident
+            }
         } else {
             gm_icon_load(&entry->asset.icon);
         }
@@ -843,19 +842,19 @@ void gm_line_load(int line_num) {
 }
 
 void gm_line_free(int line_num) {
-    // OSReport("Line free %d\n", line_num);
+    // <=128: banners stay resident in MRAM (no per-scroll free + ARAM reload, which
+    // corrupted banners on cold boot). Buffers are released by the folder-change dealloc.
+    if (!gm_evict_on_scroll) return;
 
-    for (int i = 0; i < ASSETS_PER_LINE; i++) {
-        int index = (line_num * ASSETS_PER_LINE) + i;
+    // >128 sliding window: free this off-screen line so its buffers return to the pool
+    // for the lines scrolling into view (gm_line_load re-reads those from disc).
+    for (int i = 0; i < columns_per_line; i++) {
+        int index = (line_num * columns_per_line) + i;
         if (index >= gm_entry_count) break;
 
         gm_file_entry_t *entry = gm_entry_backing[index];
         if (entry->type == GM_FILE_TYPE_GAME) {
-            // OSReport("Freeing assets %s\n", entry->path);
-            gm_icon_free(&entry->asset.icon);
             gm_banner_free(&entry->asset.banner);
-        } else {
-            gm_icon_free(&entry->asset.icon);
         }
     }
 }
@@ -868,36 +867,33 @@ void gm_line_changed(int delta) {
 
     // two slots should be processed, one to load and one to unload
 
-    // get number of lines to process
+    // get number of lines to process. Free BEFORE load so the >128 sliding window always
+    // has a free pool buffer for the line scrolling in (no-op order for the <=128 path).
     if (delta < 0) {
-        int load_line = new_line_num - PRELOAD_LINE_COUNT + 1;
-        if (load_line >= 0) {
-            // load
-            // OSReport("DEBUG: Load line %d\n", load_line);
-            gm_line_load(load_line);
-        }
-
         // unload from the bottom
         int unload_line = new_line_num + DRAW_TOTAL_ROWS + PRELOAD_LINE_COUNT;
         if (unload_line < number_of_lines) {
-            // unload
             // OSReport("DEBUG: Unload line %d\n", unload_line);
             gm_line_free(unload_line);
         }
-    } else if (delta > 0) {
-        int load_line = new_line_num + DRAW_TOTAL_ROWS + PRELOAD_LINE_COUNT - 1;
-        if (load_line < number_of_lines) {
-            // load
+
+        int load_line = new_line_num - PRELOAD_LINE_COUNT + 1;
+        if (load_line >= 0) {
             // OSReport("DEBUG: Load line %d\n", load_line);
             gm_line_load(load_line);
         }
-
+    } else if (delta > 0) {
         // unload from the top
         int unload_line = new_line_num - PRELOAD_LINE_COUNT;
         if (unload_line >= 0) {
-            // unload
             // OSReport("DEBUG: Unload line %d\n", unload_line);
             gm_line_free(unload_line);
+        }
+
+        int load_line = new_line_num + DRAW_TOTAL_ROWS + PRELOAD_LINE_COUNT - 1;
+        if (load_line < number_of_lines) {
+            // OSReport("DEBUG: Load line %d\n", load_line);
+            gm_line_load(load_line);
         }
     }
 
@@ -937,10 +933,15 @@ void gm_debug_func() {
 #endif
 
 void gm_setup_grid(int line_count, bool initial) {
-    number_of_lines = (line_count + 7) >> 3;
+    grid_setup_columns_per_line();
+
+    number_of_lines = (line_count + (columns_per_line - 1)) / columns_per_line;
     if (number_of_lines < 4) {
         number_of_lines = 4;
     }
+
+    assets_per_page = columns_per_line * DRAW_TOTAL_ROWS;
+    assets_initial_count = assets_per_page + (PRELOAD_LINE_COUNT * columns_per_line); // assuming we start at the top
 
     if (initial) {
         // Setup the grid

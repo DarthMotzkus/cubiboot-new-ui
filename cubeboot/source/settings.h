@@ -1,6 +1,7 @@
 #include <gctypes.h>
 
 #include "const.h"
+#include "settings_types.h"
 
 typedef struct settings {
     u32 cube_color;
@@ -13,6 +14,7 @@ typedef struct settings {
     u32 postboot_delay_ms;
     char *default_program;
     char *boot_buttons[MAX_BUTTONS];
+    menu_grid_type_t menu_grid_type;
 } settings_t;
 
 extern char *buttons_names[];
