@@ -556,6 +556,24 @@ void gm_sort_files(int path_count) {
     OSReport("Sort took=%f\n", runtime);
     (void)runtime;
 }
+// Title is the .iso/.gcm filename with the extension stripped (matching Swiss), so
+// multi-disc games are told apart by the "Disc N" in their filename. Names are expected
+// to fit the title box (~28 chars); a longer one is just clipped by the box at draw time
+// (no in-code truncation) -- keep filenames short.
+static void gm_set_title_from_path(gm_file_entry_t *entry) {
+    char *out = entry->desc.fullGameName; // BNR_FULL_TEXT_LEN bytes
+
+    const char *base = strrchr(entry->path, '/');
+    base = base ? base + 1 : entry->path;
+
+    const char *dot = strrchr(base, '.');
+    int len = dot ? (int)(dot - base) : (int)strlen(base);
+    if (len >= BNR_FULL_TEXT_LEN) len = BNR_FULL_TEXT_LEN - 1; // buffer safety only
+
+    memcpy(out, base, len);
+    out[len] = '\0';
+}
+
 // returns amount of space used in aram
 static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
     if (entry->extra.dvd_bnr_offset == 0) return false;
@@ -566,7 +584,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     __attribute_aligned_data_lowmem__ static BNR banner_buffer;
     // use_cache keeps makeo's bnr_cache for the resident (<=128) path; the >128 scroll
     // re-reads pass use_cache=false so they read straight from disc and never touch ARAM.
-    if (use_cache && bnr_cache_get(entry->extra.game_id, &banner_buffer))
+    if (use_cache && bnr_cache_get(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer))
         goto cached;
 
     // load the banner
@@ -581,7 +599,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     dvd_threaded_read(&banner_buffer, sizeof(BNR), entry->extra.dvd_bnr_offset, status->fd);
     dvd_custom_close(status->fd);
 
-    if (use_cache) bnr_cache_put(entry->extra.game_id, &banner_buffer);
+    if (use_cache) bnr_cache_put(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer);
     cached:
 
     entry->asset.banner.state = GM_LOAD_STATE_LOADING;
@@ -602,6 +620,10 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
 
     // TODO: check current language using extra.dvd_bnr_type
     memcpy(&entry->desc, &banner_buffer.desc[0], sizeof(BNRDesc));
+
+    // Override the banner's internal name with the .iso filename (the banner name is
+    // identical across discs of the same game). Description/company stay for the info line.
+    gm_set_title_from_path(entry);
 
     return true;
 }
@@ -709,6 +731,7 @@ void gm_check_files(int path_count) {
             memset(backing, 0, sizeof(gm_file_entry_t));
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = GM_FILE_TYPE_GAME;
+            gm_set_title_from_path(backing); // title even before the banner loads (>128 sliding window)
 
             // copy the extra info
             memcpy(backing->extra.game_id, info.game_id, sizeof(backing->extra.game_id));
@@ -728,6 +751,8 @@ void gm_check_files(int path_count) {
             if (!gm_evict_on_scroll && gm_count_banner_buf() >= ASSET_BUFFER_COUNT) {
                 gm_evict_on_scroll = true;
             }
+            // Banner is normally already cached by get_game_info (read during validation),
+            // so this is a cheap cache hit with no extra file open.
             if (!gm_evict_on_scroll) {
                 bool bnr_loaded = gm_load_banner(backing, aram_offset, force_unload, true);
                 if (!bnr_loaded) {
@@ -761,9 +786,13 @@ void gm_check_files(int path_count) {
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = entry->type;
 
-            // get the basename
+            // get the basename (bounded copy: fullGameName is BNR_FULL_TEXT_LEN bytes)
             char *base = strrchr(entry->path, '/');
-            strcpy(backing->desc.fullGameName, base + 1);
+            const char *name = base ? base + 1 : entry->path;
+            int nlen = (int)strlen(name);
+            if (nlen >= BNR_FULL_TEXT_LEN) nlen = BNR_FULL_TEXT_LEN - 1;
+            memcpy(backing->desc.fullGameName, name, nlen);
+            backing->desc.fullGameName[nlen] = '\0';
             if (entry->type == GM_FILE_TYPE_PROGRAM) {
                 strcpy(backing->desc.description, "Homebrew Program");
             } else {
@@ -956,54 +985,58 @@ void *gm_thread_worker(void* param) {
         return NULL;
     }
 
-    static bool fill_cache = true;
-    if (fill_cache) {
-        fill_cache = false;
-        
-        char path_stack[100][128];
-        int path_count = 1;
-        strcpy(path_stack[0], "/");
-
-        while (path_count > 0) {
-            char* cur = path_stack[--path_count];
-            gm_list_info list_info = gm_list_files(cur);
-            gm_sort_files(list_info.num_paths);
-            gm_check_files(list_info.num_paths);
-            if (gm_entry_count > 0) {
-                for (int i = 0; i < gm_entry_count; i++) {
-                    gm_file_entry_t *entry = gm_entry_backing[i];
-                    if (entry->type == GM_FILE_TYPE_GAME) {
-                        gm_icon_free(&entry->asset.icon);
-                        gm_banner_free(&entry->asset.banner);
-                    } else {
-                        gm_icon_free(&entry->asset.icon);
-                    }
-                    gm_free(entry);
-                }
-                gm_entry_count = 0;
-            }
-
-            for (int i = 0; i < list_info.num_paths; i++) {
-                gm_path_entry_t* entry = __gm_sorted_path_list[i];
-
-                if (entry->type == GM_FILE_TYPE_DIRECTORY) {
-                    char subdir_path[128];
-                    strcpy(subdir_path, entry->path);
-                    strcat(subdir_path, "/");
-
-                    if (path_count < 100) {
-                        strcpy(path_stack[path_count++], subdir_path);
-                    }
-                }
-            }
-        }
-    }
-
+    // --- Lever A, step 1: scan ONLY the landing folder and draw its list first ---
+    // The menu draws from game_backing_count (populated by gm_check_files), not from
+    // game_enum_running, so the user sees their default_folder immediately instead of
+    // waiting for every banner on the whole card to be read.
     gm_list_info list_info = gm_list_files(target);
     gm_setup_grid(list_info.num_paths, true);
     gm_sort_files(list_info.num_paths);
     gm_check_files(list_info.num_paths);
     gm_setup_grid(gm_entry_count, false);
+
+    // --- Lever A, step 2: warm the rest of the card's banner cache in the background ---
+    // First boot only, running behind the now-live menu on this same worker thread. We touch
+    // ONLY the banner cache (via get_game_info, which caches each banner it reads) -- never the
+    // live display arrays (gm_entry_backing/gm_entry_count) or the banner pool -- so the grid
+    // on screen is undisturbed. Navigation and game boot both call gm_deinit_thread(), which
+    // locks game_enum_mutex; we honour it cooperatively (same as gm_check_files) and bail, so
+    // the user never waits on this pass. The landing folder is skipped (already read above).
+    static bool fill_cache = true;
+    if (fill_cache) {
+        fill_cache = false;
+
+        char path_stack[100][128];
+        int path_count = 1;
+        strcpy(path_stack[0], "/");
+
+        bool stop = false;
+        while (path_count > 0 && !stop) {
+            char cur[128];
+            strcpy(cur, path_stack[--path_count]);
+            bool is_target = (strcmp(cur, target) == 0);
+
+            gm_list_info warm_info = gm_list_files(cur);
+            for (int i = 0; i < warm_info.num_paths; i++) {
+                // Let navigation / boot preempt the warm promptly.
+                if (!OSTryLockMutex(game_enum_mutex)) { stop = true; break; }
+                OSUnlockMutex(game_enum_mutex);
+
+                gm_path_entry_t* entry = __gm_sorted_path_list[i];
+                if (entry->type == GM_FILE_TYPE_DIRECTORY) {
+                    if (path_count < 100) {
+                        char subdir_path[128];
+                        strcpy(subdir_path, entry->path);
+                        strcat(subdir_path, "/");
+                        strcpy(path_stack[path_count++], subdir_path);
+                    }
+                } else if (entry->type == GM_FILE_TYPE_GAME && !is_target) {
+                    // Warm bnr_cache for this disc; the returned info is intentionally discarded.
+                    get_game_info(entry->path);
+                }
+            }
+        }
+    }
 
     game_enum_running = false;
     // DCBlockStore((void*)OSRoundDown32B((u32)&game_enum_running));
