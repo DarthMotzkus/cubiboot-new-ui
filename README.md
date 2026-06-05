@@ -141,8 +141,8 @@ menu_grid_type = small_banners
 ; Folder the menu opens in at startup. Leave commented for the SD card root.
 ; default_folder = /games
 
-; Pre-select the last game you booted when the menu opens (1 = on, 0/unset = off).
-; remember_last_game = 1
+; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).
+remember_last_game = 0
 ```
 
 ## Building
