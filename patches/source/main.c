@@ -46,6 +46,7 @@ __attribute_data__ u32 start_passthrough_game = 0;
 __attribute_data__ static u8 *cube_text_tex = NULL;
 __attribute_data__ char cube_logo_path[MAX_FILE_NAME] = {0};
 __attribute_data__ char default_folder[MAX_FILE_NAME] = {0};
+__attribute_data__ u32 remember_last_game = 0;
 __attribute_data__ u32 force_progressive = 0;
 __attribute_data__ u32 force_swiss_boot = 0;
 

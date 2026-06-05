@@ -781,6 +781,10 @@ __attribute_used__ s32 handle_gameselect_inputs() {
     update_icon_positions();
     grid_update_icon_positions();
 
+    // Last-played: select the saved game once the enum thread has finished scanning the
+    // folder shown at cold boot. No-op on every later frame (pending slot is cleared).
+    gm_apply_pending_last_played();
+
     // TODO: this code is so annoying haha... I should add a direction var
     // TODO: only works with numbers that do not divide into 255 (switch to floats?)
     u8 transition_step = 14;
@@ -889,6 +893,12 @@ __attribute_used__ s32 handle_gameselect_inputs() {
 
         if (!emu_can_boot(entry->type))
             return MENU_GAMESELECT_TRANSITION_ID;
+
+        // Remember this game so the next cold boot can pre-select it (no-op unless the
+        // config.ini option is on). Only games carry a stable path/identity to match on.
+        if (entry->type == GM_FILE_TYPE_GAME) {
+            gm_save_last_played(entry->path);
+        }
 
         memcpy(&boot_entry, entry, sizeof(gm_file_entry_t));
         if (boot_entry.second != NULL) {

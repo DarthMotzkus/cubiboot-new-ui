@@ -38,6 +38,10 @@
 #define PRELOAD_LINE_COUNT 2
 #define ASSET_BUFFER_COUNT 128
 
+// Sidecar file (SD root, no mkdir needed) holding the full path of the last game
+// booted from the menu. Written on launch, read once at cold boot to pre-select.
+#define LAST_PLAYED_PATH "/cubeboot_last.txt"
+
 // Globals
 int number_of_lines = 4;
 int game_backing_count = 0;
@@ -64,6 +68,10 @@ static u32 gm_entry_count = 0;
 // banners load/free as lines scroll, re-read straight from disc (bypassing the ARAM
 // bnr_cache). Reset per folder scan in gm_check_files.
 static bool gm_evict_on_scroll = false;
+
+// Last-played: remember_last_game is defined/patched in main.c. This is the index the
+// enum thread asks the menu thread to select (-1 = nothing pending).
+int gm_pending_last_played_slot = -1;
 
 gm_file_entry_t *gm_get_game_entry(int index) {
     if (index >= gm_entry_count) return NULL;
@@ -941,6 +949,86 @@ bool gm_can_move() {
     return true;
 }
 
+// ===== Last played =========================================================
+
+// Record the just-launched game's path to the sidecar file. Runs on the menu thread
+// at launch (enum thread is idle by then). A fixed MAX_FILE_NAME record is written so
+// a shorter path never leaves a stale tail from a previous, longer one.
+void gm_save_last_played(const char *path) {
+    if (!remember_last_game || path == NULL || path[0] == '\0') return;
+
+    static GCN_ALIGNED(char) buf[MAX_FILE_NAME];
+    memset(buf, 0, sizeof(buf));
+    strncpy(buf, path, sizeof(buf) - 1);
+    DCFlushRange(buf, sizeof(buf));
+
+    if (dvd_custom_open(LAST_PLAYED_PATH, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_WRITE) != 0) return;
+    file_status_t *status = dvd_custom_status();
+    if (status == NULL || status->result != 0) return;
+
+    dvd_custom_write(buf, 0, sizeof(buf), status->fd);
+    dvd_custom_close(status->fd);
+}
+
+// Read the sidecar once at cold boot and, if the saved game lives in the folder we just
+// scanned, stash its index for the menu thread to select. Runs on the enum thread after
+// gm_check_files. One-shot: only the folder shown at boot auto-selects (option A); later
+// navigation is unaffected.
+static void gm_find_last_played() {
+    static bool consumed = false;
+    if (!remember_last_game || consumed) return;
+    consumed = true;
+
+    static GCN_ALIGNED(char) buf[MAX_FILE_NAME];
+    memset(buf, 0, sizeof(buf));
+
+    if (dvd_custom_open(LAST_PLAYED_PATH, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0) return;
+    file_status_t *status = dvd_custom_status();
+    if (status == NULL || status->result != 0) return;
+    dvd_threaded_read(buf, sizeof(buf), 0, status->fd);
+    dvd_custom_close(status->fd);
+
+    buf[sizeof(buf) - 1] = '\0';
+    if (buf[0] == '\0') return;
+
+    for (int i = 0; i < gm_entry_count; i++) {
+        gm_file_entry_t *e = gm_entry_backing[i];
+        if (e == NULL || e->type != GM_FILE_TYPE_GAME) continue;
+        if (strcmp(e->path, buf) == 0) {
+            gm_pending_last_played_slot = i;
+            break;
+        }
+    }
+}
+
+// >ASSET_BUFFER_COUNT (sliding-window) only: the first pool-full of banners were loaded
+// resident at the top of the list, so jumping deep needs that window freed and the
+// target window read from disc. A no-op for <=ASSET_BUFFER_COUNT folders (all resident).
+// Must run on the menu thread (same as scroll) so it never frees a banner mid-draw.
+static void gm_load_window(int start_line) {
+    if (!gm_evict_on_scroll) return;
+
+    for (int l = 0; l < number_of_lines; l++) gm_line_free(l);
+
+    int first = start_line - PRELOAD_LINE_COUNT;
+    if (first < 0) first = 0;
+    int last = start_line + DRAW_TOTAL_ROWS + PRELOAD_LINE_COUNT;
+    for (int l = first; l <= last && l < number_of_lines; l++) gm_line_load(l);
+}
+
+// Menu-thread side of the jump: applied once enumeration has fully finished so the enum
+// thread is no longer touching the banner pool.
+void gm_apply_pending_last_played() {
+    if (gm_pending_last_played_slot < 0 || game_enum_running) return;
+
+    int slot = gm_pending_last_played_slot;
+    gm_pending_last_played_slot = -1;
+    if (slot >= gm_entry_count) return;
+
+    grid_jump_to_slot(slot);
+    gm_load_window(top_line_num);
+}
+
 #if 0
 void gm_debug_func() {
     int icon_buf_count = gm_count_icon_buf();
@@ -1001,6 +1089,10 @@ void *gm_thread_worker(void* param) {
     gm_sort_files(list_info.num_paths);
     gm_check_files(list_info.num_paths);
     gm_setup_grid(gm_entry_count, false);
+
+    // Pre-select the last-played game (set before clearing game_enum_running so the menu
+    // thread sees the pending slot once it observes enumeration has finished).
+    gm_find_last_played();
 
     game_enum_running = false;
     // DCBlockStore((void*)OSRoundDown32B((u32)&game_enum_running));
