@@ -8,6 +8,7 @@ entry/data/
 *.elf
 *.iso
 *.gz
+*.gif
 
 ipl.rom
 *.bin
