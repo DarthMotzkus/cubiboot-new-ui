@@ -563,6 +563,24 @@ void gm_sort_files(int path_count) {
     OSReport("Sort took=%f\n", runtime);
     (void)runtime;
 }
+// Title is the .iso/.gcm filename with the extension stripped (matching Swiss), so
+// multi-disc games are told apart by the "Disc N" in their filename. Names are expected
+// to fit the title box (~28 chars); a longer one is just clipped by the box at draw time
+// (no in-code truncation) -- keep filenames short.
+static void gm_set_title_from_path(gm_file_entry_t *entry) {
+    char *out = entry->desc.fullGameName; // BNR_FULL_TEXT_LEN bytes
+
+    const char *base = strrchr(entry->path, '/');
+    base = base ? base + 1 : entry->path;
+
+    const char *dot = strrchr(base, '.');
+    int len = dot ? (int)(dot - base) : (int)strlen(base);
+    if (len >= BNR_FULL_TEXT_LEN) len = BNR_FULL_TEXT_LEN - 1; // buffer safety only
+
+    memcpy(out, base, len);
+    out[len] = '\0';
+}
+
 // returns amount of space used in aram
 static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
     if (entry->extra.dvd_bnr_offset == 0) return false;
@@ -609,6 +627,10 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
 
     // TODO: check current language using extra.dvd_bnr_type
     memcpy(&entry->desc, &banner_buffer.desc[0], sizeof(BNRDesc));
+
+    // Override the banner's internal name with the .iso filename (the banner name is
+    // identical across discs of the same game). Description/company stay for the info line.
+    gm_set_title_from_path(entry);
 
     return true;
 }
@@ -716,6 +738,7 @@ void gm_check_files(int path_count) {
             memset(backing, 0, sizeof(gm_file_entry_t));
             memcpy(backing->path, entry->path, sizeof(backing->path));
             backing->type = GM_FILE_TYPE_GAME;
+            gm_set_title_from_path(backing); // title even before the banner loads (>128 sliding window)
 
             // copy the extra info
             memcpy(backing->extra.game_id, info.game_id, sizeof(backing->extra.game_id));
