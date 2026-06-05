@@ -985,58 +985,22 @@ void *gm_thread_worker(void* param) {
         return NULL;
     }
 
-    // --- Lever A, step 1: scan ONLY the landing folder and draw its list first ---
-    // The menu draws from game_backing_count (populated by gm_check_files), not from
-    // game_enum_running, so the user sees their default_folder immediately instead of
-    // waiting for every banner on the whole card to be read.
+    // Scan ONLY the folder we land in, then draw its list. The menu draws from
+    // game_backing_count (populated by gm_check_files), so the default_folder appears
+    // immediately -- that is the instant cold boot. Other folders are read on demand when
+    // opened (banners load on first visit, then stay cached for the session).
+    //
+    // There is deliberately NO whole-card background warm. Warming every folder up front
+    // needs its own dedicated banner buffer (so it can't race the live menu's banner_buffer),
+    // and that extra 8KB buffer is exactly what grew the loader image and broke launching
+    // swiss-gc.dol from a folder (the boot hard-reset to the console IPL). The instant boot
+    // comes from scanning just this folder -- not from the warm -- so dropping the warm keeps
+    // the speed and fixes the regression.
     gm_list_info list_info = gm_list_files(target);
     gm_setup_grid(list_info.num_paths, true);
     gm_sort_files(list_info.num_paths);
     gm_check_files(list_info.num_paths);
     gm_setup_grid(gm_entry_count, false);
-
-    // --- Lever A, step 2: warm the rest of the card's banner cache in the background ---
-    // First boot only, running behind the now-live menu on this same worker thread. We touch
-    // ONLY the banner cache (via get_game_info, which caches each banner it reads) -- never the
-    // live display arrays (gm_entry_backing/gm_entry_count) or the banner pool -- so the grid
-    // on screen is undisturbed. Navigation and game boot both call gm_deinit_thread(), which
-    // locks game_enum_mutex; we honour it cooperatively (same as gm_check_files) and bail, so
-    // the user never waits on this pass. The landing folder is skipped (already read above).
-    static bool fill_cache = true;
-    if (fill_cache) {
-        fill_cache = false;
-
-        char path_stack[100][128];
-        int path_count = 1;
-        strcpy(path_stack[0], "/");
-
-        bool stop = false;
-        while (path_count > 0 && !stop) {
-            char cur[128];
-            strcpy(cur, path_stack[--path_count]);
-            bool is_target = (strcmp(cur, target) == 0);
-
-            gm_list_info warm_info = gm_list_files(cur);
-            for (int i = 0; i < warm_info.num_paths; i++) {
-                // Let navigation / boot preempt the warm promptly.
-                if (!OSTryLockMutex(game_enum_mutex)) { stop = true; break; }
-                OSUnlockMutex(game_enum_mutex);
-
-                gm_path_entry_t* entry = __gm_sorted_path_list[i];
-                if (entry->type == GM_FILE_TYPE_DIRECTORY) {
-                    if (path_count < 100) {
-                        char subdir_path[128];
-                        strcpy(subdir_path, entry->path);
-                        strcat(subdir_path, "/");
-                        strcpy(path_stack[path_count++], subdir_path);
-                    }
-                } else if (entry->type == GM_FILE_TYPE_GAME && !is_target) {
-                    // Warm bnr_cache for this disc; the returned info is intentionally discarded.
-                    get_game_info(entry->path);
-                }
-            }
-        }
-    }
 
     game_enum_running = false;
     // DCBlockStore((void*)OSRoundDown32B((u32)&game_enum_running));
