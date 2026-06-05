@@ -729,7 +729,15 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
     draw_blob_text(make_type('t','i','t','l'), game_blob_b, &white, entry->desc.fullGameName, 0x40);
     if (entry->type == GM_FILE_TYPE_GAME) {
         draw_blob_text(make_type('m','a','k','r'), game_blob_b, &white, entry->desc.fullCompany, 0x40);
-        draw_blob_text_long(make_type('i','n','f','o'), game_blob_b, &white, entry->desc.description, 0x80);
+        if (entry->second != NULL) {
+            // Multi-disc: show the disc number instead of the description here too, so
+            // discs of the same game stay distinguishable in the expanded detail view.
+            char disc_line[16];
+            snprintf(disc_line, sizeof(disc_line), "Disc %d", entry->extra.disc_num + 1);
+            draw_blob_text_long(make_type('i','n','f','o'), game_blob_b, &white, disc_line, 0x80);
+        } else {
+            draw_blob_text_long(make_type('i','n','f','o'), game_blob_b, &white, entry->desc.description, 0x80);
+        }
     } else {
         draw_blob_text(make_type('m','a','k','r'), game_blob_b, &white, entry->desc.description, 0x40);
     }
