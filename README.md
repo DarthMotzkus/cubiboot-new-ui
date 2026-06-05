@@ -10,20 +10,21 @@ or similar SD adapters.
 **What this fork adds on top of makeo/cubiboot:**
 - A **grid / banner menu UI** ported from cubeboot (selectable via `menu_grid_type`,
   default **`small_banners`** — works even without a `config.ini`).
+- Shows the **.iso Filename** in the list, instead of internal game name, and load proper **banners from multi disc games** (example Resident Evil 0 Disc 1 and Disc 2 banner)
 - A fix for **cold-boot banner corruption**: the banner/icon buffer pools live in a
   low-memory section that PicoBoot doesn't clear on cold boot, so stale "in-use" flags
   aliased buffers (corruption) or starved them (blank), worse the colder the console.
   The pools are now zeroed at startup and banners are kept resident in MRAM. Folders with
   more banners than the pool use a sliding window (re-read from disc on scroll, no ARAM).
 - **Cubiboot branding**: a "Games" menu header, and the cubeboot banner with
-  "Cubiboot" / "Games Loader" on both the loader banner and the `.iso` BIOS intro
-  (replacing the gc-linux "Game Play" banner).
+  "Cubiboot" / "Games Loader" on both the loader banner and the `.iso` BIOS intro (replacing the gc-linux "Game Play" banner).
 - An automated **build & release pipeline** that also rebuilds `apploader.img` (so
   In-Game Reset returns to *this* loader instead of a stale one) and a flashable
   **`cubiboot_picoloader.uf2`**.
 
 > [!IMPORTANT]
 > Format your SD card using **exFAT** (not FAT32). Loading files is very slow on FAT32.
+> Keep .iso and .dol names below 28 characters so the names won't be cropped.
 
 ## What's in a release
 
