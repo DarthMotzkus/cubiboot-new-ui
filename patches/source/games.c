@@ -65,13 +65,6 @@ static u32 gm_entry_count = 0;
 // bnr_cache). Reset per folder scan in gm_check_files.
 static bool gm_evict_on_scroll = false;
 
-// True only during the startup fill_cache pre-scan that warms the banner cache across
-// every folder. While set, gm_check_files skips reading extra-disc banners (disc_num > 0):
-// each disc now has its own cache entry (banner fix), and re-reading every disc's banner
-// up front is what slowed the scan. Extra discs load lazily when their folder is opened,
-// so proper per-disc banners are kept without paying for them all at startup.
-static bool gm_prescan_phase = false;
-
 gm_file_entry_t *gm_get_game_entry(int index) {
     if (index >= gm_entry_count) return NULL;
     return gm_entry_backing[index];
@@ -758,11 +751,9 @@ void gm_check_files(int path_count) {
             if (!gm_evict_on_scroll && gm_count_banner_buf() >= ASSET_BUFFER_COUNT) {
                 gm_evict_on_scroll = true;
             }
-            // During the startup pre-scan, only warm the cache with each game's first disc;
-            // extra discs (disc_num > 0) are read lazily when their folder is opened, so the
-            // pre-scan isn't slowed by reading every disc's banner (proper banners kept).
-            bool skip_prescan_extra_disc = gm_prescan_phase && backing->extra.disc_num > 0;
-            if (!gm_evict_on_scroll && !skip_prescan_extra_disc) {
+            // Banner is normally already cached by get_game_info (read during validation),
+            // so this is a cheap cache hit with no extra file open.
+            if (!gm_evict_on_scroll) {
                 bool bnr_loaded = gm_load_banner(backing, aram_offset, force_unload, true);
                 if (!bnr_loaded) {
                     OSReport("Failed to load banner %s\n", entry->path);
@@ -997,7 +988,6 @@ void *gm_thread_worker(void* param) {
     static bool fill_cache = true;
     if (fill_cache) {
         fill_cache = false;
-        gm_prescan_phase = true; // skip extra-disc banner reads while warming the cache
         
         char path_stack[100][128];
         int path_count = 1;
@@ -1036,8 +1026,6 @@ void *gm_thread_worker(void* param) {
                 }
             }
         }
-
-        gm_prescan_phase = false; // pre-scan done; the target folder loads all its discs
     }
 
     gm_list_info list_info = gm_list_files(target);
