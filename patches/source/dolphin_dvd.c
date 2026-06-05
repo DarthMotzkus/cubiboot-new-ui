@@ -115,13 +115,13 @@ dolphin_game_into_t get_game_info(char *game_path) {
     u32 fast_bnr_offset = get_banner_offset_fast(&header);
     // OSReport("DEBUG: Fast BNR offset: %08x\n", fast_bnr_offset);
     if (fast_bnr_offset != 0) {
-        // Read the FULL banner here (not just the 32-byte magic) so we can warm the banner
-        // cache from this same file handle. gm_load_banner then gets a cache hit and never
-        // reopens the file -- halving file opens per game and removing the disc-2 read delay.
-        __attribute__((aligned(32))) static BNR bnr_buf;
-        dvd_threaded_read(&bnr_buf, sizeof(BNR), fast_bnr_offset, status->fd); //Read in the banner data
+        // Validate with just the 32-byte magic here; gm_load_banner reads the full banner
+        // when it actually needs it. (The fast-path that read the whole 8KB banner into a
+        // static buffer grew the loader by ~8KB and broke launching swiss-gc.dol from a
+        // folder -- the boot would hard-reset to the console IPL.)
+        dvd_threaded_read(small_buf, 32, fast_bnr_offset, status->fd); //Read in the banner data
 
-        u32 magic = ((u32*)&bnr_buf)[0];
+        u32 magic = small_buf[0];
         if (magic == BANNER_MAGIC_1 || magic == BANNER_MAGIC_2) {
             dolphin_game_into_t info;
             info.valid = true;
@@ -134,10 +134,6 @@ dolphin_game_into_t get_game_info(char *game_path) {
             info.fst_offset = header.FSTOffset;
             info.fst_size = header.FSTSize;
             info.max_fst_size = header.MaxFSTSize;
-
-            // Warm the cache (keyed by full disc identity) so gm_load_banner -- and disc 2+
-            // especially -- can skip reopening the file entirely.
-            bnr_cache_put(info.game_id, info.disc_num, info.disc_ver, &bnr_buf);
 
             dvd_custom_close(status->fd);
             return info;
