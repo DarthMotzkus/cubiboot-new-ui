@@ -951,6 +951,52 @@ bool gm_can_move() {
 
 // ===== Last played =========================================================
 
+// Read the saved last-played path from the sidecar into `out` (out_len bytes). Uses the
+// synchronous DI read so it is safe both pre-thread (startup folder selection) and on the
+// enum thread (matching). Returns false if the file is missing, empty, or unreadable.
+static bool gm_read_last_played(char *out, int out_len) {
+    static GCN_ALIGNED(char) rbuf[MAX_FILE_NAME];
+    memset(rbuf, 0, sizeof(rbuf));
+
+    if (dvd_custom_open(LAST_PLAYED_PATH, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0) return false;
+    file_status_t *status = dvd_custom_status();
+    if (status == NULL || status->result != 0) return false;
+    int r = dvd_read(rbuf, sizeof(rbuf), 0, status->fd);
+    dvd_custom_close(status->fd);
+    if (r != 0) return false;
+
+    rbuf[sizeof(rbuf) - 1] = '\0';
+    if (rbuf[0] == '\0') return false;
+
+    strncpy(out, rbuf, out_len - 1);
+    out[out_len - 1] = '\0';
+    return true;
+}
+
+// Cold-boot startup folder: when a last-played game is saved, return the folder that
+// CONTAINS it, so the menu opens wherever that game lives -- including letter/genre
+// subfolders, not just default_folder. Returns NULL (caller falls back to default_folder)
+// when the option is off, nothing is saved, or the folder can't be opened.
+char *gm_last_played_folder(void) {
+    static char folder_buf[MAX_FILE_NAME];
+    if (!remember_last_game) return NULL;
+    if (!gm_read_last_played(folder_buf, sizeof(folder_buf))) return NULL;
+
+    // strip the filename to get the containing folder
+    char *last_slash = strrchr(folder_buf, '/');
+    if (last_slash == NULL) return NULL;        // malformed (no slash)
+    if (last_slash == folder_buf) {
+        folder_buf[1] = '\0';                   // game at root -> "/"
+    } else {
+        *last_slash = '\0';                     // "/a/b/Game.iso" -> "/a/b"
+    }
+
+    // verify the folder still exists; otherwise fall back to the default
+    if (dvd_custom_open(folder_buf, FILE_ENTRY_TYPE_DIR, 0) != 0) return NULL;
+    dvd_custom_close(dvd_custom_status()->fd);
+    return folder_buf;
+}
+
 // Record the just-launched game's path to the sidecar file. Runs on the menu thread
 // at launch (enum thread is idle by then). A fixed MAX_FILE_NAME record is written so
 // a shorter path never leaves a stale tail from a previous, longer one.
@@ -970,31 +1016,23 @@ void gm_save_last_played(const char *path) {
     dvd_custom_close(status->fd);
 }
 
-// Read the sidecar once at cold boot and, if the saved game lives in the folder we just
-// scanned, stash its index for the menu thread to select. Runs on the enum thread after
-// gm_check_files. One-shot: only the folder shown at boot auto-selects (option A); later
-// navigation is unaffected.
+// Read the sidecar once at cold boot and, if the saved game is in the folder just scanned,
+// stash its index for the menu thread to select. Runs on the enum thread after
+// gm_check_files. With gm_last_played_folder choosing the startup folder, that first scan
+// is normally the game's own folder, so it matches there. One-shot: only the folder shown
+// at boot auto-selects; later navigation is unaffected.
 static void gm_find_last_played() {
     static bool consumed = false;
     if (!remember_last_game || consumed) return;
     consumed = true;
 
-    static GCN_ALIGNED(char) buf[MAX_FILE_NAME];
-    memset(buf, 0, sizeof(buf));
-
-    if (dvd_custom_open(LAST_PLAYED_PATH, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0) return;
-    file_status_t *status = dvd_custom_status();
-    if (status == NULL || status->result != 0) return;
-    dvd_threaded_read(buf, sizeof(buf), 0, status->fd);
-    dvd_custom_close(status->fd);
-
-    buf[sizeof(buf) - 1] = '\0';
-    if (buf[0] == '\0') return;
+    char path[MAX_FILE_NAME];
+    if (!gm_read_last_played(path, sizeof(path))) return;
 
     for (int i = 0; i < gm_entry_count; i++) {
         gm_file_entry_t *e = gm_entry_backing[i];
         if (e == NULL || e->type != GM_FILE_TYPE_GAME) continue;
-        if (strcmp(e->path, buf) == 0) {
+        if (strcmp(e->path, path) == 0) {
             gm_pending_last_played_slot = i;
             break;
         }

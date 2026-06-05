@@ -116,12 +116,13 @@ it, and if the folder can't be opened cubiboot falls back to the root.
 starting on the first game in the list — so on the next boot you just press **Start**.
 
 How it works:
-- When you launch a game, its path is saved to `/cubeboot_last.txt` on the SD card root.
-- At the next cold boot, when the menu opens (at `default_folder`, or the root), if the saved
-  game is **in that startup folder** it is highlighted automatically. Only the startup folder
-  auto-selects — browsing into other folders afterwards behaves normally (top of the list).
-  So if your last game lives in a different folder than the one the menu opens in, it simply
-  won't be pre-selected.
+- When you launch a game, its full path is saved to `/cubeboot_last.txt` on the SD card root.
+- At the next cold boot, the menu **opens directly in the folder that contains that game** —
+  including a letter/genre subfolder, not just `default_folder` — and highlights it, so you
+  just press **Start**. Navigate away normally (press **B** to go up a folder).
+- This takes precedence over `default_folder`: once you've played a game, the menu opens
+  where that game lives. `default_folder` (or the SD root) is used as the **fallback** — on
+  the first boot before any game is played, or if the saved game's folder no longer exists.
 - It's off by default; set `remember_last_game = 1` to enable it.
 
 > **Note:** if the saved game sits **beyond the first 128 banners** of a large folder (the

@@ -114,6 +114,7 @@ extern u32 remember_last_game;
 extern int gm_pending_last_played_slot;
 void gm_save_last_played(const char *path);       // menu thread: record on launch
 void gm_apply_pending_last_played();              // menu thread: jump to pending slot
+char *gm_last_played_folder(void);                // startup: folder containing last game, or NULL
 
 void gm_init_heap();
 void gm_init_thread();
