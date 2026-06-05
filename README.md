@@ -24,6 +24,7 @@ or similar SD adapters.
 
 > [!IMPORTANT]
 > Format your SD card using **exFAT** (not FAT32). Loading files is very slow on FAT32.
+> 
 > Keep .iso and .dol names below 28 characters so the names won't be cropped.
 
 ## What's in a release
