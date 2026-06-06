@@ -51,7 +51,8 @@ jobs:
           cp cubiboot.iso          dist/cubiboot.iso
           # config.ini (byte-exact, no trailing newline)
           # default_folder ships commented out so the menu opens at the SD root by default.
-          printf '[cubeboot]\n\nmenu_grid_type = small_banners\n\n; Folder the menu opens in at startup. Leave commented for the SD card root.\n; default_folder = /games' > dist/config.ini
+          # remember_last_game ships as 0 (off) so the option is visible/discoverable.
+          printf '[cubeboot]\n\nmenu_grid_type = small_banners\n\n; Folder the menu opens in at startup. Leave commented for the SD card root.\n; default_folder = /games\n\n; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).\nremember_last_game = 0' > dist/config.ini
           # EXTRACT_TO_ROOT.zip: extract to the SD card root (ipl.dol + config.ini + apploader.img)
           (cd dist && zip -r ../EXTRACT_TO_ROOT.zip ipl.dol config.ini swiss)
           cp EXTRACT_TO_ROOT.zip dist/EXTRACT_TO_ROOT.zip
