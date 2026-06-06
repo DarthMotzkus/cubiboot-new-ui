@@ -116,19 +116,37 @@ it, and if the folder can't be opened cubiboot falls back to the root.
 starting on the first game in the list — so on the next boot you just press **Start**.
 
 How it works:
-- When you launch a game, its full path is saved to `/cubeboot_last.txt` on the SD card root.
-- At the next cold boot, the menu **opens directly in the folder that contains that game** —
-  including a letter/genre subfolder, not just `default_folder` — and highlights it, so you
-  just press **Start**. Navigate away normally (press **B** to go up a folder).
-- This takes precedence over `default_folder`: once you've played a game, the menu opens
-  where that game lives. `default_folder` (or the SD root) is used as the **fallback** — on
-  the first boot before any game is played, or if the saved game's folder no longer exists.
+- cubeboot boots games by chainloading **Swiss** (`swiss-gc.dol`) with autoload, so Swiss
+  records every launch in **its own recent-games list** (`/swiss/settings/recent.ini`).
+  cubeboot simply **reads** that list back — there is no extra file to write.
+- At the next cold boot, the menu **opens directly in the folder that contains the most
+  recent game** — including a letter/genre subfolder, not just `default_folder` — and
+  highlights it, so you just press **Start**. Navigate away normally (press **B** to go up).
+- **Fast highlight, no stalls:** for that first cold-boot folder, cubeboot does *not* wait for
+  every banner to load before showing it. It scans the folder (fast — just headers), puts the
+  cursor straight on your last game, and a **background loader** fills banners in priority
+  order: your game's on-screen window first (so it appears almost immediately, regardless of
+  folder size), then the rest of the folder while the menu is already usable. Because the
+  loading runs on a background thread, the menu never freezes and — for folders that fit in
+  memory — once it has filled, scrolling is instant (banners stay resident, no re-reads).
+  Pressing **Start** boots the highlighted game even while the rest is still loading.
 - It's off by default; set `remember_last_game = 1` to enable it.
 
-> **Note:** if the saved game sits **beyond the first 128 banners** of a large folder (the
-> on-demand range described above), it is still selected — but its banner loads on demand
-> (a brief read) rather than instantly, since only the first 128 banners are preloaded. For
-> folders of 128 games or fewer, selection is instant.
+> **`remember_last_game` overrides `default_folder`.** When this option is on, the menu
+> **always** opens in the folder of the last game you played — `default_folder` is *ignored*.
+> `default_folder` (or, if it's unset, the SD card root) is only used as a **fallback**: on
+> the very first boot before any game has been played, or if the last game's folder no longer
+> exists. So if you set both, the last-played folder wins every time after your first launch.
+
+> **Required Swiss setting:** this feature reads Swiss's recent list, so Swiss must be
+> maintaining it. In Swiss, open **Settings** and set **Recent List** to **On** (this writes
+> `RecentListLevel=On` in `/swiss/settings/global.ini`). If it's **Off**, no `recent.ini` is
+> kept and cubeboot has nothing to pre-select — it falls back to `default_folder`.
+
+> **Note:** if the last-played folder holds **more games than fit in the banner pool** (>128),
+> they can't all stay resident, so that folder falls back to the sliding window — scrolling
+> reads banners from the card as they come into view. Folders of 128 games or fewer load fully
+> in the background and then scroll instantly. Either way your highlighted game shows first.
 
 ```ini
 [cubeboot]

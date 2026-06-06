@@ -894,11 +894,9 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         if (!emu_can_boot(entry->type))
             return MENU_GAMESELECT_TRANSITION_ID;
 
-        // Remember this game so the next cold boot can pre-select it (no-op unless the
-        // config.ini option is on). Only games carry a stable path/identity to match on.
-        if (entry->type == GM_FILE_TYPE_GAME) {
-            gm_save_last_played(entry->path);
-        }
+        // No save step needed: cubeboot boots games via swiss-gc.dol autoload, so Swiss
+        // records this launch in its own recent list, which we read back at the next cold
+        // boot to pre-select (see gm_read_last_played).
 
         memcpy(&boot_entry, entry, sizeof(gm_file_entry_t));
         if (boot_entry.second != NULL) {
