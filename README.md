@@ -12,7 +12,7 @@ or similar SD adapters.
   default **`small_banners`** — works even without a `config.ini`).
 - Shows the **.iso Filename** in the list, instead of internal game name, and load proper **banners from multi disc games** (example Resident Evil 0 Disc 1 and Disc 2 banner)
 - An optional **"remember last played"** mode (`remember_last_game = 1`): the last game you
-  booted is pre-selected (highlighted) when the menu opens, so you just press **Start** —
+  booted is pre-selected (highlighted) when the menu opens, so you just press **A** —
   no scrolling from the top of the list. See [Configuration](#configuration).
 - A fix for **cold-boot banner corruption**: the banner/icon buffer pools live in a
   low-memory section that PicoBoot doesn't clear on cold boot, so stale "in-use" flags
@@ -113,15 +113,16 @@ it, and if the folder can't be opened cubiboot falls back to the root.
 ### Remember last played game
 
 `remember_last_game = 1` makes the menu **pre-select the last game you booted** instead of
-starting on the first game in the list — so on the next boot you just press **Start**.
+starting on the first game in the list — so on the next boot you just press **A**.
 
 How it works:
+- **Required Swiss setting:** this feature reads Swiss's recent list, so Swiss must be maintaining it. In Swiss, open **Settings** and set **Recent List** to **On** (this writes `RecentListLevel=On` in `/swiss/settings/global.ini`). If it's **Off**, no `recent.ini` is kept and cubeboot has nothing to pre-select — it falls back to `default_folder`.
 - cubeboot boots games by chainloading **Swiss** (`swiss-gc.dol`) with autoload, so Swiss
   records every launch in **its own recent-games list** (`/swiss/settings/recent.ini`).
   cubeboot simply **reads** that list back — there is no extra file to write.
 - At the next cold boot, the menu **opens directly in the folder that contains the most
   recent game** — including a letter/genre subfolder, not just `default_folder` — and
-  highlights it, so you just press **Start**. Navigate away normally (press **B** to go up).
+  highlights it, so you just press **A**. Navigate away normally (press **B** to go up).
 - **Fast highlight, no stalls:** for that first cold-boot folder, cubeboot does *not* wait for
   every banner to load before showing it. It scans the folder (fast — just headers), puts the
   cursor straight on your last game, and a **background loader** fills banners in priority
@@ -129,7 +130,7 @@ How it works:
   folder size), then the rest of the folder while the menu is already usable. Because the
   loading runs on a background thread, the menu never freezes and — for folders that fit in
   memory — once it has filled, scrolling is instant (banners stay resident, no re-reads).
-  Pressing **Start** boots the highlighted game even while the rest is still loading.
+  Pressing **A** select the highlighted game even while the rest is still loading.
 - It's off by default; set `remember_last_game = 1` to enable it.
 
 > **`remember_last_game` overrides `default_folder`.** When this option is on, the menu
@@ -137,11 +138,6 @@ How it works:
 > `default_folder` (or, if it's unset, the SD card root) is only used as a **fallback**: on
 > the very first boot before any game has been played, or if the last game's folder no longer
 > exists. So if you set both, the last-played folder wins every time after your first launch.
-
-> **Required Swiss setting:** this feature reads Swiss's recent list, so Swiss must be
-> maintaining it. In Swiss, open **Settings** and set **Recent List** to **On** (this writes
-> `RecentListLevel=On` in `/swiss/settings/global.ini`). If it's **Off**, no `recent.ini` is
-> kept and cubeboot has nothing to pre-select — it falls back to `default_folder`.
 
 > **Note:** if the last-played folder holds **more games than fit in the banner pool** (>128),
 > they can't all stay resident, so that folder falls back to the sliding window — scrolling
