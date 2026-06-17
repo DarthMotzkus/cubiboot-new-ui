@@ -30,24 +30,23 @@ or similar SD adapters.
 > 
 > Keep .iso and .dol names below 28 characters so the names won't be cropped.
 
-### How banners load in large folders
+### ⚠️ Full Banner layout loading in large folders
 
-To stay cold-boot-safe, banner images are held in a fixed pool in low memory rather than
-streamed through ARAM. That pool holds up to **128 banners**, which sets how a folder loads:
+Banners live in a fixed low-memory pool capped at **128 banner images** (ARAM streaming was dropped — it corrupted banners on load). That cap defines two modes:
 
-- **Up to 128 games in a folder** — every banner is loaded and kept **resident** in memory
-  during the folder scan. Scrolling is instant and nothing is re-read from the card. This is
-  the proven, cold-boot-safe path.
-- **More than 128 games in a folder** — the first 128 fill the pool, then cubiboot switches
-  to an **on-demand sliding window**: banners for off-screen rows are freed and the banners
-  scrolling into view are re-read from the card on the fly. The list still shows every game
-  (the name appears immediately, from the filename); only the *banner image* loads as you
-  reach it. Scrolling such a folder does a little disc I/O, so it's slightly less instant.
+- **Less or equal than 128 files:** all banners stay resident. Scrolling is instant. Safest route for this full banner layout.
+- **More than 128 files:** the pool fills, then switches to an **on-demand sliding window** — off-screen banners are freed and re-read from the card as you scroll. Names still appear instantly; only images load on demand. Slower, but mandatory to avoid running out of memory.
 
-There's no hard limit on how many games a folder can contain — 128 is just the point where
-banner display switches from "all resident" to "load as you scroll". For the snappiest
-experience, keeping a folder at/under ~128 games (or splitting into subfolders) keeps every
-banner resident.
+> **About on-demand mode:** the banner layout gets sluggish and MAY **crash** while scrolling. Switch to the cube layout — set `menu_grid_type = square_icons` in `config.ini` if you have
+a very large list of files in the same folder. The Filename, last-played, and default-folder features still available even on the square_icons layout!
+
+**Tips**
+- Keep folders under 128 files per folder for instant scrolling.
+- Split big libraries into subfolders (eg. genre, favorites, next-to-play).
+- For large libraries that you want to stay in the same folder, use the cube layout.
+
+128 file limit is a fail-safe. It can be raised in code but that risks out-of-memory errors.
+For now this is the limit for full banner layout without trigger on-demand listing.
 
 ## What's in a release
 
