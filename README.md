@@ -41,7 +41,7 @@ Banners live in a fixed low-memory pool capped at **128 banner images** (ARAM st
 a very large list of files in the same folder. The Filename, last-played, and default-folder features still available even on the square_icons layout!
 
 **Tips**
-- Keep folders under 128 files per folder for instant scrolling.
+- Keep under 128 files per folder for instant scrolling.
 - Split big libraries into subfolders (eg. genre, favorites, next-to-play).
 - For large libraries that you want to stay in the same folder, use the cube layout.
 
