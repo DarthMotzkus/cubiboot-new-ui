@@ -143,6 +143,12 @@ How it works:
 > reads banners from the card as they come into view. Folders of 128 games or fewer load fully
 > in the background and then scroll instantly. Either way your highlighted game shows first.
 
+### Change Cube Color in the Boot with `cube_color`
+
+- You can change the Game Cube logo color setting the color in hex code (i recommend this site
+https://www.w3schools.com/colors/colors_hexadecimal.asp)
+- Use `cube_color =` and set the color you want (ex: `cube_color = ff9801` for the spice orange)
+
 ```ini
 [cubeboot]
 
@@ -151,6 +157,9 @@ How it works:
 ;   banners       = large banners, 3 columns
 ;   square_icons  = square icons, 8 columns
 menu_grid_type = small_banners
+
+; Change the boot Cube logo color (code in hex, example orange):
+; cube_color = ff9801
 
 ; Folder the menu opens in at startup. Leave commented for the SD card root.
 ; default_folder = /games
