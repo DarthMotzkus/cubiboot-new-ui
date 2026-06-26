@@ -62,16 +62,17 @@ Each tagged release (`v*`) publishes:
 | `EXTRACT_TO_ROOT.zip` | Everything that lives on the SD card (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`) — just extract it to the root of the card. |
 
 ## Installation Method 1 (Recommended) — [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) with gekkoboot payload
-1. Flash your picoloader OR picoboot with the respective .uf2 from the [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) projects.
+1. Flash your picoboot or picoloader with the respective .uf2 from the [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) projects.
 2. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol) and copy it to the **root** of your SD card.
 3. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on the SD card.
 > This .dol does **not** run in Dolphin even with IPL.bin set!
 
 ## Installation Method 2 — [PicoLoader](https://github.com/makeo/PicoLoader) (flash the Pico directly with cubiboot)
-1. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
-2. Hold down the button on the RP2040 Pico while plugging it into your PC.
-3. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
-4. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on your SD2SP2 / SD Gecko card (along with your games and a `config.ini`).
+1. 1. Flash your picoloader with the .uf2 from the [PicoLoader](https://github.com/makeo/PicoLoader) project.
+2. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
+3. Hold down the button on the RP2040 Pico while plugging it into your PC.
+4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
+5. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on your SD2SP2 / SD Gecko card (along with your games and a `config.ini`).
 > Remember that on this method, you need to open the console and re-flash the pico always you want to update to a newer release of cubiboot.
 > I personally recommend the ipl.dol method, since you can update cubiboot with just change the file in sd card, without anby disassamble.
 
