@@ -61,18 +61,21 @@ Each tagged release (`v*`) publishes:
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** (and other ODEs), branded with the Cubiboot banner. |
 | `EXTRACT_TO_ROOT.zip` | Everything that lives on the SD card (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`) — just extract it to the root of the card. |
 
-## Installation — [PicoLoader](https://github.com/makeo/PicoLoader) (flash the Pico, easiest)
+## Installation Method 1 (Recommended) — [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) with gekkoboot payload
+1. Flash your picoloader OR picoboot with the respective .uf2 from the [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) projects.
+2. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol) and copy it to the **root** of your SD card.
+3. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on the SD card.
+> This .dol does **not** run in Dolphin even with IPL.bin set!
+
+## Installation Method 2 — [PicoLoader](https://github.com/makeo/PicoLoader) (flash the Pico directly with cubiboot)
 1. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
 2. Hold down the button on the RP2040 Pico while plugging it into your PC.
 3. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
 4. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on your SD2SP2 / SD Gecko card (along with your games and a `config.ini`).
+> Remember that on this method, you need to open the console and re-flash the pico always you want to update to a newer release of cubiboot.
+> I personally recommend the ipl.dol method, since you can update cubiboot with just change the file in sd card, without anby disassamble.
 
-## Installation — [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) with gekkoboot payload
-1. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol) and copy it to the **root** of your SD card.
-2. Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest) `.dol`, rename it to `swiss-gc.dol`, and place it on the SD card.
-> This .dol does **not** run in Dolphin even with IPL.bin set!
-
-## Installation — [GC Loader](https://gcloaderhq.com/) (and other ODEs)
+## Installation Method for ODEs — [GC Loader](https://gcloaderhq.com/) (and other ODEs)
 The `cubiboot.iso` is a bootable GameCube disc image that simply *is* the cubiboot
 loader (branded with the Cubiboot banner) — no PicoBoot/modchip needed.
 1. Download [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso) and copy it onto your GC Loader's storage (SD/USB), in the folder you boot images from.
