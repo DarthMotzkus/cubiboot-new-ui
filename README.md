@@ -68,7 +68,7 @@ Each tagged release (`v*`) publishes:
 > This .dol does **not** run in Dolphin even with IPL.bin set!
 
 ## Installation Method 2 — [PicoLoader](https://github.com/makeo/PicoLoader) (flash the Pico directly with cubiboot)
-1. 1. Flash your picoloader with the .uf2 from the [PicoLoader](https://github.com/makeo/PicoLoader) project.
+1. Flash your picoloader with the .uf2 from the [PicoLoader](https://github.com/makeo/PicoLoader) project.
 2. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
 3. Hold down the button on the RP2040 Pico while plugging it into your PC.
 4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
