@@ -113,6 +113,12 @@ it, and if the folder can't be opened cubiboot falls back to the root.
 > system files must still sit at the **SD card root**: `ipl.dol`, `config.ini`, and
 > `swiss/patches/apploader.img`.
 
+> **Tip — launch Swiss from the menu:** drop Swiss's `.dol` *or* `.iso` in any folder and
+> give it a name starting with `swiss` (e.g. `swiss-gc.dol`, `Swiss v0.6r2073.iso`). cubiboot
+> boots a `swiss…`-named image **directly through its own apploader** instead of handing it to
+> Swiss — without that prefix a Swiss disc image just resets to the stock IPL. (This is
+> separate from the required `swiss-gc.dol` engine that must sit at the **SD card root**.)
+
 ### Remember last played game
 
 `remember_last_game = 1` makes the menu **pre-select the last game you booted** instead of
