@@ -171,7 +171,10 @@ extern const void _patches_end;
 
 void chainload_boot_game(gm_file_entry_t *boot_entry, bool passthrough) {
     extern u32 force_swiss_boot;
-    if (!passthrough || force_swiss_boot)
+    // A Swiss disc image must boot via the native apploader path below, NOT through Swiss
+    // autoload (that would be Swiss-loading-Swiss and resets to the stock IPL).
+    bool native_swiss = !passthrough && boot_entry != NULL && is_swiss_image(boot_entry->path);
+    if ((!passthrough || force_swiss_boot) && !native_swiss)
         chainload_swiss_game(boot_entry == NULL ? NULL : boot_entry->path, passthrough);
 
     u32 patchSize = 0x200; // setup patching space

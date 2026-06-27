@@ -57,8 +57,34 @@ bool is_swiss(char* game_path) {
     prefix[5] = '\0';
     if (strcasecmp(prefix, "swiss") != 0)
         return false;
-    
+
     return true;
+}
+
+// Like is_swiss(), but matches a Swiss *disc image* (any extension) by basename prefix.
+// Used to route a Swiss .iso/.gcm through cubeboot's native apploader boot instead of the
+// Swiss autoload path -- autoloading a Swiss disc THROUGH Swiss is Swiss-in-Swiss and
+// resets to the stock IPL. Normal games don't start with "swiss", so they're unaffected.
+bool is_swiss_image(char* game_path) {
+    if (game_path == NULL)
+        return false;
+
+    char* filename = game_path;
+    int len = strlen(game_path);
+    for (int i = len - 1; i >= 0; i--) {
+        if (game_path[i] == '/' || game_path[i] == '\\') {
+            filename = &game_path[i + 1];
+            break;
+        }
+    }
+
+    if (strlen(filename) < 5)
+        return false;
+
+    char prefix[6];
+    memcpy(prefix, filename, 5);
+    prefix[5] = '\0';
+    return strcasecmp(prefix, "swiss") == 0;
 }
 
 void chainload_swiss_game(char* game_path, bool passthrough) {
@@ -93,7 +119,7 @@ void chainload_swiss_game(char* game_path, bool passthrough) {
     const char* arg_list[] = {
         "swiss-gc.dol",
         autoload_arg,
-        "AutoBoot=Yes"
+        "AutoBoot=Yes",
         "BS2Boot=No",
         "Prefer Clean Boot=No",
         igr_type,

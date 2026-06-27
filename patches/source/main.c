@@ -564,7 +564,9 @@ __attribute_used__ void bs2start() {
     } else {
         custom_OSReport("Booting ISO\n");
 
-        if (!force_swiss_boot) {
+        if (!force_swiss_boot || is_swiss_image(boot_path)) {
+            // Swiss disc images always take the native apploader path (see chainload_boot_game),
+            // even when force_swiss_boot is on -- routing them through Swiss resets to the IPL.
             custom_OSReport("Booting ISO (custom apploader)\n");
             chainload_boot_game(&boot_entry, false);
         } else {
