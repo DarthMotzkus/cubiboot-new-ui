@@ -58,7 +58,7 @@ Each tagged release (`v*`) publishes:
 | `ipl.dol` | The cubiboot loader (a GameCube IPL replacement). Boot it via PicoBoot/PicoLoader + gekkoboot. |
 | `apploader.img` | The Swiss **In-Game-Reset** redirect. It embeds *this build's* loader, so pressing the reset combo in a game returns to this cubiboot menu. Goes in `SD:/swiss/patches/`. |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the SD card root. |
-| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** (and other ODEs), branded with the Cubiboot banner. |
+| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** (and other ODEs), branded with the Cubiboot banner. (Does not have support to play games .iso from the loader sd card) |
 | `EXTRACT_TO_ROOT.zip` | Everything that lives on the SD card (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`) — just extract it to the root of the card. |
 
 ## Installation Method 1 (Recommended) — [PicoBoot](https://github.com/webhdx/PicoBoot) / [PicoLoader](https://github.com/makeo/PicoLoader) with gekkoboot payload
@@ -85,6 +85,7 @@ loader (branded with the Cubiboot banner) — no PicoBoot/modchip needed.
    so set that card up as usual: copy your games and a `config.ini` to it (see
    [Configuration](#configuration)). Download the [latest Swiss](https://github.com/emukidid/swiss-gc/releases/latest)
    `.dol`, rename it to `swiss-gc.dol`, and place it on the SD card.
+4. It can't load games .iso from GC Loader or ODE SD Card, you need another SD Card Reader (SD2SP2 / SD Gecko)
 
 > The `.iso` is for booting the loader on a GC Loader; it does **not** run in Dolphin, even with IPL.bin set!
 
