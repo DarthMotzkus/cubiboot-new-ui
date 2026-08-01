@@ -10,8 +10,6 @@ A fork of [makeo/cubiboot](https://github.com/makeo/cubiboot) — itself a fork 
 [cubeboot](https://github.com/OffBroadway/cubeboot) by [TeamOffBroadway](https://github.com/OffBroadway) —
 with support for SD2SP2, SD Gecko and similar SD adapters.
 
-**English** · [Español](docs/README_es.md)
-
 </div>
 
 ---
@@ -327,7 +325,7 @@ The 128 limit is a fail-safe. It can be raised in code, but that risks out-of-me
 ## Known limitations
 
 - File loading is slow on FAT32 — use **exFAT**.
-- Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin**, even with an IPL.bin set.
+- Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin Emulator**, even with an IPL.bin set.
 - Inherited from upstream: `cube_logo` and `button_*` don't work (use gekkoboot for
   held-button programs).
 - The banner layouts may crash in folders over 128 files — see
