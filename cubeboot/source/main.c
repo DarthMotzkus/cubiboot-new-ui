@@ -39,6 +39,8 @@
 #include "flippy_sync.h"
 #include "sram.h"
 
+#include "emu/tweaks.h"
+
 #define DEFAULT_FIFO_SIZE (256 * 1024)
 
 #define STUB_ADDR 0x80001800
@@ -169,6 +171,11 @@ int main(int argc, char **argv) {
     // setup settings
     iprintf("Loading settings\n");
     load_settings();
+
+    // config.ini is read off the first card we find, which may well be the ODE's
+    // own SD. Now that we know what the user asked for, settle which volume the
+    // rest of the boot -- IPL dump included -- and the menu will read from.
+    emu_apply_ode_preference(settings.load_from_ode_sd);
 
     // fix sram
     set_sram_swiss(true);

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <malloc.h>
 
 #include "sd.h"
@@ -11,6 +12,26 @@
 #include "settings.h"
 
 settings_t settings;
+
+// Accepts the on/off spelling this option is documented with, as well as the
+// 1/0 style the older settings use.
+static u32 ini_get_bool(ini_t *conf, const char *key, u32 fallback) {
+    const char *raw = ini_get(conf, "cubeboot", key);
+    if (raw == NULL) return fallback;
+
+    if (strcasecmp(raw, "on") == 0 || strcasecmp(raw, "true") == 0 ||
+        strcasecmp(raw, "yes") == 0 || strcmp(raw, "1") == 0) {
+        return 1;
+    }
+
+    if (strcasecmp(raw, "off") == 0 || strcasecmp(raw, "false") == 0 ||
+        strcasecmp(raw, "no") == 0 || strcmp(raw, "0") == 0) {
+        return 0;
+    }
+
+    iprintf("Ignoring unreadable %s = %s\n", key, raw);
+    return fallback;
+}
 
 char *buttons_names[] = {
     "left",  // LEFT	0x0001
@@ -149,6 +170,10 @@ void load_settings() {
         iprintf("Found remember_last_game = %d\n", remember_last_game);
         settings.remember_last_game = remember_last_game;
     }
+
+    // read games straight off the SD card inside a GC Loader style ODE
+    settings.load_from_ode_sd = ini_get_bool(conf, "load_from_ode_sd", 0);
+    iprintf("Found load_from_ode_sd = %d\n", settings.load_from_ode_sd);
 
     // button presses
     for (int i = 0; i < (sizeof(buttons_names) / sizeof(char *)); i++) {

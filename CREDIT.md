@@ -40,8 +40,8 @@
 `cubeboot/source/dolphin_dvd.h` credit to FRAY <br/>
 `cubeboot/source/gc_dvd.c` credit to wii64 <br/>
 `cubeboot/source/gc_dvd.h` credit to wii64 <br/>
-`cubeboot/source/gcode.c` credit to libogc2 <br/>
-`cubeboot/source/gcode.h` credit to libogc2 <br/>
+`cubeboot/source/emu/gcode.c` credit to libogc2 <br/>
+`cubeboot/source/emu/gcode.h` credit to libogc2 <br/>
 `cubeboot/source/lwp_queue.inl` credit to libogc <br/>
 `cubeboot/source/pcg_basic.c` credit to pcg-random.org <br/>
 `cubeboot/source/pcg_basic.h` credit to pcg-random.org <br/>

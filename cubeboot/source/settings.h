@@ -14,6 +14,7 @@ typedef struct settings {
     u32 progressive_enabled;
     u32 preboot_delay_ms;
     u32 postboot_delay_ms;
+    u32 load_from_ode_sd;
     char *default_program;
     char *boot_buttons[MAX_BUTTONS];
     menu_grid_type_t menu_grid_type;
