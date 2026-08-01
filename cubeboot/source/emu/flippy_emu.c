@@ -38,13 +38,46 @@ const char* emu_get_device() {
 }
 
 #ifndef IPL_CODE
-// Cleared once config.ini has told us load_from_ode_sd is off, so the bootstrap
-// fallback below cannot quietly pick the ODE back up on a later mount.
-static bool ode_sd_allowed = true;
+// The file whose presence decides which device the loader reads its settings from.
+#define EMU_CONFIG_PATH "/config.ini"
+
+// One order for the whole loader: it is where the bootstrap looks for config.ini, and it is
+// what device_order falls back to when config.ini does not set it. Card readers first, the
+// ODE last, so a console without one only reaches the drive-interface inquiry once
+// everything else has been ruled out.
+#define EMU_DEFAULT_DEVICE_ORDER "sdc, sdb, sda, gcldr"
 
 static void emu_mount_path(int device, char* path) {
 	memcpy(path, device_prio[device], strlen(device_prio[device]) + 1);
 	strcat(path, ":");
+}
+
+static int emu_find_device(const char* name, int len) {
+	int count = sizeof(device_prio) / sizeof(device_prio[0]);
+	for (int i = 0; i < count; i++) {
+		if ((int)strlen(device_prio[i]) == len && strncasecmp(device_prio[i], name, len) == 0)
+			return i;
+	}
+
+	iprintf("device_order: ignoring unknown device '%.*s'\n", len, name);
+	return -1;
+}
+
+// Walks a comma or space separated device list. Writes the next device index into *device
+// (-1 when the name is not one we know) and returns where to resume, or NULL at the end.
+static const char* emu_next_device(const char* p, int* device) {
+	while (*p == ' ' || *p == '\t' || *p == ',')
+		p++;
+
+	if (*p == '\0')
+		return NULL;
+
+	const char* start = p;
+	while (*p != '\0' && *p != ' ' && *p != '\t' && *p != ',')
+		p++;
+
+	*device = emu_find_device(start, (int)(p - start));
+	return p;
 }
 
 static bool emu_try_mount(int device) {
@@ -61,6 +94,41 @@ static bool emu_try_mount(int device) {
 	return true;
 }
 
+static void emu_drop_mount(int device) {
+	static char mount_path[256];
+	emu_mount_path(device, mount_path);
+	f_mount(NULL, mount_path, 0);
+}
+
+// Mounts `device` and reports whether it actually carries a config.ini, leaving it
+// unmounted when it does not.
+//
+// Looking only at the first device that *mounts* is what made this confusing: with a card
+// reader and an ODE both present, whichever mounted first was the only one ever consulted,
+// so a config.ini sitting on the other card was invisible -- a console with an empty SD2SP2
+// and the config on the ODE booted with default settings and no games. Moving the file to
+// the other card only moved the failure. Asking every device removes the guesswork: the
+// file is found wherever the user put it.
+static bool emu_try_mount_with_config(int device) {
+	if (!emu_try_mount(device))
+		return false;
+
+	char probe_path[256 + sizeof(EMU_CONFIG_PATH)];
+	emu_mount_path(device, probe_path);
+	strcat(probe_path, EMU_CONFIG_PATH);
+
+	FIL probe;
+	if (f_open(&probe, probe_path, FA_READ) != FR_OK) {
+		iprintf("no %s on %s\n", EMU_CONFIG_PATH, device_prio[device]);
+		emu_drop_mount(device);
+		return false;
+	}
+
+	f_close(&probe);
+	iprintf("found %s on %s\n", EMU_CONFIG_PATH, device_prio[device]);
+	return true;
+}
+
 static void emu_unmount_current() {
 	if (emu_sd_device < 0)
 		return;
@@ -74,41 +142,47 @@ static void emu_unmount_current() {
 	emu_sd_device = -1;
 }
 
-// Called once config.ini has been parsed, mirroring [cubeboot] load_from_ode_sd.
+// Called once config.ini has been parsed, with the raw [cubeboot] device_order value.
 //
-// on  -> the SD card inside the ODE becomes the volume everything after this
-//        point is read from: the IPL dump, swiss-gc.dol, banners and the games
-//        the menu lists.
-// off -> the patched BIOS never gets handed the ODE volume, which is how
-//        cubiboot has always behaved.
+// The list names FatFs volumes -- sdc (SD2SP2), sdb (memory card slot B), sda (slot A) and
+// gcldr (the card inside a GC Loader style ODE) -- and the first one that mounts becomes the
+// volume everything after this point is read from: the IPL dump, swiss-gc.dol, banners and
+// the games the menu lists. Leaving a device out of the list is how you keep cubiboot off
+// it; there is no separate on/off switch.
 //
-// The bootstrap mount in flippy_emu_mount() tries the ODE last on purpose:
-// config.ini has to be readable *before* we know whether this setting is even
-// on, and on an ODE-only console that card is the only place it can live.
-void emu_apply_ode_preference(bool enabled) {
-	if (!enabled) {
-		ode_sd_allowed = false;
-		if (emu_sd_device == EMU_DEV_GCLDR) {
-			iprintf("load_from_ode_sd is off, releasing the ODE SD\n");
-			emu_unmount_current();
-		}
-		return;
-	}
-
-	if (emu_sd_device == EMU_DEV_GCLDR)
+// A NULL or empty value means config.ini did not ask for anything, and the bootstrap already
+// settled on a device using the same default order, so there is nothing to redo.
+void emu_apply_device_order(const char* order) {
+	if (order == NULL || *order == '\0')
 		return;
 
 	int previous = emu_sd_device;
-	emu_unmount_current();
+	bool moved = false;
+	int device;
 
-	if (emu_try_mount(EMU_DEV_GCLDR)) {
-		emu_sd_device = EMU_DEV_GCLDR;
-		return;
+	for (const char* p = order; (p = emu_next_device(p, &device)) != NULL; ) {
+		if (device < 0)
+			continue;
+
+		// Already sitting on the first device the user asked for.
+		if (!moved && device == previous)
+			return;
+
+		if (!moved) {
+			emu_unmount_current();
+			moved = true;
+		}
+
+		if (emu_try_mount(device)) {
+			emu_sd_device = device;
+			return;
+		}
 	}
 
-	// No ODE answered. Fall back to whatever we were already on rather than
-	// booting into an empty menu.
-	iprintf("load_from_ode_sd is on but no ODE SD was found\n");
+	// Nothing in the list mounted. Fall back to whatever the bootstrap had rather than
+	// booting into an empty menu over one bad line in config.ini.
+	iprintf("device_order: nothing usable, keeping %s\n",
+	        previous >= 0 ? device_prio[previous] : "(none)");
 	if (previous >= 0 && emu_try_mount(previous))
 		emu_sd_device = previous;
 }
@@ -137,23 +211,26 @@ bool flippy_emu_mount() {
 	#else
 
 	if (emu_sd_device < 0) {
-		// EXI card readers first. The ODE's own SD is the last resort so that a
-		// console with no card reader at all can still bootstrap its config.ini
-		// off it; emu_apply_ode_preference() then decides whether it is kept.
-		int num_devices = sizeof(device_prio) / sizeof(device_prio[0]);
-		for (int i = 0; i < num_devices; i++) {
-			if (i == EMU_DEV_GCLDR)
-				continue;
+		int device;
 
-			if (emu_try_mount(i)) {
-				emu_sd_device = i;
+		// Two passes over the default order. The first takes the device that actually
+		// holds a config.ini, so the file is honoured wherever the user put it -- the
+		// order only breaks a tie between two cards that both have one. device_order
+		// cannot help here: it lives inside the file being looked for.
+		for (const char* p = EMU_DEFAULT_DEVICE_ORDER; (p = emu_next_device(p, &device)) != NULL; ) {
+			if (device >= 0 && emu_try_mount_with_config(device)) {
+				emu_sd_device = device;
 				return true;
 			}
 		}
 
-		if (ode_sd_allowed && emu_try_mount(EMU_DEV_GCLDR)) {
-			emu_sd_device = EMU_DEV_GCLDR;
-			return true;
+		// Nothing carries a config.ini. Settle for the first device that mounts, so a card
+		// holding games but no config still works.
+		for (const char* p = EMU_DEFAULT_DEVICE_ORDER; (p = emu_next_device(p, &device)) != NULL; ) {
+			if (device >= 0 && emu_try_mount(device)) {
+				emu_sd_device = device;
+				return true;
+			}
 		}
 
 		return false;

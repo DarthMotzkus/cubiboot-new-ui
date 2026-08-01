@@ -19,7 +19,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | G | `default_folder` | `patches/source/main.c` |
 | H | `remember_last_game` | `patches/source/games.c`, `main.c` |
 | I | Booting a Swiss disc image natively | `cubeboot/source/emu/loader.c` |
-| J | Games from the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
+| J | Storage selection + the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -162,12 +162,12 @@ chainloader itself.
 Normal games don't start with `swiss`, so nothing else is affected. This is separate from the
 `swiss-gc.dol` engine that has to sit at the card root.
 
-## J. Games from the ODE's SD card  (`load_from_ode_sd`)
+## J. Storage selection and the ODE's SD card  (`device_order`)
 
-Reads games straight off the SD card inside a GC Loader style ODE, so no EXI card reader is
-needed. Reverse-engineered from a `cubiboot-gcldr.iso` build and cross-checked against
-libogc2's `DVD_LowGcodeRead`; the resulting `gcode_read_aligned` compiles instruction-for-
-instruction identical to the reference build's.
+Lets cubiboot read games straight off the SD card inside a GC Loader style ODE, so no EXI
+card reader is needed. The driver was reverse-engineered from a `cubiboot-gcldr.iso` build
+and cross-checked against libogc2's `DVD_LowGcodeRead`; the resulting `gcode_read_aligned`
+compiles instruction-for-instruction identical to the reference build's.
 
 - **`cubeboot/source/emu/gcode.c` + `.h`** (new) — block driver over the drive interface.
   Detection is the OEM inquiry `0x12000000` checking `rel_date == 0x20196c64`; reads are
@@ -175,20 +175,37 @@ instruction identical to the reference build's.
   under `emu/` so it compiles into both the loader and the injected menu.
 - **`emu/ffs/diskio.c`** — `DEV_GCLDR` (pdrv 7) wired into `disk_initialize`/`read`/`write`/
   `status`/`ioctl`/`shutdown`.
-- **`emu/flippy_emu.c`** — `device_prio[]` gains `"gcldr"` at index 0.
-  `emu_apply_ode_preference()` settles the volume after `config.ini` is parsed; the bootstrap
-  mount tries EXI readers first and the ODE last, because `config.ini` has to be readable
-  before the setting is known. `off` releases the volume behind a latch so a later lazy mount
-  can't pick it back up.
-- **`cubeboot/source/settings.{c,h}` + `main.c`** — `load_from_ode_sd`, parsed by a small
-  `ini_get_bool` that accepts `on`/`off`, `1`/`0`, `true`/`false`, `yes`/`no`. Default off, so
-  existing setups are untouched.
-- **`.github/workflows/ci.yml`** — the generated `config.ini` ships the key (set to `off`) so
-  it is discoverable.
+- **`emu/flippy_emu.c`** — `device_prio[]` gains `"gcldr"`, and `EMU_DEFAULT_DEVICE_ORDER`
+  (`"sdc, sdb, sda, gcldr"`) becomes the single order the loader works from.
+  `emu_apply_device_order()` walks the list from `config.ini` and mounts the first entry that
+  works.
+- **`cubeboot/source/settings.{c,h}` + `main.c`** — `device_order`, kept as a raw string so
+  the device list stays owned by `flippy_emu.c`.
+- **`.github/workflows/ci.yml`** — the generated `config.ini` ships the key commented, so it
+  is discoverable without changing behaviour.
 
 Two deliberate departures from the recovered implementation: DI transfers are bounded by a
 timeout instead of spinning on `TSTART` forever, and the probe stops as soon as a real optical
-drive answers rather than burning 40 retries.
+drive answers — or as soon as nothing answers at all — rather than burning 40 retries.
+
+### Finding `config.ini`
+
+The first cut of this shipped a `load_from_ode_sd` boolean, and it did not survive contact
+with hardware. `load_settings()` runs once, against whatever volume happens to be mounted, and
+the bootstrap took the first device that *mounted* — so on a console with both an SD2SP2 and a
+GC Loader, the card reader always won and a `config.ini` on the ODE was never opened. A tester
+with the config on the ODE booted to default settings and no games; it only worked once the
+SD2SP2 was physically removed. Moving the file to the other card just moved the failure, and
+inverting the probe order only swapped which user it hit.
+
+The fix is to search: `flippy_emu_mount()` runs the default order twice, first taking the
+device that actually carries a `/config.ini`, then falling back to the first that merely
+mounts. `device_order` cannot help here — it lives inside the file being looked for.
+
+`load_from_ode_sd` was then dropped rather than kept as an alias. It never appeared in a
+tagged release, so there was nothing to preserve, and a list expresses everything the boolean
+did plus what it could not: excluding a card reader, reordering slots, or naming a device that
+does not exist yet.
 
 Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
 Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered.

@@ -20,7 +20,9 @@ typedef struct settings {
     u32 progressive_enabled;
     u32 preboot_delay_ms;
     u32 postboot_delay_ms;
-    u32 load_from_ode_sd;
+    // Raw [cubeboot] device_order value: FatFs volume names, in the order the loader
+    // should try them. Parsed by emu_apply_device_order(), which owns the device list.
+    char *device_order;
     char *default_program;
     char *boot_buttons[MAX_BUTTONS];
     menu_grid_type_t menu_grid_type;

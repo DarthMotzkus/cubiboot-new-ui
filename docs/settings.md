@@ -10,7 +10,7 @@ menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
 cube_logo = path.png    # path to a 352x40px PNG image
 force_progressive = 1   # enables progressive scan
-load_from_ode_sd = off  # read games off the SD card inside a GC Loader / ODE
+device_order = sdc, sdb, sda, gcldr   # storage to read games from, most wanted first
 ```
 
 ## Colors
@@ -33,9 +33,11 @@ key, which wins when set.
 Neither derivation is a straight fill:
 
 - **Grid cubes.** The IPL stores four shades per cube (bright / dimmed, each with a selected
-  variant). `menu_cube_color` re-tints that whole set — hue rotated, saturation and lightness
-  scaled by the ratio between your color and the stock bright shade — so the selected cube
-  still reads as selected. The stock shades themselves are shared with the memory card menu
+  variant). `menu_cube_color` re-tints that whole set — every shade takes your hue, with
+  saturation and lightness scaled by the ratio between your color and the stock bright shade
+  — so the selected cube still reads as selected. The hue is assigned, not rotated: the IPL's
+  palettes are not four shades of one hue (stock purple spans 265.7° to 310°), so rotating
+  them all by one amount dragged the outliers elsewhere and the selected tile came out lime. The stock shades themselves are shared with the memory card menu
   and are never written to; the recolored copies live in the patch's own `.data`.
   `menu_cube_color` also accepts a stock palette name (`blue`, `green`, `yellow`, `orange`,
   `red`, `purple` — the default), which uses Nintendo's shades verbatim. Naming a palette and
@@ -43,9 +45,11 @@ Neither derivation is a straight fill:
 - **Info panel.** One key drives both ends of its gradient. Stock is top `6e00b3`
   (H=196 S=255 L=89) fading to bottom `800057` (H=226 S=255 L=64): saturation holds, lightness
   drops to ~72%, hue swings +30 (about +42°, purple → magenta). `menu_box_color` sets the
-  bright end and the far end reuses that lightness falloff. The hue swing is deliberately
-  dropped — rotating it onto another hue turns the gradient into a clash, with orange fading
-  to lime.
+  bright end; the far end keeps the hue and saturation and drops to **45%** lightness. The hue
+  swing is deliberately dropped — rotating it onto another hue turns the gradient into a
+  clash, with orange fading to lime — and the falloff is steeper than stock's to compensate,
+  because lightness now carries alone what stock split between two cues. At stock's own ~72%
+  a grey theme read as a solid panel on hardware.
 
 - **The big "PRESS START".** Drawn by the stock BIOS's `draw_start_anim`, which takes only an
   alpha byte — there is no color parameter. Disassembling it on all seven dumps shows it loops
@@ -76,27 +80,44 @@ The parsing lives in [`cubeboot/source/settings.c`](../cubeboot/source/settings.
 (`ini_get_color`), the derivations in
 [`patches/source/theme.c`](../patches/source/theme.c).
 
-## `load_from_ode_sd`
+## `device_order`
 
-`on` / `off` (also accepts `1`/`0`, `true`/`false`, `yes`/`no`). Defaults to `off`.
+Which storage cubiboot reads from, most wanted first. The first entry that mounts becomes
+the volume everything comes off: the IPL dump, `swiss-gc.dol`, banners and the games.
 
-By default cubiboot only reads from an EXI card reader (SD2SP2, SD Gecko,
-Slot A/B). With `load_from_ode_sd = on` it will instead use the SD card that
-sits **inside** the ODE — a [GC Loader](https://gcloaderhq.com/) or anything
-else that answers the same drive commands — so the menu can list and boot the
-games already on it, with no second card reader.
+| Name | Where it is |
+|------|-------------|
+| `sdc` | Serial Port 2 — an **SD2SP2** |
+| `sdb` | Memory card **slot B** — an SD Gecko |
+| `sda` | Memory card **slot A** — an SD Gecko |
+| `gcldr` | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
+
+Separate the names with commas or spaces; case does not matter. Unknown names are reported
+and skipped. Default when the key is absent:
+
+```ini
+device_order = sdc, sdb, sda, gcldr
+```
+
+Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
+A console with both an SD2SP2 and a GC Loader, whose games live on the ODE, writes:
+
+```ini
+device_order = gcldr
+```
 
 Two things to know:
 
-- **One volume at a time.** When this is on, everything cubiboot reads comes
-  off the ODE's card: the IPL dump, `swiss-gc.dol`, banners and the games. Keep
-  them together on that card.
-- **Where `config.ini` is read from.** cubiboot has to read `config.ini` before
-  it can know this setting, so it mounts the first card it finds and tries
-  EXI card readers first, the ODE's card last. On a console with no card reader
-  that is the ODE's card, which is exactly where you want `config.ini` to be.
-  If you have *both* a card reader and an ODE, put `config.ini` on the card
-  reader (that is what gets read) and turn this on to move everything else to
-  the ODE's card.
+- **One volume at a time.** cubiboot does not merge cards. Whichever entry wins holds
+  everything.
+- **`config.ini` can live on any of them.** cubiboot looks for it on every device it can
+  mount, in the default order above, and reads the first one that actually has the file.
+  It has to work that way, because `device_order` lives *inside* the file being looked
+  for. If two cards both carry a `config.ini`, the default order breaks the tie.
 
-The ODE's card is mounted read-only.
+If nothing in the list mounts, cubiboot keeps whatever the search settled on rather than
+booting into an empty menu over one bad line.
+
+The ODE's card is mounted read-only. A console without an ODE pays one drive inquiry per
+boot for the `gcldr` entry, which gives up as soon as a real optical drive answers, or as
+soon as nothing answers at all.

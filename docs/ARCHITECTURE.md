@@ -73,8 +73,8 @@ lays out one contiguous self-contained blob at a fixed address.
    The ELF is linked into the loader as a binary blob (`data/patches.elf` → `patches_elf.h`).
 3. **`load_settings()`** ([settings.c](../cubeboot/source/settings.c)) reads `/config.ini`.
    This is the first file access, so it is what triggers the storage device probe.
-4. **`emu_apply_ode_preference()`** settles which volume the rest of the boot uses, now that
-   `load_from_ode_sd` is known. See [the storage stack](#the-shared-storage-stack).
+4. **`emu_apply_device_order()`** settles which volume the rest of the boot uses, now that
+   `device_order` is known. See [the storage stack](#the-shared-storage-stack).
 5. **`load_ipl()`** ([ipl.c](../cubeboot/source/ipl.c)) reads `/ipl.bin` if present, else
    dumps the console's own ROM. It descrambles from `0x100` to the SJIS font, CRCs the result
    to identify the revision, and copies BS2 to `0x81300000`.
@@ -262,11 +262,23 @@ the ODE. The volume strings come from `ffconf.h` `FF_VOLUME_STRS`.
 `device_prio[] = { "gcldr", "sdc", "sdb", "sda" }` in
 [flippy_emu.c](../cubeboot/source/emu/flippy_emu.c).
 
-The loader probes EXI readers first and the ODE last, because `config.ini` has to be readable
-before `load_from_ode_sd` can be known — and on an ODE-only console that card is the only
-place it can live. Once the setting is parsed, `emu_apply_ode_preference()` either switches to
-the ODE volume (`on`) or releases it (`off`, latched so a later lazy mount can't pick it back
-up).
+The array leads with the ODE because the IPL patches index straight into it, but the loader
+works from `EMU_DEFAULT_DEVICE_ORDER` — `"sdc, sdb, sda, gcldr"` — so a console without an ODE
+only reaches the drive-interface inquiry after everything else has been ruled out. That one
+string is both the bootstrap's search order and the default for `device_order`.
+
+The bootstrap runs that order **twice**. The first pass takes the device that actually holds a
+`/config.ini`; only if none does, a second pass settles for the first device that merely
+mounts. That two-pass shape is the fix for a real failure: `load_settings()` runs once, against
+whatever volume is mounted at that moment, so consulting only the first device that *mounted*
+meant a `config.ini` on the other card was never opened. A console with an empty SD2SP2 and the
+config on the ODE booted with default settings and no games, and moving the file to the other
+card only moved the failure. Searching for the file removes the guesswork entirely.
+
+Once the settings are parsed, `emu_apply_device_order()` walks the `device_order` list from
+config.ini and mounts the first entry that works. There is no on/off switch for any device:
+leaving a name out of the list is what keeps cubiboot off it. An empty or absent value means
+the bootstrap's choice already followed the same default order, so nothing is redone.
 
 The menu never probes: it mounts exactly `device_prio[emu_sd_device]`.
 

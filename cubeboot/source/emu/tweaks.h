@@ -24,7 +24,7 @@ void bnr_cache_put(u8 game_id[6], u8 disc_num, u8 disc_ver, BNR* bnr);
 
 #else
 void ensure_ipl_loaded(uint8_t* bios_buffer);
-void emu_apply_ode_preference(bool enabled);
+void emu_apply_device_order(const char* order);
 #endif
 
 #ifdef __cplusplus

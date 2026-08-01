@@ -113,24 +113,31 @@ bool gcode_sd_init(void) {
 
         _di_regs[DI_CR] = (DI_CR_DMA | DI_CR_TSTART); // start transfer
 
-        if (di_wait()) {
-            DCInvalidateRange(info, sizeof(info));
-
-            if (!(_di_regs[DI_SR] & DI_SR_DEINT)) {
-                u32 rel_date = *(u32*)&info[4];
-                if (rel_date == GCODE_INQUIRY_REL_DATE) {
-                    has_gcode = 1;
-                    return true;
-                }
-
-                // Something answered and it isn't a GC Loader -- a real optical
-                // drive, or an ODE without the raw storage command. Retrying
-                // only costs boot time.
-                if (rel_date != 0)
-                    break;
-            }
+        if (!di_wait()) {
+            // The transfer never completed, so nothing is driving the interface at all --
+            // no ODE, no optical drive. Every retry would buy another full timeout, so
+            // stop here instead. This is the path a driveless console takes, and the
+            // probe now runs on every boot, so it has to be cheap.
+            break;
         }
 
+        DCInvalidateRange(info, sizeof(info));
+
+        if (!(_di_regs[DI_SR] & DI_SR_DEINT)) {
+            u32 rel_date = *(u32*)&info[4];
+            if (rel_date == GCODE_INQUIRY_REL_DATE) {
+                has_gcode = 1;
+                return true;
+            }
+
+            // Something answered and it isn't a GC Loader -- a real optical drive, or an
+            // ODE without the raw storage command. Retrying only costs boot time.
+            if (rel_date != 0)
+                break;
+        }
+
+        // Answered with an error or with nothing useful: the drive may still be spinning
+        // up, so this is the one case worth retrying.
         udelay(GCODE_PROBE_DELAY);
     }
 

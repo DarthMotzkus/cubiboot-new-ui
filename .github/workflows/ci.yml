@@ -51,9 +51,9 @@ jobs:
           cp cubiboot.iso          dist/cubiboot.iso
           # config.ini (byte-exact, no trailing newline)
           # default_folder ships commented out so the menu opens at the SD root by default.
-          # remember_last_game and load_from_ode_sd ship off so the options are
+          # remember_last_game ships off and device_order ships commented, so both are
           # visible/discoverable without changing the default behaviour.
-          printf '[cubeboot]\n\nmenu_grid_type = small_banners\n\n; Folder the menu opens in at startup. Leave commented for the SD card root.\n; default_folder = /games\n\n; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).\nremember_last_game = 0\n\n; Read games off the SD card inside a GC Loader / ODE (on = yes, off = no).\nload_from_ode_sd = off' > dist/config.ini
+          printf '[cubeboot]\n\nmenu_grid_type = small_banners\n\n; Folder the menu opens in at startup. Leave commented for the SD card root.\n; default_folder = /games\n\n; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).\nremember_last_game = 0\n\n; Which storage to read games from, most wanted first: sdc (SD2SP2), sdb (memory\n; card slot B), sda (slot A), gcldr (the card inside a GC Loader / ODE).\n; device_order = sdc, sdb, sda, gcldr\n\n; Colors. Hex RGB, or `random`. theme_color paints everything; the keys under it\n; override it per item. Leave them all commented for the stock look.\n; theme_color = ff9801\n; cube_color = ff9801        ; boot logo only\n; menu_cube_color = 8b5cd6   ; grid cubes (or blue|green|yellow|orange|red|purple)\n; menu_box_color = 6e00b3    ; info panel under the game list\n; menu_start_color = ff2d55  ; the big block PRESS START' > dist/config.ini
           # EXTRACT_TO_ROOT.zip: extract to the SD card root (ipl.dol + config.ini + apploader.img)
           (cd dist && zip -r ../EXTRACT_TO_ROOT.zip ipl.dol config.ini swiss)
           cp EXTRACT_TO_ROOT.zip dist/EXTRACT_TO_ROOT.zip

@@ -13,26 +13,6 @@
 
 settings_t settings;
 
-// Accepts the on/off spelling this option is documented with, as well as the
-// 1/0 style the older settings use.
-static u32 ini_get_bool(ini_t *conf, const char *key, u32 fallback) {
-    const char *raw = ini_get(conf, "cubeboot", key);
-    if (raw == NULL) return fallback;
-
-    if (strcasecmp(raw, "on") == 0 || strcasecmp(raw, "true") == 0 ||
-        strcasecmp(raw, "yes") == 0 || strcmp(raw, "1") == 0) {
-        return 1;
-    }
-
-    if (strcasecmp(raw, "off") == 0 || strcasecmp(raw, "false") == 0 ||
-        strcasecmp(raw, "no") == 0 || strcmp(raw, "0") == 0) {
-        return 0;
-    }
-
-    iprintf("Ignoring unreadable %s = %s\n", key, raw);
-    return fallback;
-}
-
 // The six stock save-icon shades baked into the IPL, in the order of its own color table
 // (SAVE_COLOR_* in patches/source/menu.h). Only menu_cube_color accepts these -- they are
 // whole 4-shade palettes, not single colors.
@@ -218,9 +198,12 @@ void load_settings() {
         settings.remember_last_game = remember_last_game;
     }
 
-    // read games straight off the SD card inside a GC Loader style ODE
-    settings.load_from_ode_sd = ini_get_bool(conf, "load_from_ode_sd", 0);
-    iprintf("Found load_from_ode_sd = %d\n", settings.load_from_ode_sd);
+    // which storage the loader and the menu read from, most wanted first
+    const char *device_order = ini_get(conf, "cubeboot", "device_order");
+    if (device_order != NULL) {
+        iprintf("Found device_order = %s\n", device_order);
+        settings.device_order = (char*)device_order;
+    }
 
     // button presses
     for (int i = 0; i < (sizeof(buttons_names) / sizeof(char *)); i++) {

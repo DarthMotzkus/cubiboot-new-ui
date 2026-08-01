@@ -31,7 +31,7 @@ con soporte para SD2SP2, SD Gecko y adaptadores SD similares.
   - [Diseño del menú](#diseño-del-menú)
   - [Carpeta de inicio](#carpeta-de-inicio)
   - [Recordar el último jugado](#recordar-el-último-jugado)
-  - [Juegos en la tarjeta SD del ODE](#juegos-en-la-tarjeta-sd-del-ode)
+  - [De dónde se leen los juegos](#de-dónde-se-leen-los-juegos)
   - [Iniciar Swiss desde el menú](#iniciar-swiss-desde-el-menú)
   - [Colores](#colores)
 - [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners)
@@ -50,7 +50,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Menú en cuadrícula con banners** | Portado desde cubeboot. Tres diseños, seleccionables con [`menu_grid_type`](#diseño-del-menú); usa `small_banners` por defecto incluso sin `config.ini`. |
 | **Nombres de archivo reales** | La lista muestra el **nombre del archivo** `.iso` en lugar del nombre interno del juego, y carga el banner correcto de cada disco en juegos multidisco (por ejemplo Resident Evil 0 Disco 1 / Disco 2). |
 | **Recordar el último jugado** | [`remember_last_game = 1`](#recordar-el-último-jugado) abre el menú en la carpeta de tu último juego, ya resaltado — pulsas **A** y listo. |
-| **Juegos desde la SD del ODE** | [`load_from_ode_sd = on`](#juegos-en-la-tarjeta-sd-del-ode) lee los juegos directamente de la tarjeta SD que está dentro de un ODE tipo GC Loader. Sin necesidad de un segundo lector. |
+| **Juegos desde la SD del ODE** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
 | **Marca Cubiboot** | Un encabezado "Games" en el menú, más el banner de Cubiboot en el loader y en la intro de la BIOS del `.iso` (reemplazando el banner "Game Play" de gc-linux). |
 | **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader.uf2` flasheable. |
@@ -144,11 +144,11 @@ cubiboot — sin modchip.
    desde la que arrancas imágenes.
 2. Arranca `cubiboot.iso` desde el menú del GC Loader — cae directo en el menú de cubiboot.
 3. Elige de dónde salen los juegos:
-   - **De la propia tarjeta SD del ODE** (sin segundo lector): pon un `config.ini` con
-     `load_from_ode_sd = on` y `swiss-gc.dol` en la **raíz de esa misma tarjeta**. Mira
-     [Juegos en la tarjeta SD del ODE](#juegos-en-la-tarjeta-sd-del-ode).
-   - **De un adaptador SD** (SD2SP2 / SD Gecko): deja la opción desactivada — es el valor por
-     defecto — y prepara la tarjeta del adaptador como siempre.
+   - **De la propia tarjeta SD del ODE** (sin segundo lector): pon `swiss-gc.dol` y un
+     `config.ini` con `device_order = gcldr` en la **raíz de esa misma tarjeta**. Mira
+     [De dónde se leen los juegos](#de-dónde-se-leen-los-juegos).
+   - **De un adaptador SD** (SD2SP2 / SD Gecko): no hay nada que configurar — los lectores de
+     tarjeta van primero por defecto. Prepara la tarjeta del adaptador como siempre.
 
 ### Reinicio en el juego
 
@@ -186,8 +186,10 @@ menu_grid_type = small_banners
 ; Preseleccionar el último juego arrancado al abrir el menú (1 = sí, 0 = no).
 remember_last_game = 0
 
-; Leer los juegos de la tarjeta SD dentro de un GC Loader / ODE (on = sí, off = no).
-load_from_ode_sd = off
+; De qué almacenamiento leer los juegos, el preferido primero. Nombres de volumen:
+; sdc (SD2SP2), sdb (ranura B de memory card), sda (ranura A), gcldr (la tarjeta dentro
+; de un GC Loader / ODE). Deja comentado para usar el valor por defecto.
+; device_order = sdc, sdb, sda, gcldr
 ```
 
 ### Todas las opciones
@@ -197,7 +199,7 @@ load_from_ode_sd = off
 | [`menu_grid_type`](#diseño-del-menú) | `small_banners` · `banners` · `square_icons` | `small_banners` | Diseño de la cuadrícula |
 | [`default_folder`](#carpeta-de-inicio) | ruta | raíz de la tarjeta | Carpeta en la que abre el menú |
 | [`remember_last_game`](#recordar-el-último-jugado) | `1` · `0` | `0` | Preselecciona el último juego arrancado |
-| [`load_from_ode_sd`](#juegos-en-la-tarjeta-sd-del-ode) | `on` · `off` | `off` | Lee los juegos de la SD del ODE |
+| [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de volumen | `sdc, sdb, sda, gcldr` | De qué almacenamiento leer los juegos |
 | [`theme_color`](#colores) | RGB hex · `random` | original | Un color para toda la interfaz |
 | [`cube_color`](#colores) | RGB hex · `random` | `theme_color` | Color del logo de arranque |
 | [`menu_cube_color`](#colores) | RGB hex · `random` · nombre de paleta | `theme_color` | Cubos / banners de la cuadrícula |
@@ -274,27 +276,44 @@ medida que aparecen. En cualquier caso tu juego resaltado se muestra primero. Mi
 
 </details>
 
-### Juegos en la tarjeta SD del ODE
+### De dónde se leen los juegos
 
-`load_from_ode_sd = on` hace que cubiboot lea de la tarjeta SD que está **dentro** del ODE —
-un [GC Loader](https://gcloaderhq.com/) o cualquier otro que responda a los mismos comandos
-de unidad — así el menú lista y arranca los juegos que ya tienes ahí, sin un segundo lector.
+`device_order` lista el almacenamiento que cubiboot debe usar, el preferido primero. La
+primera entrada que monte se convierte en el volumen del que sale todo: el volcado del IPL,
+`swiss-gc.dol`, los banners y los juegos que el menú lista.
 
-Acepta `on` / `off` (y `1`/`0`, `true`/`false`, `yes`/`no`). Por defecto `off`, que es el
-comportamiento clásico: solo lectores de tarjeta EXI.
+| Nombre | Dónde está |
+|--------|------------|
+| `sdc` | Puerto serie 2 — un **SD2SP2** |
+| `sdb` | **Ranura B** de memory card — un SD Gecko |
+| `sda` | **Ranura A** de memory card — un SD Gecko |
+| `gcldr` | La tarjeta SD **dentro del ODE** — un [GC Loader](https://gcloaderhq.com/) o cualquiera que responda a los mismos comandos de unidad |
+
+El valor por defecto, cuando la clave no está:
+
+```ini
+device_order = sdc, sdb, sda, gcldr
+```
+
+Dejar un dispositivo fuera de la lista es como mantienes a cubiboot lejos de él — no hay un
+interruptor de encendido/apagado aparte. Así que una consola con SD2SP2 y GC Loader, cuyos
+juegos viven en el ODE, escribe:
+
+```ini
+device_order = gcldr
+```
 
 Dos cosas a tener en cuenta:
 
-- **Un volumen a la vez.** Con esto activado, *todo* lo que cubiboot lee sale de la tarjeta
-  del ODE: el volcado del IPL, `swiss-gc.dol`, los banners y los juegos. Mantenlos juntos en
-  esa tarjeta.
-- **De dónde se lee el `config.ini`.** Cubiboot tiene que leer `config.ini` antes de poder
-  saber el valor de esta opción, así que monta la primera tarjeta que encuentra, probando
-  primero los lectores EXI y la tarjeta del ODE en último lugar. En una consola sin lector de
-  tarjetas esa *es* la del ODE — justo donde quieres el `config.ini`. Si tienes ambos, pon el
-  `config.ini` en el lector de tarjetas y activa esta opción para mover todo lo demás al ODE.
+- **Un volumen a la vez.** cubiboot no mezcla tarjetas. La entrada que gane lo tiene todo:
+  `swiss-gc.dol`, los juegos y el `ipl.bin` si usas uno.
+- **El `config.ini` puede estar en cualquiera de ellas.** cubiboot lo busca en cada
+  dispositivo que pueda montar, en el orden por defecto de arriba, y lee el primero que
+  realmente tenga el archivo — tiene que hacerlo así, porque `device_order` vive *dentro* de
+  ese archivo. Si dos tarjetas llevan un `config.ini`, el orden por defecto desempata.
 
-La tarjeta del ODE se monta en solo lectura. Más detalle en [docs/settings.md](settings.md).
+La tarjeta del ODE se monta en solo lectura. Una consola sin ODE paga una consulta a la unidad
+por arranque por la entrada `gcldr`, que se rinde en cuanto responde una unidad óptica real.
 
 ### Iniciar Swiss desde el menú
 
