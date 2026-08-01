@@ -27,12 +27,23 @@ __attribute_data__ u32 menu_start_color = CFG_COLOR_UNSET;
 #define RGB24_TO_RGBA(rgb) ((((u32)(rgb)) << 8) | 0xFF)
 #define RGBA_TO_RGB24(rgba) ((((u32)(rgba)) >> 8) & 0x00FFFFFFu)
 
-// A hue rotation plus a saturation/lightness scale. Applying a tint to the color it was
-// derived from reproduces the target exactly, so a whole palette can be moved onto a new
+// An absolute target hue plus a saturation/lightness scale. Applying a tint to the color it
+// was derived from reproduces the target exactly, so a whole palette can be moved onto a new
 // color while keeping its internal relationships -- which shade is the bright one, which is
 // the dimmed one -- instead of being flattened to a single value.
+//
+// The hue is absolute, not a rotation, and that is deliberate. The IPL's palettes are not
+// four shades of one hue; read out of the BS2, stock purple is
+//
+//     ICON 265.7 deg   ICON_SEL 305.0 deg   EMPTY_SEL 310.0 deg   EMPTY 285.0 deg
+//
+// a 45 degree spread. Rotating all four by the same amount preserves that spread, so a large
+// rotation drags the outliers into a different part of the wheel entirely: aiming ICON at
+// orange (35 deg) put ICON_SEL at 74 deg, and the selected tile came out lime. Pinning every
+// shade to the target hue and letting saturation and lightness carry the difference keeps the
+// ramp readable -- selected is still the bright one -- and keeps the whole palette one color.
 typedef struct {
-    s16 hue_shift;
+    u8 hue;
     float sat_mult;
     float lum_mult;
 } tint_t;
@@ -48,7 +59,7 @@ static tint_t make_tint(u32 ref_rgb, u32 target_rgb) {
     u32 target = GRRLIB_RGBToHSL(RGB24_TO_RGBA(target_rgb));
 
     tint_t tint;
-    tint.hue_shift = (s16)H(target) - (s16)H(ref);
+    tint.hue = H(target);
     // A greyscale or black reference has no hue or brightness to scale from, so fall back to
     // passing the channel through untouched rather than dividing by zero.
     tint.sat_mult = S(ref) != 0 ? (float)S(target) / (float)S(ref) : 1.0f;
@@ -59,11 +70,10 @@ static tint_t make_tint(u32 ref_rgb, u32 target_rgb) {
 static u32 apply_tint(const tint_t *tint, u32 rgb) {
     u32 hsl = GRRLIB_RGBToHSL(RGB24_TO_RGBA(rgb));
 
-    u8 hue = (u8)(((s16)H(hsl) + tint->hue_shift) & 0xFF); // hue wraps
     u8 sat = clamp_u8((float)S(hsl) * tint->sat_mult);
     u8 lum = clamp_u8((float)L(hsl) * tint->lum_mult);
 
-    return RGBA_TO_RGB24(GRRLIB_HSLToRGB(HSLA(hue, sat, lum, 0xFF)));
+    return RGBA_TO_RGB24(GRRLIB_HSLToRGB(HSLA(tint->hue, sat, lum, 0xFF)));
 }
 
 // TEV register colors are s10, so a stock shade can legitimately sit above 0xFF. Normalise it
@@ -155,23 +165,29 @@ bool theme_tint_cube_colors(const GXColorS10 *stock[4], GXColorS10 out[4]) {
 }
 
 // One configured colour drives the whole panel: it is the strong end, and the far end is that
-// same colour dimmed by however much the stock gradient dims.
+// same colour, dimmed.
 //
-// Measuring stock: top 6e00b3 is H=196 S=255 L=89, bottom 800057 is H=226 S=255 L=64. So the
-// far end keeps the saturation and drops to ~72% of the lightness. Stock also swings the hue
-// +30 (about +42 degrees, purple -> magenta), and that part is deliberately dropped: rotating
-// the same swing onto another hue turns the gradient into a clash, with orange fading to lime.
-// Hue and saturation therefore stay put and only the lightness falls off.
+// Measuring stock: top 6e00b3 is H=196 S=255 L=89, bottom 800057 is H=226 S=255 L=64 -- the
+// saturation is untouched, the lightness drops to ~72%, and the hue swings +30 (about +42
+// degrees, purple -> magenta).
+//
+// The hue swing is deliberately dropped: rotating that same swing onto another hue turns the
+// gradient into a clash, with orange fading to lime. That leaves lightness as the only lever,
+// and copying the stock's ~72% is not enough to read as a gradient once the hue stops moving
+// -- on a grey theme, where there is no hue at all, the panel came out looking solid on
+// hardware even though the far end really was 53 lightness steps down. So the falloff is
+// steeper than stock's on purpose: it has to carry alone what stock split between two cues.
+#define BOX_FAR_END_LUM 0.45f
+
 static u32 derive_box_far_end(u32 near_rgb) {
     u32 stock_near = GRRLIB_RGBToHSL(RGB24_TO_RGBA(STOCK_BOX_TOP_RGB));
     u32 stock_far = GRRLIB_RGBToHSL(RGB24_TO_RGBA(STOCK_BOX_BOTTOM_RGB));
     u32 hsl = GRRLIB_RGBToHSL(RGB24_TO_RGBA(near_rgb));
 
     float sat_mult = S(stock_near) != 0 ? (float)S(stock_far) / (float)S(stock_near) : 1.0f;
-    float lum_mult = L(stock_near) != 0 ? (float)L(stock_far) / (float)L(stock_near) : 1.0f;
 
     u8 sat = clamp_u8((float)S(hsl) * sat_mult);
-    u8 lum = clamp_u8((float)L(hsl) * lum_mult);
+    u8 lum = clamp_u8((float)L(hsl) * BOX_FAR_END_LUM);
 
     return RGBA_TO_RGB24(GRRLIB_HSLToRGB(HSLA(H(hsl), sat, lum, 0xFF)));
 }
