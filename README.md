@@ -174,8 +174,10 @@ menu_grid_type = small_banners
 ; game list and the big PRESS START (hex, example orange):
 ; theme_color = ff9801
 
-; Change only the boot Cube logo color (hex, overrides theme_color):
+; Change only the boot Cube logo color (hex, overrides theme_color). Any color key also
+; accepts `random`, which re-rolls on every boot:
 ; cube_color = ff9801
+; cube_color = random
 
 ; Folder the menu opens in at startup. Leave commented for the card root.
 ; default_folder = /games
@@ -302,8 +304,10 @@ This is separate from the `swiss-gc.dol` engine that must sit at the card **root
 ### Colors
 
 Every color key takes a hex RGB code
-([color picker](https://www.w3schools.com/colors/colors_hexadecimal.asp)) or `random`.
-`theme_color` is the one-liner; the rest are per-item overrides on top of it.
+([color picker](https://www.w3schools.com/colors/colors_hexadecimal.asp)) or `random`, which
+picks a different color on every boot — it seeds from the console clock, so a console with a
+dead RTC battery will keep landing on the same one. `theme_color` is the one-liner; the rest
+are per-item overrides on top of it.
 
 ```ini
 theme_color = ff9801   ; spice orange everywhere
@@ -332,8 +336,10 @@ Naming a palette *and* setting `theme_color` picks that palette and then tints i
 
 **The info panel is a gradient, from one color.** It is brightest at the top and fades
 darker downward, and `menu_box_color` sets that bright end — the far end is your color at
-~72% lightness, which is the same falloff the stock panel uses. Same hue and saturation
-throughout, so you pick one color and the shading takes care of itself.
+~45% lightness. Same hue and saturation throughout, so you pick one color and the shading
+takes care of itself. The falloff is steeper than the stock panel's because the stock one
+also swings its hue from purple to magenta, and copying that swing onto an arbitrary color
+turns the gradient into a clash; lightness has to carry the effect alone.
 
 **The big "PRESS START"** is drawn by the stock BIOS, which offers no color parameter, so
 cubiboot recolors the block palette it reads. Only the RGB is touched — the per-block
