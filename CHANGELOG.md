@@ -1,5 +1,18 @@
 # Changelog
 
+> [!NOTE]
+> This file is **inherited history from upstream cubeboot**, frozen at its 0.1.4 release. It
+> is kept for provenance and is not maintained by this fork.
+>
+> - This fork's releases: [GitHub Releases](https://github.com/DarthMotzkus/cubiboot-new-ui/releases)
+>   (notes are generated per tag).
+> - What this fork changed and why: [docs/FORK_CHANGES.md](docs/FORK_CHANGES.md).
+> - How it all works: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+>
+> Entries below reference cubeboot filenames (`cubeboot.dol`, `cubeboot.ini`) and options
+> (`force_fallback`) that do **not** apply here. For installation, follow the
+> [README](README.md).
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -71,8 +84,8 @@ If you notice any issues, you are encouraged to post in the [GitHub Issue Tracke
 Please take a look at the [README](./README.md) for an overview of the project. However if you are looking for install tutorials please follow the guides in the [docs folder](https://github.com/OffBroadway/flippyboot-ipl/tree/master/docs).
 
 Guides:
-- [SD Booting](./docs/SD_Boot.md)
-- [RP2040 Pico](./docs/RP2040_Boot.md)
+- SD Booting *(upstream guide, removed in this fork — see the [README](README.md))*
+- RP2040 Pico *(upstream guide, removed in this fork — see the [README](README.md))*
 
 
 Spanish translations are also available in the [docs folder](https://github.com/OffBroadway/flippyboot-ipl/tree/master/docs).

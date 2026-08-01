@@ -2,8 +2,24 @@
 
 This fork = pristine **makeo/cubiboot `main`** + the `OffBroadway/cubeboot@custom-loader-menu`
 banner-grid layout + a cold-boot banner-corruption fix + Cubiboot branding + a CI that
-releases all artifacts. This document records every change so it can be re-applied onto a
-fresh makeo clone.
+releases all artifacts + the menu/quality-of-life work in sections F–J. This document records
+every change so it can be re-applied onto a fresh makeo clone.
+
+For how the pieces fit together — the two-binary split, how the BIOS is patched, how settings
+reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+| | Change | Main files |
+|---|---|---|
+| A | Banner-grid layout (cherry-picked from cubeboot) | `patches/source/grid.c`, `menu.c` |
+| B | Cold-boot banner-corruption fix | `patches/source/games.c` |
+| C | Scaling past the 128-buffer pool | `patches/source/games.c` |
+| D | Cubiboot branding | `.ci/brand_*.py`, `patches/source/menu.c` |
+| E | CI / release pipeline | `.github/workflows/ci.yml`, `.ci/` |
+| F | Filename titles + multi-disc banners | `patches/source/games.c` |
+| G | `default_folder` | `patches/source/main.c` |
+| H | `remember_last_game` | `patches/source/games.c`, `main.c` |
+| I | Booting a Swiss disc image natively | `cubeboot/source/emu/loader.c` |
+| J | Games from the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -80,11 +96,115 @@ with `cubiboot.iso` embedded at flash `0x10031000` for both RP2040/RP2350 family
 `.ci/make_picoloader_uf2.py` (replicates makeo's PicoLoader converter). On a `v*` tag it
 publishes a GitHub Release with all six artifacts.
 
+## F. Filename titles + multi-disc banners  (`patches/source/games.c`)
+
+Upstream showed the **internal game name** from the disc header, so every disc of a
+multi-disc set displayed the same title and the list gave no way to tell them apart.
+
+`gm_set_title_from_path()` now writes `entry->desc.fullGameName` from the **filename** with
+its extension stripped — the same thing Swiss shows. `Resident Evil 0 Disc 2.iso` reads as
+`Resident Evil 0 Disc 2`.
+
+There is no in-code truncation: a title longer than the box (~28 chars) is clipped at draw
+time, which is why the README asks for short filenames.
+
+Banner lookup is keyed on `(game_id, disc_num, disc_ver)` rather than `game_id` alone
+(`bnr_cache_get`/`bnr_cache_put`), so disc 2 gets disc 2's banner instead of disc 1's.
+`gm_check_files` pairs entries that share a game id but differ in `disc_num`.
+
+## G. `default_folder`  (`patches/source/main.c`)
+
+The `default_folder` option by [wins1ey](https://github.com/wins1ey), via the
+[Hazado/cubiboot](https://github.com/Hazado/cubiboot) fork
+([merge](https://github.com/Hazado/cubiboot/commit/c91066b4889346fec288393f6a9fe41304652e49)),
+ported onto this tree.
+
+`resolve_default_folder()` runs from `pre_thread_init()`. It adds a leading `/` when the
+value omits one, verifies the folder opens, and falls back to `/` when it doesn't. The string
+reaches the patch as a `strcpy` into the `default_folder` buffer (not a `set_patch_value`
+word) — see [ARCHITECTURE.md](ARCHITECTURE.md#the-loader-to-patches-contract).
+
+## H. `remember_last_game`  (`patches/source/games.c`, `main.c`)
+
+Opens the menu in the folder of the last game booted, with that game highlighted.
+
+**No new state is written.** cubiboot boots games by chainloading Swiss, and Swiss already
+records every launch in `/swiss/settings/recent.ini`. `gm_read_last_played()` reads the first
+`Recent_*=` line that resolves to a game, strips the device prefix, and returns the path. Only
+the first 512 bytes are read — `Recent_0` is line 2, always well inside the first sector.
+
+Consequence worth knowing: **Swiss's Recent List must be On** (`RecentListLevel=On` in
+`/swiss/settings/global.ini`), otherwise there is no file to read and the menu falls back to
+`default_folder`.
+
+`gm_last_played_folder()` strips the filename to get the containing folder — so a letter or
+genre subfolder is honoured, not just `default_folder` — and verifies it still opens.
+
+The cold-boot path is deliberately not banner-blocking. `gm_arm_last_played()` marks the scan
+so `gm_check_files` skips the resident banner preload; the folder is scanned by headers only,
+the cursor is placed via `gm_match_last_played()`, and `gm_bg_load_last_played()` fills
+banners on a background thread in priority order — the on-screen window around the highlighted
+game first, then the rest. **A** works while that is still running.
+
+`remember_last_game` overrides `default_folder`; the latter is only the fallback (first boot,
+or the folder is gone).
+
+## I. Booting a Swiss disc image natively  (`cubeboot/source/emu/loader.c`)
+
+Handing a Swiss `.iso`/`.gcm` to Swiss via `Autoload=` is Swiss-in-Swiss, and it just resets
+to the stock IPL.
+
+`is_swiss_image()` matches any file whose **basename starts with `swiss`**, regardless of
+extension, and routes it through cubiboot's own apploader (`load_dol_file` + `run`) instead of
+the autoload path. `is_swiss()` keeps the older, narrower `.dol`-only check for the
+chainloader itself.
+
+Normal games don't start with `swiss`, so nothing else is affected. This is separate from the
+`swiss-gc.dol` engine that has to sit at the card root.
+
+## J. Games from the ODE's SD card  (`load_from_ode_sd`)
+
+Reads games straight off the SD card inside a GC Loader style ODE, so no EXI card reader is
+needed. Reverse-engineered from a `cubiboot-gcldr.iso` build and cross-checked against
+libogc2's `DVD_LowGcodeRead`; the resulting `gcode_read_aligned` compiles instruction-for-
+instruction identical to the reference build's.
+
+- **`cubeboot/source/emu/gcode.c` + `.h`** (new) — block driver over the drive interface.
+  Detection is the OEM inquiry `0x12000000` checking `rel_date == 0x20196c64`; reads are
+  `0xB2000000` with `CMDBUF1` = LBA and `CMDBUF2` = byte count. Writes are stubbed. Lives
+  under `emu/` so it compiles into both the loader and the injected menu.
+- **`emu/ffs/diskio.c`** — `DEV_GCLDR` (pdrv 7) wired into `disk_initialize`/`read`/`write`/
+  `status`/`ioctl`/`shutdown`.
+- **`emu/flippy_emu.c`** — `device_prio[]` gains `"gcldr"` at index 0.
+  `emu_apply_ode_preference()` settles the volume after `config.ini` is parsed; the bootstrap
+  mount tries EXI readers first and the ODE last, because `config.ini` has to be readable
+  before the setting is known. `off` releases the volume behind a latch so a later lazy mount
+  can't pick it back up.
+- **`cubeboot/source/settings.{c,h}` + `main.c`** — `load_from_ode_sd`, parsed by a small
+  `ini_get_bool` that accepts `on`/`off`, `1`/`0`, `true`/`false`, `yes`/`no`. Default off, so
+  existing setups are untouched.
+- **`.github/workflows/ci.yml`** — the generated `config.ini` ships the key (set to `off`) so
+  it is discoverable.
+
+Two deliberate departures from the recovered implementation: DI transfers are bounded by a
+timeout instead of spinning on `TSTART` forever, and the probe stops as soon as a real optical
+drive answers rather than burning 40 retries.
+
+Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
+Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered.
+
 ## Re-applying onto a fresh makeo clone
 
 1. `git clone https://github.com/makeo/cubiboot && cd cubiboot`
 2. Add the cubeboot remote, fetch, cherry-pick the 8 commits in section A (resolve the 2
    conflicts as noted).
 3. Apply the `games.c` fix (B) + scalable (C), the branding (D), and the `.ci/` + workflow (E).
-4. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+4. Apply the menu work: titles + multi-disc (F), `default_folder` (G), `remember_last_game`
+   (H) — all in `patches/source/games.c` and `main.c`.
+5. Apply the shared-`emu/` changes: Swiss image boot (I) in `loader.c`, and the ODE SD driver
+   (J) — `gcode.{c,h}`, `diskio.c`, `flippy_emu.c`, plus the `settings.c`/`main.c` wiring.
+6. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
+7. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+   `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
+   fork's.

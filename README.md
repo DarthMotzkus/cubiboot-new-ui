@@ -54,6 +54,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader.uf2`. |
 
 Full changelog against upstream: [docs/FORK_CHANGES.md](docs/FORK_CHANGES.md).
+How it all fits together: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Before you start
 
