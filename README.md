@@ -159,6 +159,7 @@ How it works:
 - You can change the Game Cube logo color setting the color in hex code (i recommend this site
 https://www.w3schools.com/colors/colors_hexadecimal.asp)
 - Use `cube_color =` and set the color you want (ex: `cube_color = ff9801` for the spice orange)
+- setting `cube_color = random` sets it to a different color every boot (dependent on working clock)
 
 ```ini
 [cubeboot]
@@ -169,8 +170,9 @@ https://www.w3schools.com/colors/colors_hexadecimal.asp)
 ;   square_icons  = square icons, 8 columns
 menu_grid_type = small_banners
 
-; Change the boot Cube logo color (code in hex, example orange):
+; Change the boot Cube logo color (code either hex or "random", two examples for orange and random):
 ; cube_color = ff9801
+; cube_color = random
 
 ; Folder the menu opens in at startup. Leave commented for the SD card root.
 ; default_folder = /games
