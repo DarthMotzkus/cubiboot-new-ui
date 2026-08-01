@@ -5,6 +5,8 @@
 #define SUBMENU_GAMESELECT_LOADER 0
 #define SUBMENU_GAMESELECT_START 1
 
+// Order matters: it indexes the IPL's own color table, and save_palette_names[] in
+// cubeboot/source/settings.c maps the config.ini spellings onto these same numbers.
 #define SAVE_COLOR_BLUE 0
 #define SAVE_COLOR_GREEN 1
 #define SAVE_COLOR_YELLOW 2

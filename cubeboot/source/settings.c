@@ -33,6 +33,45 @@ static u32 ini_get_bool(ini_t *conf, const char *key, u32 fallback) {
     return fallback;
 }
 
+// The six stock save-icon shades baked into the IPL, in the order of its own color table
+// (SAVE_COLOR_* in patches/source/menu.h). Only menu_cube_color accepts these -- they are
+// whole 4-shade palettes, not single colors.
+static const char *save_palette_names[] = {
+    "blue", "green", "yellow", "orange", "red", "purple",
+};
+
+// Colors are hex RGB ("ff9801"), `random`, or -- when allow_palette is set -- one of the
+// stock palette names above. Returns CFG_COLOR_UNSET when the key is missing or unreadable,
+// which leaves the stock look alone.
+static u32 ini_get_color(ini_t *conf, const char *key, int allow_palette) {
+    const char *raw = ini_get(conf, "cubeboot", key);
+    if (raw == NULL) return CFG_COLOR_UNSET;
+
+    if (strcasecmp(raw, "random") == 0) {
+        u32 color = CFG_COLOR_RGB(generate_random_color());
+        iprintf("Found %s = random -> #%06x\n", key, CFG_COLOR_VALUE(color));
+        return color;
+    }
+
+    if (allow_palette) {
+        for (u32 i = 0; i < (sizeof(save_palette_names) / sizeof(char *)); i++) {
+            if (strcasecmp(raw, save_palette_names[i]) == 0) {
+                iprintf("Found %s = %s (stock palette %u)\n", key, raw, i);
+                return CFG_COLOR_PALETTE(i);
+            }
+        }
+    }
+
+    u32 rgb = 0;
+    if (sscanf(raw, "%x", &rgb) != 1) {
+        iprintf("Ignoring unreadable %s = %s\n", key, raw);
+        return CFG_COLOR_UNSET;
+    }
+
+    iprintf("Found %s = #%06x\n", key, rgb & 0x00FFFFFF);
+    return CFG_COLOR_RGB(rgb);
+}
+
 char *buttons_names[] = {
     "left",  // LEFT	0x0001
     "right", // RIGHT	0x0002
@@ -86,6 +125,14 @@ void load_settings() {
             iprintf("Found cube_color = #%x\n", settings.cube_color);
         }
     }
+
+    // menu colors -- theme_color is the umbrella; everything below overrides it per item.
+    // The menu resolves the fallbacks itself (see patches/source/theme.c), so an unset key
+    // stays unset here.
+    settings.theme_color = ini_get_color(conf, "theme_color", 0);
+    settings.menu_cube_color = ini_get_color(conf, "menu_cube_color", 1);
+    settings.menu_box_color = ini_get_color(conf, "menu_box_color", 0);
+    settings.menu_start_color = ini_get_color(conf, "menu_start_color", 0);
 
     // cube logo
     const char *cube_logo = ini_get(conf, "cubeboot", "cube_logo");

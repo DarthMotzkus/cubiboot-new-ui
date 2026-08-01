@@ -5,6 +5,12 @@
 
 typedef struct settings {
     u32 cube_color;
+    // Menu colors, in the CFG_COLOR_* encoding from settings_types.h. theme_color is the
+    // umbrella the rest fall back to; the others are per-item overrides.
+    u32 theme_color;
+    u32 menu_cube_color;
+    u32 menu_box_color;
+    u32 menu_start_color;
     char *cube_logo;
     char *default_folder;
     u32 force_swiss_default;

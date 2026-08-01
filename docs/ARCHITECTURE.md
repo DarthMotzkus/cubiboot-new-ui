@@ -194,6 +194,7 @@ Current contract:
 | Symbol | Source |
 |---|---|
 | `cube_color` | `config.ini` |
+| `theme_color`, `menu_cube_color`, `menu_box_color`, `menu_start_color` | `config.ini` (see below) |
 | `force_progressive` | `config.ini` |
 | `force_swiss_boot` | `config.ini` |
 | `disable_mcp_select` | `config.ini` |
@@ -213,6 +214,14 @@ sides change together — that is the whole point of the shared directory.
 
 Adding a new setting means touching four places: `settings.h`, `settings.c` (parse),
 `main.c` (`set_patch_value`), and a `__attribute_data__` declaration in `patches/source/`.
+
+The color settings are the one group that needs more than a raw value. `set_patch_value` only
+moves single words, and `0` has to keep meaning "key absent", so a configured color carries a
+tag in its top byte — see the `CFG_COLOR_*` macros in `settings_types.h`, which is a symlink
+shared by both sides. That is also what lets `menu_cube_color` accept either a hex color or
+one of the IPL's own palette names through a single u32. The loader only parses
+(`ini_get_color`); every fallback and derivation happens menu-side in `patches/source/theme.c`,
+so `docs/settings.md` describes behaviour that lives in exactly one file.
 
 ## The shared storage stack
 

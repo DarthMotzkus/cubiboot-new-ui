@@ -31,7 +31,7 @@ with support for SD2SP2, SD Gecko and similar SD adapters.
   - [Remember last played](#remember-last-played)
   - [Games on the ODE SD card](#games-on-the-ode-sd-card)
   - [Launching Swiss from the menu](#launching-swiss-from-the-menu)
-  - [Cube color](#cube-color)
+  - [Colors](#colors)
 - [Large folders and the banner pool](#large-folders-and-the-banner-pool)
 - [Known limitations](#known-limitations)
 - [Building](#building)
@@ -170,7 +170,11 @@ you get the `small_banners` layout and the card root as the starting folder.
 ;   square_icons  = square icons, 8 columns
 menu_grid_type = small_banners
 
-; Change the boot Cube logo color (hex, example orange):
+; One color for the whole UI -- boot logo, menu cubes, the info box at the bottom of the
+; game list and the big PRESS START (hex, example orange):
+; theme_color = ff9801
+
+; Change only the boot Cube logo color (hex, overrides theme_color):
 ; cube_color = ff9801
 
 ; Folder the menu opens in at startup. Leave commented for the card root.
@@ -191,7 +195,11 @@ load_from_ode_sd = off
 | [`default_folder`](#starting-folder) | path | card root | Folder the menu opens in |
 | [`remember_last_game`](#remember-last-played) | `1` · `0` | `0` | Pre-select the last game you booted |
 | [`load_from_ode_sd`](#games-on-the-ode-sd-card) | `on` · `off` | `off` | Read games from the ODE's own SD card |
-| [`cube_color`](#cube-color) | hex RGB | stock | Boot logo color |
+| [`theme_color`](#colors) | hex RGB · `random` | stock | One color for the whole UI |
+| [`cube_color`](#colors) | hex RGB · `random` | `theme_color` | Boot logo color |
+| [`menu_cube_color`](#colors) | hex RGB · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
+| [`menu_box_color`](#colors) | hex RGB · `random` | `theme_color` | Info panel under the game list |
+| [`menu_start_color`](#colors) | hex RGB · `random` | `theme_color` | The big block "PRESS START" |
 | `force_progressive` | `1` · `0` | `0` | Force progressive scan |
 
 Other keys inherited from upstream are parsed in
@@ -291,14 +299,54 @@ a Swiss disc image just resets to the stock IPL.
 
 This is separate from the `swiss-gc.dol` engine that must sit at the card **root**.
 
-### Cube color
+### Colors
 
-Set the GameCube boot logo color with a hex RGB code
-([color picker](https://www.w3schools.com/colors/colors_hexadecimal.asp)):
+Every color key takes a hex RGB code
+([color picker](https://www.w3schools.com/colors/colors_hexadecimal.asp)) or `random`.
+`theme_color` is the one-liner; the rest are per-item overrides on top of it.
 
 ```ini
-cube_color = ff9801   ; spice orange
+theme_color = ff9801   ; spice orange everywhere
 ```
+
+| Key | What it paints |
+|-----|----------------|
+| `theme_color` | Everything below, unless that item is set explicitly |
+| `cube_color` | The boot logo cube only |
+| `menu_cube_color` | The cubes / banner tiles in the game grid |
+| `menu_box_color` | The info panel under the game list (filename, description, thumbnail) |
+| `menu_start_color` | The big block "PRESS START" on the pre-boot screen |
+
+With no color key at all you get the stock look, unchanged.
+
+**The grid cubes keep their shading.** The IPL ships four shades per cube — bright, dimmed,
+and a selected variant of each — and `menu_cube_color` moves that whole set onto your color
+instead of flattening it, so the selected cube still stands out. You can also just name one
+of the six palettes the IPL already has, which uses Nintendo's own shades verbatim:
+
+```ini
+menu_cube_color = green   ; blue | green | yellow | orange | red | purple (default)
+```
+
+Naming a palette *and* setting `theme_color` picks that palette and then tints it.
+
+**The info panel is a gradient, from one color.** It is brightest at the top and fades
+darker downward, and `menu_box_color` sets that bright end — the far end is your color at
+~72% lightness, which is the same falloff the stock panel uses. Same hue and saturation
+throughout, so you pick one color and the shading takes care of itself.
+
+**The big "PRESS START"** is drawn by the stock BIOS, which offers no color parameter, so
+cubiboot recolors the block palette it reads. Only the RGB is touched — the per-block
+intensity that drives the fly-in and fade is left alone, so the animation is unchanged. The
+small `Press START to begin!` line above it is a separate draw and always stays white.
+
+> [!NOTE]
+> This one is per-IPL-revision, and all seven revisions cubiboot can boot on are covered:
+> NTSC 1.0-001, 1.1, 1.2-001, 1.2-101, PAL 1.0-001, PAL 1.2-101 and MPAL. The remaining IPLs
+> the menu can recognise are NPDP / dev-kit BIOSes, which the loader refuses to boot anyway.
+
+> [!NOTE]
+> `000000` works as an actual black, and `random` picks a fresh color on every boot.
 
 ## Large folders and the banner pool
 

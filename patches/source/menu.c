@@ -10,6 +10,7 @@
 
 #include "usbgecko.h"
 #include "menu.h"
+#include "theme.h"
 #include "grid.h"
 #include "games.h"
 #include "gameid.h"
@@ -172,6 +173,12 @@ __attribute_data__ GXColorS10 *menu_color_icon_sel;
 __attribute_data__ GXColorS10 *menu_color_empty;
 __attribute_data__ GXColorS10 *menu_color_empty_sel;
 
+// Filled in from the stock palette when config.ini asks for a custom cube color. The stock
+// shades themselves are shared with the memory card menu and must not be written through, so
+// the recolored copies live here instead. Indexed by SAVE_ICON_SEL / SAVE_ICON /
+// SAVE_EMPTY_SEL / SAVE_EMPTY, and in .data because GX reads them every frame.
+__attribute_data__ static GXColorS10 themed_cube_colors[4];
+
 __attribute_data__ model global_textured_icon = {};
 __attribute_data__ model global_empty_icon = {};
 // __attribute_data__ BNR global_start_banner = {};
@@ -233,12 +240,26 @@ __attribute_used__ void custom_gameselect_init() {
     // }
 
     // colors
-    u32 color_num = SAVE_COLOR_PURPLE; // TODO: make a setting for this
+    u32 color_num = theme_get_cube_palette();
     u32 color_index = 1 << (10 + 3 + color_num);
-    menu_color_icon = get_save_color(color_index, SAVE_ICON);
-    menu_color_icon_sel = get_save_color(color_index, SAVE_ICON_SEL);
-    menu_color_empty = get_save_color(color_index, SAVE_EMPTY);
-    menu_color_empty_sel = get_save_color(color_index, SAVE_EMPTY_SEL);
+
+    const GXColorS10 *stock_colors[4];
+    stock_colors[SAVE_ICON] = get_save_color(color_index, SAVE_ICON);
+    stock_colors[SAVE_ICON_SEL] = get_save_color(color_index, SAVE_ICON_SEL);
+    stock_colors[SAVE_EMPTY] = get_save_color(color_index, SAVE_EMPTY);
+    stock_colors[SAVE_EMPTY_SEL] = get_save_color(color_index, SAVE_EMPTY_SEL);
+
+    if (theme_tint_cube_colors(stock_colors, themed_cube_colors)) {
+        menu_color_icon = &themed_cube_colors[SAVE_ICON];
+        menu_color_icon_sel = &themed_cube_colors[SAVE_ICON_SEL];
+        menu_color_empty = &themed_cube_colors[SAVE_EMPTY];
+        menu_color_empty_sel = &themed_cube_colors[SAVE_EMPTY_SEL];
+    } else {
+        menu_color_icon = (GXColorS10*)stock_colors[SAVE_ICON];
+        menu_color_icon_sel = (GXColorS10*)stock_colors[SAVE_ICON_SEL];
+        menu_color_empty = (GXColorS10*)stock_colors[SAVE_EMPTY];
+        menu_color_empty_sel = (GXColorS10*)stock_colors[SAVE_EMPTY_SEL];
+    }
 
     // DUMP_COLOR(menu_color_icon);
     // DUMP_COLOR(menu_color_icon_sel);
@@ -640,8 +661,8 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     }
 
     // box
-    GXColor top_color = {0x6e, 0x00, 0xb3, 0xc8};
-    GXColor bottom_color = {0x80, 0x00, 0x57, 0xb4};
+    GXColor top_color, bottom_color;
+    theme_get_box_colors(&top_color, &bottom_color);
     draw_info_box(0x20f0, 0x560, 0x1230, 0x1640, ui_alpha, &top_color, &bottom_color);
 
     gm_file_entry_t *entry = gm_get_game_entry(selected_slot);
@@ -726,13 +747,16 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
     }
 
     // press start anim
-    if (can_boot)
+    if (can_boot) {
+        theme_recolor_start_blocks(); // must be immediately before the draw, see theme.c
         draw_start_anim(ui_alpha); // TODO: fix alpha timing
+    }
 
     // fix camera again
     setup_gameselect_menu(0, 0, 0);
 
-    // start string
+    // start string ("Press START to begin!") -- stays white on purpose; the themable
+    // PRESS START is the big block graphic drawn by draw_start_anim above.
     switch_lang_orig();
     if (can_boot)
         draw_blob_fixed(game_blob_text, game_blob_a, game_blob_b, &white);

@@ -44,6 +44,7 @@ cubeboot/source/    stage 2: the loader
 patches/source/     stage 3: the injected menu
   games.c           game enumeration, banner/icon pools, last-played
   menu.c grid.c     the UI
+  theme.c           all UI colour derivation (config.ini -> cubes, info box, PRESS START)
   linker/           one link script per IPL revision
 .ci/                scripts the GitHub workflow runs
 .localbuild/        local build wrappers (gitignored, comments in Portuguese)
@@ -91,5 +92,6 @@ CI runs the same steps from `.ci/` on every branch — see `.github/workflows/ci
 | How is the stock BIOS patched? | `cubeboot/source/main.c`, the `.patch.*` / `.reloc` walk |
 | How are files read? | `cubeboot/source/emu/flippy_emu.c` (`dvd_custom_*`) |
 | Which storage device is used? | `flippy_emu.c` `device_prio[]` + `emu_sd_device` |
+| Where do the menu's colours come from? | `patches/source/theme.c` (loader only parses; see `docs/settings.md`) |
 | Why is a banner blank or corrupted? | `docs/FORK_CHANGES.md` §B and §C |
 | What did this fork change vs upstream? | `docs/FORK_CHANGES.md` |

@@ -33,7 +33,7 @@ con soporte para SD2SP2, SD Gecko y adaptadores SD similares.
   - [Recordar el último jugado](#recordar-el-último-jugado)
   - [Juegos en la tarjeta SD del ODE](#juegos-en-la-tarjeta-sd-del-ode)
   - [Iniciar Swiss desde el menú](#iniciar-swiss-desde-el-menú)
-  - [Color del cubo](#color-del-cubo)
+  - [Colores](#colores)
 - [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners)
 - [Limitaciones conocidas](#limitaciones-conocidas)
 - [Compilación](#compilación)
@@ -173,7 +173,11 @@ el diseño `small_banners` y la raíz de la tarjeta como carpeta de inicio.
 ;   square_icons  = iconos cuadrados, 8 columnas
 menu_grid_type = small_banners
 
-; Color del logo del cubo en el arranque (hex, ejemplo naranja):
+; Un solo color para toda la interfaz -- logo de arranque, cubos del menú, la caja de info
+; al pie de la lista de juegos y el PRESS START grande (hex, ejemplo naranja):
+; theme_color = ff9801
+
+; Color solo del logo del cubo en el arranque (hex, tiene prioridad sobre theme_color):
 ; cube_color = ff9801
 
 ; Carpeta en la que se abre el menú al arrancar. Coméntala para la raíz de la tarjeta.
@@ -194,7 +198,11 @@ load_from_ode_sd = off
 | [`default_folder`](#carpeta-de-inicio) | ruta | raíz de la tarjeta | Carpeta en la que abre el menú |
 | [`remember_last_game`](#recordar-el-último-jugado) | `1` · `0` | `0` | Preselecciona el último juego arrancado |
 | [`load_from_ode_sd`](#juegos-en-la-tarjeta-sd-del-ode) | `on` · `off` | `off` | Lee los juegos de la SD del ODE |
-| [`cube_color`](#color-del-cubo) | RGB hex | original | Color del logo de arranque |
+| [`theme_color`](#colores) | RGB hex · `random` | original | Un color para toda la interfaz |
+| [`cube_color`](#colores) | RGB hex · `random` | `theme_color` | Color del logo de arranque |
+| [`menu_cube_color`](#colores) | RGB hex · `random` · nombre de paleta | `theme_color` | Cubos / banners de la cuadrícula |
+| [`menu_box_color`](#colores) | RGB hex · `random` | `theme_color` | Panel de info bajo la lista de juegos |
+| [`menu_start_color`](#colores) | RGB hex · `random` | `theme_color` | El "PRESS START" grande de bloques |
 | `force_progressive` | `1` · `0` | `0` | Fuerza el escaneo progresivo |
 
 Otras claves heredadas del upstream se leen en
@@ -297,14 +305,56 @@ Swiss — sin ese prefijo, una imagen de disco de Swiss simplemente reinicia al 
 
 Esto es independiente del motor `swiss-gc.dol` que debe estar en la **raíz** de la tarjeta.
 
-### Color del cubo
+### Colores
 
-Define el color del logo de arranque de GameCube con un código RGB hexadecimal
-([selector de color](https://www.w3schools.com/colors/colors_hexadecimal.asp)):
+Todas las claves de color aceptan un código RGB hexadecimal
+([selector de color](https://www.w3schools.com/colors/colors_hexadecimal.asp)) o `random`.
+`theme_color` es el atajo; el resto son ajustes por elemento que tienen prioridad sobre él.
 
 ```ini
-cube_color = ff9801   ; naranja
+theme_color = ff9801   ; naranja en todo
 ```
+
+| Clave | Qué pinta |
+|-------|-----------|
+| `theme_color` | Todo lo de abajo, salvo lo que se defina explícitamente |
+| `cube_color` | Solo el cubo del logo de arranque |
+| `menu_cube_color` | Los cubos / banners de la cuadrícula de juegos |
+| `menu_box_color` | El panel de info bajo la lista (nombre, descripción, miniatura) |
+| `menu_start_color` | El "PRESS START" grande de la pantalla previa al arranque |
+
+Sin ninguna clave de color obtienes el aspecto original, intacto.
+
+**Los cubos conservan su sombreado.** El IPL trae cuatro tonos por cubo — brillante, atenuado
+y una variante seleccionada de cada uno — y `menu_cube_color` mueve todo ese conjunto a tu
+color en vez de aplanarlo, así que el cubo seleccionado sigue destacando. También puedes
+nombrar una de las seis paletas que el IPL ya tiene, usando los tonos de Nintendo tal cual:
+
+```ini
+menu_cube_color = green   ; blue | green | yellow | orange | red | purple (por defecto)
+```
+
+Nombrar una paleta *y* definir `theme_color` elige esa paleta y luego la tiñe.
+
+**El panel de info es un degradado, a partir de un solo color.** Es más claro arriba y se
+oscurece hacia abajo, y `menu_box_color` define ese extremo claro — el otro extremo es tu
+color al ~72% de luminosidad, la misma caída que usa el panel original. El tono y la
+saturación no cambian, así que eliges un color y el sombreado se resuelve solo.
+
+**El "PRESS START" grande** lo dibuja el BIOS original, que no ofrece ningún parámetro de
+color, así que cubiboot recolorea la paleta de bloques que este lee. Solo se toca el RGB — la
+intensidad por bloque que impulsa la entrada y el fundido se deja intacta, así que la
+animación no cambia. La línea pequeña `Press START to begin!` de arriba es un dibujo aparte y
+siempre queda en blanco.
+
+> [!NOTE]
+> Esta opción depende de la revisión del IPL, y están cubiertas las siete revisiones en las
+> que cubiboot puede arrancar: NTSC 1.0-001, 1.1, 1.2-001, 1.2-101, PAL 1.0-001, PAL 1.2-101 y
+> MPAL. Los demás IPL que el menú reconoce son BIOS NPDP / de kits de desarrollo, que el
+> loader se niega a arrancar de todos modos.
+
+> [!NOTE]
+> `000000` funciona como negro real, y `random` elige un color nuevo en cada arranque.
 
 ## Carpetas grandes y el pool de banners
 

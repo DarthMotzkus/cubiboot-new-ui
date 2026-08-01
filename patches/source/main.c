@@ -13,6 +13,7 @@
 
 #include "reloc.h"
 #include "menu.h"
+#include "theme.h"
 
 #include "dolphin_arq.h"
 #include "flippy_sync.h"
@@ -86,13 +87,14 @@ __attribute_data__ gm_file_entry_t boot_entry;
 __attribute_data__ gm_file_entry_t second_boot_entry;
 
 __attribute_used__ void mod_cube_colors() {
-    if (cube_color == 0) {
+    u32 logo_color = theme_get_boot_cube_color();
+    if (logo_color == 0) {
         OSReport("Using default colors\n");
         return;
     }
 
     rgb_color target_color;
-    target_color.color = (cube_color << 8) | 0xFF;
+    target_color.color = (logo_color << 8) | 0xFF;
 
     // TODO: the HSL calculations do not render good results for darker inputs, I still need to tune SAT/LUM scaling
     // tough colors: 252850 A18594 763C28

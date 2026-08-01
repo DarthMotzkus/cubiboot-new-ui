@@ -308,6 +308,12 @@ int main(int argc, char **argv) {
     set_patch_value(symshdr, syment, symstringdata, "start_passthrough_game", force_passthrough);
     set_patch_value(symshdr, syment, symstringdata, "cube_color", settings.cube_color);
     set_patch_value(symshdr, syment, symstringdata, "force_progressive", settings.progressive_enabled);
+
+    set_patch_value(symshdr, syment, symstringdata, "theme_color", settings.theme_color);
+    set_patch_value(symshdr, syment, symstringdata, "menu_cube_color", settings.menu_cube_color);
+    set_patch_value(symshdr, syment, symstringdata, "menu_box_color", settings.menu_box_color);
+    set_patch_value(symshdr, syment, symstringdata, "menu_start_color", settings.menu_start_color);
+
     set_patch_value(symshdr, syment, symstringdata, "force_swiss_boot", settings.force_swiss_default);
 
     set_patch_value(symshdr, syment, symstringdata, "disable_mcp_select", settings.disable_mcp_select);
