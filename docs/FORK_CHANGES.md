@@ -21,6 +21,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | I | Booting a Swiss disc image natively | `cubeboot/source/emu/loader.c` |
 | J | Storage selection + the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
 | K | Homebrew apps as banner entries | `patches/source/games.c` |
+| L | Folder name in the header, rebranding, banner tool | `patches/source/menu.c`, `.ci/brand_*.py`, `tools/` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -240,6 +241,25 @@ keeps the detection cheap.
 The banner pool is unaffected in practice: it is released whole on every folder change
 (`gm_start_thread`), so an apps folder and a games folder never compete for the 128 buffers.
 An apps folder past 128 entries would degrade to the same sliding window games use.
+
+## L. Header, branding and the banner tool
+
+- **Menu header** names the folder being browsed (`patches/source/menu.c`,
+  `custom_gameselect_menu`) instead of the fixed `"Games"`. At the card root there is no
+  folder name, so the old label stands in.
+- **Banner artwork and text** are the Cubiboot wordmark with `"GC Games and Apps Loader"` /
+  `"build v1.6.0"` under it. Both the menu cube and the `.iso` BIOS intro read from
+  `patches/data/default_opening.bin` -- `brand_gbi.py` copies its pixel data into `gbi.hdr`
+  at iso-build time -- so replacing that one file covers both. The artwork is fitted to
+  width, not stretched; the slot is 96x32, so a source's aspect ratio decides how many of
+  the 32 rows it fills.
+- **`tools/banner-converter/`** vendors the converter that produces an `opening.bnr` from
+  any image, since an app cannot be listed with a banner without one. Canonical copy is
+  [banner-converter-gc](https://github.com/DarthMotzkus/banner-converter-gc); take fixes
+  upstream first.
+
+Note that the version string in the banner is baked into `default_opening.bin`, so a release
+that forgets to re-run `brand_opening.py` will show the previous version on the console.
 
 ## Re-applying onto a fresh makeo clone
 

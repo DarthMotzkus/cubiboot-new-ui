@@ -52,7 +52,8 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
 | **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE, so the menu lists what is already on it with no second card reader. |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
-| **Cubiboot branding** | A "Games" menu header, plus the Cubiboot banner on the loader and on the `.iso` BIOS intro (replacing the gc-linux "Game Play" banner). |
+| **Folder name in the header** | The menu header names the folder you are browsing instead of always saying "Games". |
+| **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
 | **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader.uf2`. |
 
 Full changelog against upstream: [docs/FORK_CHANGES.md](docs/FORK_CHANGES.md).
@@ -339,6 +340,19 @@ description and 96x32 image all come from that one file.
 A folder missing either file behaves exactly as before — you enter it and browse. The check
 costs one file probe per folder while the list is being built, and folders without an
 `opening.bnr` stop right there, so a library of game folders is unaffected.
+
+**Making the banner.** [`tools/banner-converter/run.py`](tools/banner-converter) turns any
+image into an `opening.bnr`. Download it from this repo, put your artwork next to it and run:
+
+```sh
+pip install Pillow
+python run.py
+```
+
+Pick option **2**, answer the title/author/description prompts, and it writes
+`output/<name>/opening.bnr`. Drop your `default.dol` beside that file and the folder is ready
+for the card. See [its README](tools/banner-converter) for the sizing rules — the slot is
+96×32, so a wordmark that looks thin wants a *taller* source, not a wider one.
 
 ### Launching Swiss from the menu
 

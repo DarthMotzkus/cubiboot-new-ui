@@ -54,7 +54,8 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Recordar el último jugado** | [`remember_last_game = 1`](#recordar-el-último-jugado) abre el menú en la carpeta de tu último juego, ya resaltado — pulsas **A** y listo. |
 | **Juegos desde la SD del ODE** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
-| **Marca Cubiboot** | Un encabezado "Games" en el menú, más el banner de Cubiboot en el loader y en la intro de la BIOS del `.iso` (reemplazando el banner "Game Play" de gc-linux). |
+| **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando en vez de decir siempre "Games". |
+| **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
 | **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader.uf2` flasheable. |
 
 Lista completa de cambios frente al upstream: [docs/FORK_CHANGES.md](FORK_CHANGES.md).
@@ -344,6 +345,21 @@ Una carpeta a la que le falte cualquiera de los dos se comporta como siempre —
 navegas. La comprobación cuesta un sondeo de archivo por carpeta mientras se construye la
 lista, y las carpetas sin `opening.bnr` se detienen ahí, así que una biblioteca de carpetas de
 juegos no se ve afectada.
+
+**Crear el banner.** [`tools/banner-converter/run.py`](../tools/banner-converter) convierte
+cualquier imagen en un `opening.bnr`. Descárgalo de este repositorio, pon tu arte junto a él y
+ejecuta:
+
+```sh
+pip install Pillow
+python run.py
+```
+
+Elige la opción **2**, responde a las preguntas de título/autor/descripción, y escribe
+`output/<nombre>/opening.bnr`. Deja tu `default.dol` junto a ese archivo y la carpeta está
+lista para la tarjeta. Mira [su README](../tools/banner-converter) para las reglas de tamaño:
+el hueco es de 96×32, así que un logotipo que se ve delgado necesita una fuente más alta, no
+más ancha.
 
 ### Iniciar Swiss desde el menú
 
