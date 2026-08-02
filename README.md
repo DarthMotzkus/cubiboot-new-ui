@@ -319,9 +319,10 @@ boot for the `gcldr` entry, which gives up as soon as a real optical drive answe
 
 ### Homebrew apps
 
-A folder that holds **`default.dol`** and **`opening.bnr`** side by side is treated as an
-application, not as a folder. It shows up in the grid with the banner from its `opening.bnr`,
-and pressing **A** runs the `.dol` directly instead of opening the folder.
+Inside a folder named **`apps`**, a subfolder that holds **`default.dol`** and
+**`opening.bnr`** side by side is treated as an application rather than a folder. It shows up
+in the grid with the banner from its `opening.bnr`, and pressing **A** runs the `.dol`
+directly instead of opening the folder.
 
 ```
 /apps/
@@ -333,12 +334,17 @@ and pressing **A** runs the `.dol` directly instead of opening the folder.
     opening.bnr
 ```
 
-Both filenames are fixed. The banner is the same format retail discs use, so a title,
-description and 96x32 image all come from that one file.
+All three names are fixed: the `apps` folder (any capitalisation), `default.dol` and
+`opening.bnr`. The banner is the same format retail discs use, so the title, description and
+96x32 image all come out of that one file.
 
-A folder missing either file behaves exactly as before — you enter it and browse. The check
-costs one file probe per folder while the list is being built, and folders without an
-`opening.bnr` stop right there, so a library of game folders is unaffected.
+> [!IMPORTANT]
+> **Apps are only detected inside `apps/`.** A folder with the same two files anywhere else
+> stays a plain folder you browse into. That is deliberate: checking every folder on the card
+> would cost a file probe per subfolder on every listing, which a game library organised into
+> subfolders would pay for nothing.
+
+A subfolder of `apps/` missing either file behaves normally — you enter it and browse.
 
 ### Launching Swiss from the menu
 

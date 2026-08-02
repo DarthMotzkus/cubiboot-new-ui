@@ -323,9 +323,10 @@ por arranque por la entrada `gcldr`, que se rinde en cuanto responde una unidad 
 
 ### Apps homebrew
 
-Una carpeta que tiene **`default.dol`** y **`opening.bnr`** juntos se trata como una
-aplicación, no como una carpeta. Aparece en la cuadrícula con el banner de su `opening.bnr`,
-y pulsar **A** ejecuta el `.dol` directamente en vez de abrir la carpeta.
+Dentro de una carpeta llamada **`apps`**, una subcarpeta que tiene **`default.dol`** y
+**`opening.bnr`** juntos se trata como una aplicación en vez de como una carpeta. Aparece en
+la cuadrícula con el banner de su `opening.bnr`, y pulsar **A** ejecuta el `.dol` directamente
+en vez de abrir la carpeta.
 
 ```
 /apps/
@@ -337,13 +338,18 @@ y pulsar **A** ejecuta el `.dol` directamente en vez de abrir la carpeta.
     opening.bnr
 ```
 
-Los dos nombres de archivo son fijos. El banner usa el mismo formato que los discos
-originales, así que el título, la descripción y la imagen de 96x32 salen todos de ese archivo.
+Los tres nombres son fijos: la carpeta `apps` (con cualquier capitalización), `default.dol` y
+`opening.bnr`. El banner usa el mismo formato que los discos originales, así que el título, la
+descripción y la imagen de 96x32 salen todos de ese archivo.
 
-Una carpeta a la que le falte cualquiera de los dos se comporta como siempre — entras y
-navegas. La comprobación cuesta un sondeo de archivo por carpeta mientras se construye la
-lista, y las carpetas sin `opening.bnr` se detienen ahí, así que una biblioteca de carpetas de
-juegos no se ve afectada.
+> [!IMPORTANT]
+> **Las apps solo se detectan dentro de `apps/`.** Una carpeta con esos dos archivos en
+> cualquier otro sitio sigue siendo una carpeta normal. Es deliberado: comprobar cada carpeta
+> de la tarjeta costaría un sondeo de archivo por subcarpeta en cada listado, y una biblioteca
+> de juegos organizada en subcarpetas lo pagaría a cambio de nada.
+
+Una subcarpeta de `apps/` a la que le falte cualquiera de los dos se comporta como siempre —
+entras y navegas.
 
 ### Iniciar Swiss desde el menú
 

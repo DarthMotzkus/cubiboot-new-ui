@@ -434,6 +434,30 @@ static char *valid_prog_exts[] = {".dol", ".dol+cli"}; // TODO: add .elf
 // these paths are copied straight into those fields.
 #define GM_PATH_MAX 128
 
+// Apps are only looked for inside a folder named "apps". Distribution puts every app at
+// apps/<slug>/, and honouring that keeps the probe off every other folder -- a game library
+// with a subfolder per letter would otherwise pay a failed open on each one, on every scan.
+// The limit is documented rather than inferred: an app dropped somewhere else stays a plain
+// folder, which is a surprise worth naming in the README instead of leaving people to find.
+static bool gm_scanning_apps_folder(const char *dir) {
+    int len = (int)strlen(dir);
+    if (len > 0 && dir[len - 1] == '/') len--; // the scan path carries a trailing slash
+    if (len <= 0) return false;
+
+    int start = len;
+    while (start > 0 && dir[start - 1] != '/') start--;
+
+    // Compare the last component whole, so "/myapps" does not pass for "/apps".
+    char name[16];
+    int name_len = len - start;
+    if (name_len <= 0 || name_len >= (int)sizeof(name)) return false;
+
+    memcpy(name, dir + start, name_len);
+    name[name_len] = '\0';
+
+    return strcasecmp(name, "apps") == 0;
+}
+
 static bool gm_file_exists(const char *path) {
     if (dvd_custom_open((char*)path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0)
         return false;
@@ -802,6 +826,7 @@ void gm_check_files(int path_count) {
     gm_evict_on_scroll = false;
 
     char app_dol_path[GM_PATH_MAX];
+    bool scanning_apps = gm_scanning_apps_folder(game_enum_path);
 
     // Enumerate all of the games
     u64 start_time = gettime();
@@ -882,7 +907,8 @@ void gm_check_files(int path_count) {
             // set heap pointer
             gm_entry_backing[gm_entry_count] = backing;
             gm_entry_count++;
-        } else if (entry->type == GM_FILE_TYPE_DIRECTORY && gm_dir_is_app(entry->path, app_dol_path)) {
+        } else if (scanning_apps && entry->type == GM_FILE_TYPE_DIRECTORY
+                   && gm_dir_is_app(entry->path, app_dol_path)) {
             OSReport("Found app %s\n", app_dol_path);
 
             // The .dol is what gets booted, so it is what the entry points at -- that keeps

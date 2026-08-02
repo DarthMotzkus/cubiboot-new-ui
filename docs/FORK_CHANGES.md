@@ -222,9 +222,13 @@ keeps the detection cheap.
   drawing path a game uses, and `boot_entry.path` already points at the `.dol`, so booting is
   the plain homebrew path.
 - **Detection** happens in `gm_check_files`, not in the readdir loop, so the cost sits where
-  entries are already being opened one by one. `opening.bnr` is probed first because it is the
-  rarer of the two: a folder without one stops after a single failed open, which is every
-  folder in a normal game library.
+  entries are already being opened one by one, and only while scanning a folder named `apps`
+  (`gm_scanning_apps_folder`, matched on the whole last path component so `/myapps` does not
+  qualify). Restricting it that way is what keeps the probe off every other folder: a game
+  library organised into per-letter subfolders would otherwise pay a failed open on each one,
+  on every listing, to find nothing. The trade is that an app outside `apps/` silently stays a
+  folder, which is why the README states the requirement outright. Within `apps/`,
+  `opening.bnr` is probed before `default.dol` because it is the rarer of the two.
 - **`standalone_bnr`** in `gm_extra_t`. `gm_load_banner` used `dvd_bnr_offset == 0` to mean
   "no banner", and 0 is exactly where a standalone `opening.bnr` starts, so the sentinel had
   to move to a flag.
