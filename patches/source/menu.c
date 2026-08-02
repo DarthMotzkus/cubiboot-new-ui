@@ -749,7 +749,9 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
     if (!can_boot)
         emu_draw_boot_error(entry->type, alpha_1);
 
-    if (entry->type == GM_FILE_TYPE_GAME && entry->asset.banner.state == GM_LOAD_STATE_LOADED) {
+    // An app carries a banner exactly like a disc does, so it draws one here too.
+    bool has_banner = entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP;
+    if (has_banner && entry->asset.banner.state == GM_LOAD_STATE_LOADED) {
         // game banner
         setup_tex_draw(1, 0, 1);
         banner_texture.offset = (s32)((u32)(entry->asset.banner.buf->data) - (u32)&banner_texture);
@@ -759,7 +761,8 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
     // game info
     prep_text_mode();
     draw_blob_text(make_type('t','i','t','l'), game_blob_b, &white, entry->desc.fullGameName, 0x40);
-    if (entry->type == GM_FILE_TYPE_GAME) {
+    if (has_banner) {
+        // Author and description come out of the banner, for a disc and an app alike.
         draw_blob_text(make_type('m','a','k','r'), game_blob_b, &white, entry->desc.fullCompany, 0x40);
         draw_blob_text_long(make_type('i','n','f','o'), game_blob_b, &white, entry->desc.description, 0x80);
     } else {
