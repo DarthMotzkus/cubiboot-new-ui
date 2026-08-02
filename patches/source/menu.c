@@ -696,11 +696,11 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
                 icon_texture.offset = (s32)((u32)entry->asset.icon.buf->data - (u32)&icon_texture);
                 draw_blob_tex(make_type('i','c','0','0'), menu_blob, &white, &icon_texture);
             }
-        } else if (entry->type == GM_FILE_TYPE_GAME) {
+        } else if (entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP) {
             // game source
             switch_lang_eng();
             draw_blob_border(make_type('f','r','m','c'), menu_blob, &white);
-            draw_text("ISO", 20, 125, 540, &white);
+            draw_text(entry->type == GM_FILE_TYPE_APP ? "APP" : "ISO", 20, 125, 540, &white);
 
             if (entry->asset.banner.state == GM_LOAD_STATE_LOADED) {
                 // banner image
