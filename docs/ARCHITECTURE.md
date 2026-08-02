@@ -265,7 +265,9 @@ the ODE. The volume strings come from `ffconf.h` `FF_VOLUME_STRS`.
 The array leads with the ODE because the IPL patches index straight into it, but the loader
 works from `EMU_DEFAULT_DEVICE_ORDER` — `"sdc, sdb, sda, gcldr"` — so a console without an ODE
 only reaches the drive-interface inquiry after everything else has been ruled out. That one
-string is both the bootstrap's search order and the default for `device_order`.
+string is both the bootstrap's search order and the default for `device_order`. config.ini also
+accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`) which resolve
+onto the same volumes.
 
 The bootstrap runs that order **twice**. The first pass takes the device that actually holds a
 `/config.ini`; only if none does, a second pass settles for the first device that merely

@@ -1,6 +1,10 @@
 # Settings
 
-These are all of the values supported by the `cubeboot.ini` file.
+These are all of the values supported by the `config.ini` file.
+
+The commented template that ships in every release lives at
+[`.ci/config.ini`](../.ci/config.ini) — edit that one when adding or changing an option, and
+the release picks it up. This page is the prose reference.
 
 ```
 theme_color = 00ffff    # hex color code -- one color for the whole UI
@@ -10,7 +14,7 @@ menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
 cube_logo = path.png    # path to a 352x40px PNG image
 force_progressive = 1   # enables progressive scan
-device_order = sdc, sdb, sda, gcldr   # storage to read games from, most wanted first
+device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
 ```
 
 ## Colors
@@ -87,23 +91,23 @@ the volume everything comes off: the IPL dump, `swiss-gc.dol`, banners and the g
 
 | Name | Where it is |
 |------|-------------|
-| `sdc` | Serial Port 2 — an **SD2SP2** |
-| `sdb` | Memory card **slot B** — an SD Gecko |
-| `sda` | Memory card **slot A** — an SD Gecko |
-| `gcldr` | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
+| `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
+| `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
+| `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
+| `ode`, `gcloader` (or `gcldr`) | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
 
 Separate the names with commas or spaces; case does not matter. Unknown names are reported
 and skipped. Default when the key is absent:
 
 ```ini
-device_order = sdc, sdb, sda, gcldr
+device_order = sd2sp2, slot_b, slot_a, ode
 ```
 
 Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
 A console with both an SD2SP2 and a GC Loader, whose games live on the ODE, writes:
 
 ```ini
-device_order = gcldr
+device_order = ode
 ```
 
 Two things to know:

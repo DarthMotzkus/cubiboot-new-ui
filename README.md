@@ -161,6 +161,10 @@ Optional, works with every method above.
 Put a `config.ini` in the root of the card cubiboot reads from. It's optional: without one
 you get the `small_banners` layout and the card root as the starting folder.
 
+Releases ship a commented template with every option — it is
+[`.ci/config.ini`](.ci/config.ini) in this repo, and `config.ini` in the release zip. The
+block below is the short version.
+
 ```ini
 [cubeboot]
 
@@ -185,10 +189,10 @@ menu_grid_type = small_banners
 ; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).
 remember_last_game = 0
 
-; Which storage to read games from, most wanted first. Volume names: sdc (SD2SP2),
-; sdb (memory card slot B), sda (slot A), gcldr (the card inside a GC Loader / ODE).
+; Which storage to read games from, most wanted first: sd2sp2, slot_b, slot_a, ode.
+; The FatFs volume names (sdc, sdb, sda, gcldr) also work.
 ; Leave commented for the default below.
-; device_order = sdc, sdb, sda, gcldr
+; device_order = sd2sp2, slot_b, slot_a, ode
 ```
 
 ### All options
@@ -198,7 +202,7 @@ remember_last_game = 0
 | [`menu_grid_type`](#menu-layout) | `small_banners` · `banners` · `square_icons` | `small_banners` | Menu grid layout |
 | [`default_folder`](#starting-folder) | path | card root | Folder the menu opens in |
 | [`remember_last_game`](#remember-last-played) | `1` · `0` | `0` | Pre-select the last game you booted |
-| [`device_order`](#where-games-are-read-from) | volume names | `sdc, sdb, sda, gcldr` | Which storage to read games from |
+| [`device_order`](#where-games-are-read-from) | device names | `sd2sp2, slot_b, slot_a, ode` | Which storage to read games from |
 | [`theme_color`](#colors) | hex RGB · `random` | stock | One color for the whole UI |
 | [`cube_color`](#colors) | hex RGB · `random` | `theme_color` | Boot logo color |
 | [`menu_cube_color`](#colors) | hex RGB · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
@@ -281,22 +285,22 @@ banners and the games the menu lists.
 
 | Name | Where it is |
 |------|-------------|
-| `sdc` | Serial Port 2 — an **SD2SP2** |
-| `sdb` | Memory card **slot B** — an SD Gecko |
-| `sda` | Memory card **slot A** — an SD Gecko |
-| `gcldr` | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
+| `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
+| `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
+| `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
+| `ode`, `gcloader` (or `gcldr`) | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
 
 The default, used when the key is absent:
 
 ```ini
-device_order = sdc, sdb, sda, gcldr
+device_order = sd2sp2, slot_b, slot_a, ode
 ```
 
 Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
 So a console with both an SD2SP2 and a GC Loader, whose games live on the ODE, says:
 
 ```ini
-device_order = gcldr
+device_order = ode
 ```
 
 Two things to know:

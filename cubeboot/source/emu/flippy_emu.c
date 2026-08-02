@@ -52,11 +52,38 @@ static void emu_mount_path(int device, char* path) {
 	strcat(path, ":");
 }
 
-static int emu_find_device(const char* name, int len) {
+// Hardware spellings for the FatFs volume names. Someone writing a config.ini thinks in
+// terms of the thing plugged into their console, not in terms of a FatFs volume -- and
+// "sdc" meaning serial port 2 is not guessable. Both are accepted: the volume names have
+// to keep working because they are what the loader's own logging prints.
+static const struct { const char* alias; const char* volume; } emu_device_aliases[] = {
+	{ "sd2sp2",   "sdc"   },
+	{ "slot_b",   "sdb"   },
+	{ "slot_a",   "sda"   },
+	{ "ode",      "gcldr" },
+	{ "gcloader", "gcldr" },
+};
+
+static int emu_match_volume(const char* name, int len) {
 	int count = sizeof(device_prio) / sizeof(device_prio[0]);
 	for (int i = 0; i < count; i++) {
 		if ((int)strlen(device_prio[i]) == len && strncasecmp(device_prio[i], name, len) == 0)
 			return i;
+	}
+
+	return -1;
+}
+
+static int emu_find_device(const char* name, int len) {
+	int device = emu_match_volume(name, len);
+	if (device >= 0)
+		return device;
+
+	int aliases = sizeof(emu_device_aliases) / sizeof(emu_device_aliases[0]);
+	for (int i = 0; i < aliases; i++) {
+		const char* alias = emu_device_aliases[i].alias;
+		if ((int)strlen(alias) == len && strncasecmp(alias, name, len) == 0)
+			return emu_match_volume(emu_device_aliases[i].volume, strlen(emu_device_aliases[i].volume));
 	}
 
 	iprintf("device_order: ignoring unknown device '%.*s'\n", len, name);

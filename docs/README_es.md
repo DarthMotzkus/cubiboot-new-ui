@@ -164,6 +164,10 @@ Opcional, funciona con todos los métodos anteriores.
 Pon un `config.ini` en la raíz de la tarjeta que cubiboot lee. Es opcional: sin él obtienes
 el diseño `small_banners` y la raíz de la tarjeta como carpeta de inicio.
 
+Las releases incluyen una plantilla comentada con todas las opciones — es
+[`.ci/config.ini`](../.ci/config.ini) en este repositorio, y `config.ini` en el zip de la
+release. El bloque de abajo es la versión corta.
+
 ```ini
 [cubeboot]
 
@@ -186,10 +190,10 @@ menu_grid_type = small_banners
 ; Preseleccionar el último juego arrancado al abrir el menú (1 = sí, 0 = no).
 remember_last_game = 0
 
-; De qué almacenamiento leer los juegos, el preferido primero. Nombres de volumen:
-; sdc (SD2SP2), sdb (ranura B de memory card), sda (ranura A), gcldr (la tarjeta dentro
-; de un GC Loader / ODE). Deja comentado para usar el valor por defecto.
-; device_order = sdc, sdb, sda, gcldr
+; De qué almacenamiento leer los juegos, el preferido primero: sd2sp2, slot_b, slot_a,
+; ode. Los nombres de volumen de FatFs (sdc, sdb, sda, gcldr) también funcionan.
+; Deja comentado para usar el valor por defecto.
+; device_order = sd2sp2, slot_b, slot_a, ode
 ```
 
 ### Todas las opciones
@@ -199,7 +203,7 @@ remember_last_game = 0
 | [`menu_grid_type`](#diseño-del-menú) | `small_banners` · `banners` · `square_icons` | `small_banners` | Diseño de la cuadrícula |
 | [`default_folder`](#carpeta-de-inicio) | ruta | raíz de la tarjeta | Carpeta en la que abre el menú |
 | [`remember_last_game`](#recordar-el-último-jugado) | `1` · `0` | `0` | Preselecciona el último juego arrancado |
-| [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de volumen | `sdc, sdb, sda, gcldr` | De qué almacenamiento leer los juegos |
+| [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de dispositivo | `sd2sp2, slot_b, slot_a, ode` | De qué almacenamiento leer los juegos |
 | [`theme_color`](#colores) | RGB hex · `random` | original | Un color para toda la interfaz |
 | [`cube_color`](#colores) | RGB hex · `random` | `theme_color` | Color del logo de arranque |
 | [`menu_cube_color`](#colores) | RGB hex · `random` · nombre de paleta | `theme_color` | Cubos / banners de la cuadrícula |
@@ -284,15 +288,15 @@ primera entrada que monte se convierte en el volumen del que sale todo: el volca
 
 | Nombre | Dónde está |
 |--------|------------|
-| `sdc` | Puerto serie 2 — un **SD2SP2** |
-| `sdb` | **Ranura B** de memory card — un SD Gecko |
-| `sda` | **Ranura A** de memory card — un SD Gecko |
-| `gcldr` | La tarjeta SD **dentro del ODE** — un [GC Loader](https://gcloaderhq.com/) o cualquiera que responda a los mismos comandos de unidad |
+| `sd2sp2` (o `sdc`) | Puerto serie 2 — un **SD2SP2** |
+| `slot_b` (o `sdb`) | **Ranura B** de memory card — un SD Gecko |
+| `slot_a` (o `sda`) | **Ranura A** de memory card — un SD Gecko |
+| `ode`, `gcloader` (o `gcldr`) | La tarjeta SD **dentro del ODE** — un [GC Loader](https://gcloaderhq.com/) o cualquiera que responda a los mismos comandos de unidad |
 
 El valor por defecto, cuando la clave no está:
 
 ```ini
-device_order = sdc, sdb, sda, gcldr
+device_order = sd2sp2, slot_b, slot_a, ode
 ```
 
 Dejar un dispositivo fuera de la lista es como mantienes a cubiboot lejos de él — no hay un
@@ -300,7 +304,7 @@ interruptor de encendido/apagado aparte. Así que una consola con SD2SP2 y GC Lo
 juegos viven en el ODE, escribe:
 
 ```ini
-device_order = gcldr
+device_order = ode
 ```
 
 Dos cosas a tener en cuenta:
