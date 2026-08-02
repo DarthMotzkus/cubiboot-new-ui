@@ -15,7 +15,7 @@ const char* emu_get_device();
 
 #ifdef IPL_CODE
 void emu_update_boot();
-bool emu_can_boot(gm_file_type_t type);
+bool emu_can_boot(gm_file_entry_t *entry);
 void emu_draw_boot_error(gm_file_type_t type, u8 ui_alpha);
 bool emu_has_dvd();
 

@@ -158,8 +158,12 @@ to the stock IPL.
 
 `is_swiss_image()` matches any file whose **basename starts with `swiss`**, regardless of
 extension, and routes it through cubiboot's own apploader (`load_dol_file` + `run`) instead of
-the autoload path. `is_swiss()` keeps the older, narrower `.dol`-only check for the
-chainloader itself.
+the autoload path. `is_swiss()` covers the chainloader itself, and matches an app by its **folder** name when
+the file is `default.dol` -- an app's filename is always that, so the folder is the only
+thing identifying it. `emu_can_boot` lets Swiss through even with no `swiss-gc.dol` at the
+root: everything else is booted by chainloading Swiss, but Swiss needs no chainloader, and a
+card carrying it only as an app would otherwise refuse to launch the one thing that fixes
+that.
 
 Normal games don't start with `swiss`, so nothing else is affected. This is separate from the
 `swiss-gc.dol` engine that has to sit at the card root.

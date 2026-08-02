@@ -368,7 +368,13 @@ Deja el `.dol` *o* el `.iso` de Swiss en cualquier carpeta con un nombre que emp
 llamada `swiss…` **directamente a través de su propio apploader** en lugar de pasársela a
 Swiss — sin ese prefijo, una imagen de disco de Swiss simplemente reinicia al IPL original.
 
-Esto es independiente del motor `swiss-gc.dol` que debe estar en la **raíz** de la tarjeta.
+Swiss como app homebrew también funciona: `apps/swiss/default.dol` se reconoce por el nombre
+de la **carpeta**, ya que el archivo de dentro siempre se llama `default.dol`. Se ejecuta
+directamente en vez de pasárselo a Swiss — y sigue siendo lanzable aunque no haya
+`swiss-gc.dol` en la raíz, así que una tarjeta que solo tenga Swiss como app puede arrancarlo.
+
+Esto es independiente del motor `swiss-gc.dol` que debe estar en la **raíz** de la tarjeta
+para los juegos.
 
 ### Colores
 

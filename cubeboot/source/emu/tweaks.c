@@ -12,6 +12,7 @@
 #include "../crc32.h"
 #include "../sd.h"
 #else
+#include "../boot.h"
 #include "../gc_dvd.h"
 #include "../time.h"
 #include "../attr.h"
@@ -30,12 +31,16 @@ void emu_update_boot() {
     dvd_custom_close(status->fd);
 }
 
-bool emu_can_boot(gm_file_type_t type) {
-    switch (type) {
+bool emu_can_boot(gm_file_entry_t *entry) {
+    switch (entry->type) {
         case GM_FILE_TYPE_GAME:
         case GM_FILE_TYPE_PROGRAM:
         case GM_FILE_TYPE_APP:
-            return found_swiss;
+            // Everything is booted by chainloading Swiss, so without it nothing runs --
+            // except Swiss itself, which needs no chainloader. That exception matters: a
+            // card carrying Swiss only as an app, with no swiss-gc.dol at the root, would
+            // otherwise refuse to launch the one thing that could fix it.
+            return found_swiss || is_swiss(entry->path);
         default:
             return true;
     }

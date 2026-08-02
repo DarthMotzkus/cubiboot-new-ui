@@ -745,7 +745,7 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
     if (entry->extra.game_id[3] == 'J') switch_lang_jpn();
     else switch_lang_eng();
 
-    bool can_boot = emu_can_boot(entry->type);
+    bool can_boot = emu_can_boot(entry);
     if (!can_boot)
         emu_draw_boot_error(entry->type, alpha_1);
 
@@ -938,7 +938,7 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         Jac_PlaySe(SOUND_MENU_FINAL);
         gm_file_entry_t *entry = gm_get_game_entry(selected_slot);
 
-        if (!emu_can_boot(entry->type))
+        if (!emu_can_boot(entry))
             return MENU_GAMESELECT_TRANSITION_ID;
 
         // No save step needed: cubeboot boots games via swiss-gc.dol autoload, so Swiss

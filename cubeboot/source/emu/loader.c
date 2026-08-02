@@ -29,36 +29,55 @@ static int setup_argv(const char** string_list, char* buffer, struct __argv* arg
     return buffer_len;
 }
 
-bool is_swiss(char* game_path) {
-    if (game_path == NULL)
-        return false;
-    
-    int len = strlen(game_path);
-    if (len < 10)
-        return false;
-    
-    char* filename = game_path;
-    for (int i = len - 1; i >= 0; i--) {
-        if (game_path[i] == '/' || game_path[i] == '\\') {
-            filename = &game_path[i + 1];
-            break;
-        }
-    }
-    
-    int filename_len = strlen(filename);
-    if (filename_len < 10)
-        return false;
-    
-    if (strcasecmp(filename + filename_len - 4, ".dol") != 0)
+static bool starts_with_swiss(const char* name, int len) {
+    if (len < 5)
         return false;
 
     char prefix[6];
-    memcpy(prefix, filename, 5);
+    memcpy(prefix, name, 5);
     prefix[5] = '\0';
-    if (strcasecmp(prefix, "swiss") != 0)
+    return strcasecmp(prefix, "swiss") == 0;
+}
+
+// True when this .dol is Swiss itself, in which case it is run directly rather than being
+// handed to Swiss with Autoload= -- asking Swiss to autoload a copy of itself resets the
+// console to the stock IPL.
+//
+// The name to test is usually the file's, but an app folder is always <name>/default.dol, so
+// the file says nothing and the folder is what identifies it. Both spellings therefore work:
+// swiss-gc.dol sitting loose, and apps/swiss/default.dol.
+bool is_swiss(char* game_path) {
+    if (game_path == NULL)
         return false;
 
-    return true;
+    int len = strlen(game_path);
+
+    // split off the last component
+    int base = len;
+    while (base > 0 && game_path[base - 1] != '/' && game_path[base - 1] != '\\')
+        base--;
+
+    const char* filename = &game_path[base];
+    int filename_len = len - base;
+
+    if (filename_len < 5 || strcasecmp(filename + filename_len - 4, ".dol") != 0)
+        return false;
+
+    if (starts_with_swiss(filename, filename_len))
+        return true;
+
+    // Not named for itself: fall back to the folder holding it, which is how an app is
+    // identified. Only default.dol earns that -- any other name in the folder is some
+    // other program that happens to live beside Swiss.
+    if (strcasecmp(filename, "default.dol") != 0)
+        return false;
+
+    int dir_end = base > 0 ? base - 1 : 0;   // step over the separator
+    int dir_start = dir_end;
+    while (dir_start > 0 && game_path[dir_start - 1] != '/' && game_path[dir_start - 1] != '\\')
+        dir_start--;
+
+    return starts_with_swiss(&game_path[dir_start], dir_end - dir_start);
 }
 
 // Like is_swiss(), but matches a Swiss *disc image* (any extension) by basename prefix.
