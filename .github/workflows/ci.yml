@@ -28,6 +28,22 @@ jobs:
           echo "docker build failed after 5 attempts" >&2
           exit 1
 
+      # The version shown under the banner, on the menu cube and on the .iso BIOS intro.
+      # Stamped from the tag being built so a release cannot ship the previous version's
+      # number; off a tag there is no version to claim, so the commit is used instead --
+      # which is also what you want when someone reports a bug against a test build.
+      # Both artefacts read this one file: build_iso.sh's brand_gbi.py copies its text
+      # across, so stamping here covers the .iso too.
+      - name: Stamp the banner version
+        run: |
+          set -e
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="$GITHUB_REF_NAME"
+          else
+            VERSION="$(git rev-parse --short HEAD)"
+          fi
+          python3 .ci/brand_opening.py patches/data/default_opening.bin "$VERSION"
+
       # ipl.dol: the cubeboot loader (entry/ build copies emu sources + compresses payload).
       - name: Build ipl.dol
         run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'cd entry && make clean && make'
@@ -79,11 +95,17 @@ jobs:
             dist/EXTRACT_TO_ROOT.zip
 
       # On a tag push (v*), publish a GitHub Release with the artifacts.
+      #
+      # The body comes from .ci/release-notes.md, written per release. It used to be
+      # generate_release_notes, which builds the body out of the commit log -- that buries
+      # what actually changed under every "chore: refresh the banner artwork", and adds
+      # contributor and PR lists nobody asked for. It also silently ignores the tag's own
+      # annotation, so writing notes there does nothing.
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: .ci/release-notes.md
           files: |
             dist/ipl.dol
             dist/swiss/patches/apploader.img

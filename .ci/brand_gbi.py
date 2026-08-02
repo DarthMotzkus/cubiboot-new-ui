@@ -8,9 +8,11 @@ The console IPL/BIOS reads the disc's opening.bnr (baked into gbi.hdr) to draw t
 "press start / press A" intro cube. mkgbi (cubeboot-tools) embeds the gc-linux banner
 there. We overwrite, in place:
 
-  * the 96x32 RGB5A3 banner image  -> the cubeboot loader banner (the same one the
+  * the 96x32 RGB5A3 banner image  -> the cubiboot loader banner (the same one the
                                       menu shows on the cube, default_opening.bin)
-  * the BNRDesc text fields        -> "GC Games and Apps Loader" / "build v1.6.0"
+  * the BNRDesc text fields        -> copied from that same banner, so the .iso says
+                                      whatever brand_opening.py stamped and there is
+                                      no second copy of the strings to keep in step
 
 Offsets are fixed by mkgbi's layout (verified against the shipped gbi.hdr):
   BNR1 magic   @ 0x43C0
@@ -34,16 +36,8 @@ PIXELDATA_LEN = 96 * 32 * 2          # 6144
 BNR_PIXEL_OFF = 0x20                 # pixelData offset inside an opening.bnr
 DESC_OFF      = 0x5BE0               # desc[0]
 
-# BNRDesc field (offset, length) within a desc block, and the text to write.
-TITLE = b"GC Games and Apps Loader"
-SUBTITLE = b"build v1.6.0"
-FIELDS = [
-    (0x00, 0x20, TITLE),       # gameName      (short)
-    (0x20, 0x20, SUBTITLE),    # company       (short)
-    (0x40, 0x40, TITLE),       # fullGameName
-    (0x80, 0x40, SUBTITLE),    # fullCompany
-    (0xC0, 0x80, SUBTITLE),    # description
-]
+BNR_DESC_OFF  = 0x1820               # desc[0] offset inside an opening.bnr
+DESC_LEN      = 0x140                # one BNRDesc
 
 BANNER_TILES_W = 96 // 4             # 24
 LOGO_TILES_W   = 32 // 4             # 8
@@ -76,12 +70,17 @@ def build_banner(src: bytes) -> bytes:
     return bytes(banner)
 
 
-def patch_desc(buf: bytearray):
-    for off, length, text in FIELDS:
-        base = DESC_OFF + off
-        buf[base:base + length] = b"\x00" * length          # clear field
-        n = min(len(text), length - 1)                       # keep NUL terminator
-        buf[base:base + n] = text[:n]
+def patch_desc(buf: bytearray, src: bytes):
+    """Copy the banner's own text across, rather than restating it here.
+
+    The strings used to be duplicated between this script and brand_opening.py, which
+    meant every wording change had to be made twice and could silently drift. Now the
+    .bin is the single source and this just carries it over.
+    """
+    if len(src) < BNR_DESC_OFF + DESC_LEN:
+        raise SystemExit("banner source has no BNRDesc to copy — pass an opening.bnr")
+
+    buf[DESC_OFF:DESC_OFF + DESC_LEN] = src[BNR_DESC_OFF:BNR_DESC_OFF + DESC_LEN]
 
 
 def main():
@@ -95,11 +94,12 @@ def main():
 
     banner_src = open(banner_src_path, "rb").read()
     buf[PIXELDATA_OFF:PIXELDATA_OFF + PIXELDATA_LEN] = build_banner(banner_src)
-    patch_desc(buf)
+    patch_desc(buf, banner_src)
 
+    line1 = buf[DESC_OFF:DESC_OFF + 0x20].split(b"\x00")[0].decode("latin-1")
+    line2 = buf[DESC_OFF + 0x20:DESC_OFF + 0x40].split(b"\x00")[0].decode("latin-1")
     open(out_gbi, "wb").write(buf)
-    print(f">> wrote {out_gbi} ({len(buf)} bytes): banner + '{TITLE.decode()}' / "
-          f"'{SUBTITLE.decode()}' branded")
+    print(f">> wrote {out_gbi} ({len(buf)} bytes): banner + '{line1}' / '{line2}' branded")
 
 
 if __name__ == "__main__":
