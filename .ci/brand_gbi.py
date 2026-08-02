@@ -10,7 +10,7 @@ there. We overwrite, in place:
 
   * the 96x32 RGB5A3 banner image  -> the cubeboot loader banner (the same one the
                                       menu shows on the cube, default_opening.bin)
-  * the BNRDesc text fields        -> "CUBIBOOT NEW UI" / "GC Games and Apps Loader"
+  * the BNRDesc text fields        -> "GC Games and Apps Loader" / "build v1.6.0"
 
 Offsets are fixed by mkgbi's layout (verified against the shipped gbi.hdr):
   BNR1 magic   @ 0x43C0
@@ -35,8 +35,8 @@ BNR_PIXEL_OFF = 0x20                 # pixelData offset inside an opening.bnr
 DESC_OFF      = 0x5BE0               # desc[0]
 
 # BNRDesc field (offset, length) within a desc block, and the text to write.
-TITLE = b"CUBIBOOT NEW UI"
-SUBTITLE = b"GC Games and Apps Loader"
+TITLE = b"GC Games and Apps Loader"
+SUBTITLE = b"build v1.6.0"
 FIELDS = [
     (0x00, 0x20, TITLE),       # gameName      (short)
     (0x20, 0x20, SUBTITLE),    # company       (short)

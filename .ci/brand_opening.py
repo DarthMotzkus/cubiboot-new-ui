@@ -19,8 +19,8 @@ Usage: brand_opening.py <default_opening.bin>   (patched in place)
 import sys
 
 DESC = 0x1820
-TITLE = b"CUBIBOOT NEW UI"
-MAKER = b"GC Games and Apps Loader"
+TITLE = b"GC Games and Apps Loader"
+MAKER = b"build v1.6.0"
 FIELDS = [
     (0x00, 0x20, TITLE),   # gameName
     (0x20, 0x20, MAKER),   # company
