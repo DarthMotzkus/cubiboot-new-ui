@@ -357,12 +357,13 @@ menu_cube_color = green   ; blue | green | yellow | orange | red | purple (defau
 
 Naming a palette *and* setting `theme_color` picks that palette and then tints it.
 
-**The info panel is a gradient, from one color.** It is brightest at the top and fades
-darker downward, and `menu_box_color` sets that bright end — the far end is your color at
-~45% lightness. Same hue and saturation throughout, so you pick one color and the shading
-takes care of itself. The falloff is steeper than the stock panel's because the stock one
-also swings its hue from purple to magenta, and copying that swing onto an arbitrary color
-turns the gradient into a clash; lightness has to carry the effect alone.
+**The info panel is a gradient, from one color.** It is darkest at the bottom and brightens
+upward into the color you set, so `menu_box_color` is that bright end and the dark end is
+your color at ~20% lightness. Same hue and saturation throughout, so you pick one color and
+the shading takes care of itself. The dark end goes much further down than the stock panel's,
+because the stock one also swings its hue from purple to magenta; copying that swing onto an
+arbitrary color turns the gradient into a clash, so lightness carries the effect alone and
+has to work harder for it.
 
 **The big "PRESS START"** is drawn by the stock BIOS, which offers no color parameter, so
 cubiboot recolors the block palette it reads. Only the RGB is touched — the per-block

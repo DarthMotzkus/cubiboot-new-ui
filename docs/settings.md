@@ -49,11 +49,13 @@ Neither derivation is a straight fill:
 - **Info panel.** One key drives both ends of its gradient. Stock is top `6e00b3`
   (H=196 S=255 L=89) fading to bottom `800057` (H=226 S=255 L=64): saturation holds, lightness
   drops to ~72%, hue swings +30 (about +42°, purple → magenta). `menu_box_color` sets the
-  bright end; the far end keeps the hue and saturation and drops to **45%** lightness. The hue
+  bright end, which renders at the **top**; the dark end keeps the hue and saturation and
+  drops to **20%** lightness at the bottom (orientation confirmed on hardware). The hue
   swing is deliberately dropped — rotating it onto another hue turns the gradient into a
-  clash, with orange fading to lime — and the falloff is steeper than stock's to compensate,
-  because lightness now carries alone what stock split between two cues. At stock's own ~72%
-  a grey theme read as a solid panel on hardware.
+  clash, with orange fading to lime — and the falloff is far steeper than stock's, because
+  lightness now carries alone what stock split between two cues. Stock's own ~72% read as a
+  solid panel on hardware, and so did 45%, so the dark end is near-black: the panel runs from
+  dark at the bottom up into the color you picked.
 
 - **The big "PRESS START".** Drawn by the stock BIOS's `draw_start_anim`, which takes only an
   alpha byte — there is no color parameter. Disassembling it on all seven dumps shows it loops

@@ -359,10 +359,13 @@ menu_cube_color = green   ; blue | green | yellow | orange | red | purple (por d
 
 Nombrar una paleta *y* definir `theme_color` elige esa paleta y luego la tiñe.
 
-**El panel de info es un degradado, a partir de un solo color.** Es más claro arriba y se
-oscurece hacia abajo, y `menu_box_color` define ese extremo claro — el otro extremo es tu
-color al ~72% de luminosidad, la misma caída que usa el panel original. El tono y la
-saturación no cambian, así que eliges un color y el sombreado se resuelve solo.
+**El panel de info es un degradado, a partir de un solo color.** Es más oscuro abajo y se
+aclara hacia arriba hasta el color que elijas, así que `menu_box_color` es ese extremo claro
+y el extremo oscuro es tu color al ~20% de luminosidad. El tono y la saturación no cambian,
+así que eliges un color y el sombreado se resuelve solo. El extremo oscuro baja mucho más que
+el del panel original, porque el original también gira su tono de morado a magenta; aplicar
+ese giro a un color arbitrario convierte el degradado en un choque, así que la luminosidad
+carga sola con el efecto y tiene que esforzarse más.
 
 **El "PRESS START" grande** lo dibuja el BIOS original, que no ofrece ningún parámetro de
 color, así que cubiboot recolorea la paleta de bloques que este lee. Solo se toca el RGB — la

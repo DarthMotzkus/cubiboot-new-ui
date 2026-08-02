@@ -173,11 +173,16 @@ bool theme_tint_cube_colors(const GXColorS10 *stock[4], GXColorS10 out[4]) {
 //
 // The hue swing is deliberately dropped: rotating that same swing onto another hue turns the
 // gradient into a clash, with orange fading to lime. That leaves lightness as the only lever,
-// and copying the stock's ~72% is not enough to read as a gradient once the hue stops moving
-// -- on a grey theme, where there is no hue at all, the panel came out looking solid on
-// hardware even though the far end really was 53 lightness steps down. So the falloff is
-// steeper than stock's on purpose: it has to carry alone what stock split between two cues.
-#define BOX_FAR_END_LUM 0.45f
+// and it has to carry alone what stock split between two cues.
+//
+// Stock's own ~72% was invisible on hardware, and so was 45%: the panel read as one flat
+// colour both times. Near-black is what finally shows -- ff9801 lands on 341e00 -- so the
+// panel runs dark at the bottom and brightens upward into the colour you picked.
+//
+// That also settles the orientation, which was guesswork until someone looked at a screen:
+// the dark end lands where bottom_color says it should, so the `top_color`/`bottom_color`
+// names in box_draw_metadata are right way round and draw_box does interpolate vertically.
+#define BOX_FAR_END_LUM 0.20f
 
 static u32 derive_box_far_end(u32 near_rgb) {
     u32 stock_near = GRRLIB_RGBToHSL(RGB24_TO_RGBA(STOCK_BOX_TOP_RGB));
