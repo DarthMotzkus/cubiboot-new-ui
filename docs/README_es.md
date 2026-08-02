@@ -363,18 +363,41 @@ más ancha.
 
 ### Iniciar Swiss desde el menú
 
-Deja el `.dol` *o* el `.iso` de Swiss en cualquier carpeta con un nombre que empiece por
-`swiss` (por ejemplo `swiss-gc.dol`, `Swiss v0.6r2073.iso`). Cubiboot arranca una imagen
-llamada `swiss…` **directamente a través de su propio apploader** en lugar de pasársela a
-Swiss — sin ese prefijo, una imagen de disco de Swiss simplemente reinicia al IPL original.
+Cubiboot arranca los juegos encadenando Swiss. Eso convierte a Swiss en un caso especial:
+pasárselo a Swiss sería pedirle que cargue una copia de sí mismo, y la consola se reinicia al
+menú original de GameCube. Cubiboot lo evita reconociendo a Swiss y ejecutándolo directamente
+— pero lo reconoce **por el nombre**, así que el nombre es lo que hay que acertar.
 
-Swiss como app homebrew también funciona: `apps/swiss/default.dol` se reconoce por el nombre
-de la **carpeta**, ya que el archivo de dentro siempre se llama `default.dol`. Se ejecuta
-directamente en vez de pasárselo a Swiss — y sigue siendo lanzable aunque no haya
-`swiss-gc.dol` en la raíz, así que una tarjeta que solo tenga Swiss como app puede arrancarlo.
+**Ponle un nombre que empiece por `swiss`.** Las mayúsculas dan igual, y lo que venga después
+de las primeras cinco letras se ignora, así que `Swiss v0.6r2073` sirve igual que `swiss`.
 
-Esto es independiente del motor `swiss-gc.dol` que debe estar en la **raíz** de la tarjeta
-para los juegos.
+| Cómo guardas Swiss | Qué tiene que empezar por `swiss` | Ejemplo |
+|---|---|---|
+| Un `.dol` en cualquier carpeta | el **nombre del archivo** | `swiss-gc.dol`, `Swiss v0.6r2073.dol` |
+| Una carpeta de [app homebrew](#apps-homebrew) | el nombre de la **carpeta** | `apps/Swiss v0.6r2073/default.dol` |
+| Una imagen de disco | el **nombre del archivo** | `Swiss v0.6r2073.iso` |
+
+En la carpeta de app, solo `default.dol` hereda el nombre de la carpeta — cualquier otro
+`.dol` que esté ahí se trata como un programa distinto que casualmente vive junto a Swiss.
+
+Si el nombre no coincide, Swiss se trata como un programa cualquiera: se le pasa al Swiss de
+la raíz de tu tarjeta, y la consola vuelve al menú original en vez de arrancar. No se daña
+nada, y renombrarlo lo arregla.
+
+Dos cosas que conviene saber:
+
+- **Una app de Swiss arranca aunque no haya `swiss-gc.dol` en la raíz.** Todo lo demás
+  necesita ese archivo, porque todo lo demás se arranca a través de Swiss — pero Swiss no
+  necesita encadenador. Así que una tarjeta que solo lleve Swiss como app puede arrancarlo,
+  que es justo lo que quieres cuando lo que falta es ese archivo de la raíz.
+- **Las imágenes de disco solo necesitan el nombre si [`force_swiss_default`](#todas-las-opciones)
+  está activo.** Con él desactivado — el valor por defecto — cualquier imagen de disco arranca
+  igualmente por el propio apploader de cubiboot, así que un `.iso` de Swiss funciona se llame
+  como se llame. Activarlo enruta los discos a través de Swiss, y entonces el nombre es lo que
+  mantiene a Swiss fuera de ese camino.
+
+Todo esto es independiente del `swiss-gc.dol` de la **raíz** de la tarjeta, que es la copia
+con la que se lanzan los juegos y tiene que estar ahí de todos modos.
 
 ### Colores
 

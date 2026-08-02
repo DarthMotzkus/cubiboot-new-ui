@@ -168,6 +168,11 @@ that.
 Normal games don't start with `swiss`, so nothing else is affected. This is separate from the
 `swiss-gc.dol` engine that has to sit at the card root.
 
+The disc-image half of this only bites when `force_swiss_default = 1`: with the default of 0
+every image already takes the native apploader, so a Swiss `.iso` boots under any name. The
+`.dol` and app forms have no such escape -- they are always routed through Swiss -- so there
+the name is what decides, always.
+
 ## J. Storage selection and the ODE's SD card  (`device_order`)
 
 Lets cubiboot read games straight off the SD card inside a GC Loader style ODE, so no EXI

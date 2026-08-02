@@ -356,17 +356,40 @@ for the card. See [its README](tools/banner-converter) for the sizing rules — 
 
 ### Launching Swiss from the menu
 
-Drop Swiss's `.dol` *or* `.iso` in any folder and give it a name starting with `swiss`
-(e.g. `swiss-gc.dol`, `Swiss v0.6r2073.iso`). Cubiboot boots a `swiss…`-named image
-**directly through its own apploader** instead of handing it to Swiss — without that prefix
-a Swiss disc image just resets to the stock IPL.
+Cubiboot boots games by chainloading Swiss. That makes Swiss itself a special case: handing
+it to Swiss would be asking Swiss to load a copy of itself, which resets the console to the
+stock GameCube menu. Cubiboot avoids that by recognising Swiss and running it directly — but
+it recognises it **by name**, so the name is what you have to get right.
 
-Swiss as a homebrew app works too: `apps/swiss/default.dol` is recognised by the **folder**
-name, since the file inside is always `default.dol`. It runs directly rather than being
-handed to Swiss — and it stays launchable even with no `swiss-gc.dol` at the root, so a card
-that only has Swiss as an app can still start it.
+**Name it so it starts with `swiss`.** Capitalisation does not matter, and anything after
+the first five letters is ignored, so `Swiss v0.6r2073` works as well as `swiss`.
 
-This is separate from the `swiss-gc.dol` engine that must sit at the card **root** for games.
+| How you keep Swiss | What has to start with `swiss` | Example |
+|---|---|---|
+| A `.dol` in any folder | the **filename** | `swiss-gc.dol`, `Swiss v0.6r2073.dol` |
+| A [homebrew app](#homebrew-apps) folder | the **folder** name | `apps/Swiss v0.6r2073/default.dol` |
+| A disc image | the **filename** | `Swiss v0.6r2073.iso` |
+
+For the app folder, only `default.dol` inherits the folder's name — any other `.dol` sitting
+in there is treated as a different program that happens to live beside Swiss.
+
+Get the name wrong and Swiss is treated as an ordinary program: it gets handed to the Swiss
+at your card root, and the console resets to the stock menu instead of starting. Nothing is
+damaged, and renaming fixes it.
+
+Two things worth knowing:
+
+- **A Swiss app boots even with no `swiss-gc.dol` at the root.** Everything else needs that
+  file, because everything else is booted through Swiss — but Swiss needs no chainloader. So
+  a card that only carries Swiss as an app can still start it, which is what you want when
+  that root file is what went missing.
+- **Disc images only need the name when [`force_swiss_default`](#all-options) is on.** With
+  it off — the default — every disc image boots through cubiboot's own apploader anyway, so
+  a Swiss `.iso` works whatever it is called. Turning it on routes discs through Swiss, and
+  then the name is what keeps Swiss out of that path.
+
+This is all separate from the `swiss-gc.dol` at the card **root**, which is the copy games
+are launched with and has to be there regardless.
 
 ### Colors
 
