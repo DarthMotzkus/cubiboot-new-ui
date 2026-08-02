@@ -8,7 +8,7 @@
 
 Un fork de [makeo/cubiboot](https://github.com/makeo/cubiboot) — que a su vez es un fork de
 [cubeboot](https://github.com/OffBroadway/cubeboot) de [TeamOffBroadway](https://github.com/OffBroadway) —
-con soporte para SD2SP2, SD Gecko y adaptadores SD similares.
+con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares.
 
 [English](../README.md) · **Español**
 
