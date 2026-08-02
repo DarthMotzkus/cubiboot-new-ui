@@ -601,8 +601,28 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     // u8 ui_alpha = alpha_2; // correct with animation
     GXColor white = {0xFF, 0xFF, 0xFF, ui_alpha};
 
-    // text
-    draw_text("Games", 20, 20, 4, &white);
+    // text -- the header names the folder you are browsing. At the card root there is no
+    // folder name to show, so the old fixed label stands in.
+    char header[48];
+    const char *header_text = "Games";
+    int path_len = (int)strlen(game_enum_path);
+    if (path_len > 0 && game_enum_path[path_len - 1] == '/')
+        path_len--; // the scan path carries a trailing slash
+
+    if (path_len > 0) {
+        int start = path_len;
+        while (start > 0 && game_enum_path[start - 1] != '/')
+            start--;
+
+        int name_len = path_len - start;
+        if (name_len > 0 && name_len < (int)sizeof(header)) {
+            memcpy(header, &game_enum_path[start], name_len);
+            header[name_len] = '\0';
+            header_text = header;
+        }
+    }
+
+    draw_text((char*)header_text, 20, 20, 4, &white);
     draw_text("Load Disc (Z)", 20, 320, 4, &white);
 
     // icons
