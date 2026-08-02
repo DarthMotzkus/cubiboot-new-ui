@@ -22,7 +22,10 @@ typedef enum {
     GM_FILE_TYPE_UNKNOWN,
     GM_FILE_TYPE_DIRECTORY,
     GM_FILE_TYPE_PROGRAM,
-    GM_FILE_TYPE_GAME
+    GM_FILE_TYPE_GAME,
+    // A folder holding default.dol next to opening.bnr. Selecting it boots the .dol
+    // instead of entering the folder, and it draws with the banner like a game does.
+    GM_FILE_TYPE_APP
 } gm_file_type_t;
 
 #pragma pack(push,1)
@@ -72,7 +75,10 @@ typedef struct {
     u8 game_id[6];
     u8 disc_num;
     u8 disc_ver;
-    u8 padding;
+    // The banner is a file of its own (an app's opening.bnr) rather than a region inside a
+    // disc image, so it reads from offset 0 and dvd_bnr_offset stops being a valid "has a
+    // banner" test -- 0 is a real offset here.
+    bool standalone_bnr;
     u8 dvd_bnr_type;
     u32 dvd_bnr_offset;
     u32 dvd_dol_offset;

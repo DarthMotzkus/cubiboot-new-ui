@@ -556,7 +556,9 @@ __attribute_used__ void bs2start() {
     }
 
     char *boot_path = boot_entry.path;
-    if (boot_entry.type == GM_FILE_TYPE_PROGRAM) {
+    // An app entry already points at its default.dol, so it boots exactly like any other
+    // homebrew program from here on.
+    if (boot_entry.type == GM_FILE_TYPE_PROGRAM || boot_entry.type == GM_FILE_TYPE_APP) {
         custom_OSReport("Booting DOL\n");
         load_stub();
 

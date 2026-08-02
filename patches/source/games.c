@@ -423,6 +423,54 @@ ok_png gm_png_decode(void *file_buf, size_t file_size) {
 // HELPERS
 static char *valid_game_exts[] = {".gcm", ".iso", ".fdi"};
 static char *valid_prog_exts[] = {".dol", ".dol+cli"}; // TODO: add .elf
+
+// An "app" is a folder laid out as <dir>/default.dol next to <dir>/opening.bnr. Both names
+// are fixed, which is what keeps detection cheap: one open decides it for almost every
+// folder, because a plain folder has no opening.bnr and the probe stops there.
+#define APP_BANNER_NAME "/opening.bnr"
+#define APP_DOL_NAME    "/default.dol"
+
+// Matches the `path` field in gm_path_entry_t and gm_file_entry_t. Not MAX_FILE_NAME (256):
+// these paths are copied straight into those fields.
+#define GM_PATH_MAX 128
+
+static bool gm_file_exists(const char *path) {
+    if (dvd_custom_open((char*)path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0)
+        return false;
+
+    file_status_t *status = dvd_custom_status();
+    if (status == NULL || status->result != 0)
+        return false;
+
+    dvd_custom_close(status->fd);
+    return true;
+}
+
+// Decides whether `dir` is an app folder, writing the .dol to boot into `dol_out` (which
+// must hold GM_PATH_MAX bytes). opening.bnr is probed first on purpose: it is the rarer
+// of the two, so folders that are just folders cost a single failed open and nothing else.
+static bool gm_dir_is_app(const char *dir, char *dol_out) {
+    char probe[GM_PATH_MAX];
+
+    int len = snprintf(probe, sizeof(probe), "%s" APP_BANNER_NAME, dir);
+    if (len < 0 || len >= (int)sizeof(probe)) return false;
+    if (!gm_file_exists(probe)) return false;
+
+    len = snprintf(dol_out, GM_PATH_MAX, "%s" APP_DOL_NAME, dir);
+    if (len < 0 || len >= GM_PATH_MAX) return false;
+
+    return gm_file_exists(dol_out);
+}
+
+// <dir>/default.dol -> <dir>/opening.bnr. Both names are the same length, so a path that
+// fit one fits the other.
+static void gm_app_banner_path(const char *dol_path, char *out) {
+    const char *slash = strrchr(dol_path, '/');
+    int dir_len = slash != NULL ? (int)(slash - dol_path) : 0;
+
+    memcpy(out, dol_path, dir_len);
+    strcpy(out + dir_len, APP_BANNER_NAME);
+}
 static gm_file_type_t gm_get_file_type(const char *path) {
     const char *ext = strrchr(path, '.');
     if (ext == NULL) return GM_FILE_TYPE_UNKNOWN;
@@ -596,28 +644,57 @@ static void gm_set_title_from_path(gm_file_entry_t *entry) {
 
 // returns amount of space used in aram
 static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_unload, bool use_cache) {
-    if (entry->extra.dvd_bnr_offset == 0) return false;
+    // Offset 0 means "no banner" for a disc image, but it is where an app's opening.bnr
+    // legitimately starts, so the flag has to be checked first.
+    if (!entry->extra.standalone_bnr && entry->extra.dvd_bnr_offset == 0) return false;
     // Already resident: never re-read or re-allocate. Guards the scroll re-read path so
     // a still-loaded banner can't leak its pool buffer.
     if (entry->asset.banner.state == GM_LOAD_STATE_LOADED) return true;
 
     __attribute_aligned_data_lowmem__ static BNR banner_buffer;
+    // An app's banner is keyed by nothing -- it has no game id, disc number or version --
+    // so the cache has no key to work with and is skipped.
+    if (entry->extra.standalone_bnr) use_cache = false;
+
     // use_cache keeps makeo's bnr_cache for the resident (<=128) path; the >128 scroll
     // re-reads pass use_cache=false so they read straight from disc and never touch ARAM.
     if (use_cache && bnr_cache_get(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer))
         goto cached;
 
     // load the banner
-    dvd_custom_open(entry->path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE | IPC_FILE_FLAG_DISABLESPEEDEMU);
+    char bnr_path_buf[GM_PATH_MAX];
+    const char *bnr_path = entry->path;
+    if (entry->extra.standalone_bnr) {
+        gm_app_banner_path(entry->path, bnr_path_buf);
+        bnr_path = bnr_path_buf;
+    }
+
+    dvd_custom_open((char*)bnr_path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE | IPC_FILE_FLAG_DISABLESPEEDEMU);
     file_status_t *status = dvd_custom_status();
     if (status == NULL || status->result != 0) {
         OSReport("ERROR: could not open file\n");
         return false;
     }
 
+    u32 read_len = sizeof(BNR);
+    if (entry->extra.standalone_bnr) {
+        // The BNR struct is BNR2-shaped (six BNRDesc, 0x1FA0 bytes); a BNR1 file stops after
+        // one (0x1960). Reading the larger size off the smaller file leaves the tail holding
+        // the previous banner's bytes, so clamp to the real size and clear first. desc[0] and
+        // the pixel data sit inside both, which is why either format works from here on.
+        memset(&banner_buffer, 0, sizeof(BNR));
+        u32 fsize = (u32)__builtin_bswap64(*(u64*)&status->fsize);
+        if (fsize < read_len) read_len = fsize;
+    }
+
     //__attribute_aligned_data_lowmem__ static BNR banner_buffer;
-    dvd_threaded_read(&banner_buffer, sizeof(BNR), entry->extra.dvd_bnr_offset, status->fd);
+    dvd_threaded_read(&banner_buffer, read_len, entry->extra.dvd_bnr_offset, status->fd);
     dvd_custom_close(status->fd);
+
+    if (entry->extra.standalone_bnr) {
+        // 'BNR1' carries one language, 'BNR2' carries six.
+        entry->extra.dvd_bnr_type = banner_buffer.magic[3] == '2' ? 1 : 0;
+    }
 
     if (use_cache) bnr_cache_put(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer);
     cached:
@@ -643,7 +720,10 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
 
     // Override the banner's internal name with the .iso filename (the banner name is
     // identical across discs of the same game). Description/company stay for the info line.
-    gm_set_title_from_path(entry);
+    // An app is the exception: its filename is always default.dol, and it has no sibling
+    // disc to tell apart, so the banner's own name is the only useful one.
+    if (entry->type != GM_FILE_TYPE_APP)
+        gm_set_title_from_path(entry);
 
     return true;
 }
@@ -720,6 +800,8 @@ void gm_check_files(int path_count) {
 
     // Re-evaluate resident-vs-sliding per folder scan (pool is empty here after dealloc).
     gm_evict_on_scroll = false;
+
+    char app_dol_path[GM_PATH_MAX];
 
     // Enumerate all of the games
     u64 start_time = gettime();
@@ -798,6 +880,34 @@ void gm_check_files(int path_count) {
             aram_offset += ICON_PIXELDATA_LEN;
 
             // set heap pointer
+            gm_entry_backing[gm_entry_count] = backing;
+            gm_entry_count++;
+        } else if (entry->type == GM_FILE_TYPE_DIRECTORY && gm_dir_is_app(entry->path, app_dol_path)) {
+            OSReport("Found app %s\n", app_dol_path);
+
+            // The .dol is what gets booted, so it is what the entry points at -- that keeps
+            // the boot path identical to a plain homebrew program. The banner is derived
+            // from it when it loads.
+            gm_file_entry_t *backing = gm_malloc(sizeof(gm_file_entry_t));
+            memset(backing, 0, sizeof(gm_file_entry_t));
+            strcpy(backing->path, app_dol_path);
+            backing->type = GM_FILE_TYPE_APP;
+            backing->extra.standalone_bnr = true;
+
+            // Same pool rules as games: resident while there is room, sliding window after.
+            if (!gm_evict_on_scroll && gm_count_banner_buf() >= ASSET_BUFFER_COUNT) {
+                gm_evict_on_scroll = true;
+            }
+            if (!gm_evict_on_scroll && !gm_scan_is_last_played) {
+                if (!gm_load_banner(backing, aram_offset, force_unload, false)) {
+                    OSReport("Failed to load app banner %s\n", app_dol_path);
+                }
+            }
+            aram_offset += BNR_PIXELDATA_LEN;
+
+            backing->asset.use_banner = true;
+            aram_offset += ICON_PIXELDATA_LEN;
+
             gm_entry_backing[gm_entry_count] = backing;
             gm_entry_count++;
         } else if (entry->type == GM_FILE_TYPE_PROGRAM || entry->type == GM_FILE_TYPE_DIRECTORY) {

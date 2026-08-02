@@ -20,6 +20,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | H | `remember_last_game` | `patches/source/games.c`, `main.c` |
 | I | Booting a Swiss disc image natively | `cubeboot/source/emu/loader.c` |
 | J | Storage selection + the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
+| K | Homebrew apps as banner entries | `patches/source/games.c` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -210,6 +211,36 @@ does not exist yet.
 Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
 Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered.
 
+## K. Homebrew apps as banner entries  (`patches/source/games.c`)
+
+A folder holding `default.dol` next to `opening.bnr` is listed as a launchable application
+with its own banner rather than as a folder to enter. Both filenames are fixed, which is what
+keeps the detection cheap.
+
+- **`GM_FILE_TYPE_APP`** — a new entry type. It needs no menu work: an app is neither
+  `PROGRAM` nor `DIRECTORY` and carries no icon, so it already falls through to the same
+  drawing path a game uses, and `boot_entry.path` already points at the `.dol`, so booting is
+  the plain homebrew path.
+- **Detection** happens in `gm_check_files`, not in the readdir loop, so the cost sits where
+  entries are already being opened one by one. `opening.bnr` is probed first because it is the
+  rarer of the two: a folder without one stops after a single failed open, which is every
+  folder in a normal game library.
+- **`standalone_bnr`** in `gm_extra_t`. `gm_load_banner` used `dvd_bnr_offset == 0` to mean
+  "no banner", and 0 is exactly where a standalone `opening.bnr` starts, so the sentinel had
+  to move to a flag.
+- **BNR1 vs BNR2.** The `BNR` struct is BNR2-shaped (six `BNRDesc`, `0x1FA0`); a BNR1 file
+  stops after one (`0x1960`). Reading the larger size off the smaller file left the tail
+  holding the previous banner's bytes, so the read clamps to the file's real size and clears
+  the buffer first. `desc[0]` and the pixel data sit inside both formats, and the magic now
+  fills `dvd_bnr_type`, which had been a TODO.
+- **Title.** Games override the banner's own name with the filename so multi-disc sets are
+  distinguishable. An app is always `default.dol` and has no sibling disc, so it keeps the
+  banner's name.
+
+The banner pool is unaffected in practice: it is released whole on every folder change
+(`gm_start_thread`), so an apps folder and a games folder never compete for the 128 buffers.
+An apps folder past 128 entries would degrade to the same sliding window games use.
+
 ## Re-applying onto a fresh makeo clone
 
 1. `git clone https://github.com/makeo/cubiboot && cd cubiboot`
@@ -220,8 +251,10 @@ Loader, cubiboot reads it too. FlippyDrive uses a different command set and is n
    (H) — all in `patches/source/games.c` and `main.c`.
 5. Apply the shared-`emu/` changes: Swiss image boot (I) in `loader.c`, and the ODE SD driver
    (J) — `gcode.{c,h}`, `diskio.c`, `flippy_emu.c`, plus the `settings.c`/`main.c` wiring.
-6. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+6. Apply the app entries (K): `games.h` type + flag, `games.c` detection and banner load,
+   plus the `GM_FILE_TYPE_APP` cases in `patches/source/main.c` and `emu/tweaks.c`.
+7. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
-7. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+8. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
    `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
    fork's.

@@ -29,6 +29,7 @@ with support for SD2SP2, SD Gecko and similar SD adapters.
   - [Menu layout](#menu-layout)
   - [Starting folder](#starting-folder)
   - [Remember last played](#remember-last-played)
+  - [Homebrew apps](#homebrew-apps)
   - [Where games are read from](#where-games-are-read-from)
   - [Launching Swiss from the menu](#launching-swiss-from-the-menu)
   - [Colors](#colors)
@@ -47,6 +48,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 |---|---|
 | **Grid / banner menu UI** | Ported from cubeboot. Three layouts, selectable with [`menu_grid_type`](#menu-layout); defaults to `small_banners` even without a `config.ini`. |
 | **Real filenames** | The list shows the `.iso` **filename** instead of the internal game name, and loads the correct banner for each disc of a multi-disc game (e.g. Resident Evil 0 Disc 1 / Disc 2). |
+| **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
 | **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE, so the menu lists what is already on it with no second card reader. |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
@@ -314,6 +316,29 @@ Two things to know:
 
 The ODE's card is mounted read-only. A console without an ODE pays one drive inquiry per
 boot for the `gcldr` entry, which gives up as soon as a real optical drive answers.
+
+### Homebrew apps
+
+A folder that holds **`default.dol`** and **`opening.bnr`** side by side is treated as an
+application, not as a folder. It shows up in the grid with the banner from its `opening.bnr`,
+and pressing **A** runs the `.dol` directly instead of opening the folder.
+
+```
+/apps/
+  my-app/
+    default.dol     <- what gets launched
+    opening.bnr     <- name, description and banner art
+  another-app/
+    default.dol
+    opening.bnr
+```
+
+Both filenames are fixed. The banner is the same format retail discs use, so a title,
+description and 96x32 image all come from that one file.
+
+A folder missing either file behaves exactly as before — you enter it and browse. The check
+costs one file probe per folder while the list is being built, and folders without an
+`opening.bnr` stop right there, so a library of game folders is unaffected.
 
 ### Launching Swiss from the menu
 

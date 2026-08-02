@@ -31,6 +31,7 @@ con soporte para SD2SP2, SD Gecko y adaptadores SD similares.
   - [Diseño del menú](#diseño-del-menú)
   - [Carpeta de inicio](#carpeta-de-inicio)
   - [Recordar el último jugado](#recordar-el-último-jugado)
+  - [Apps homebrew](#apps-homebrew)
   - [De dónde se leen los juegos](#de-dónde-se-leen-los-juegos)
   - [Iniciar Swiss desde el menú](#iniciar-swiss-desde-el-menú)
   - [Colores](#colores)
@@ -49,6 +50,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 |---|---|
 | **Menú en cuadrícula con banners** | Portado desde cubeboot. Tres diseños, seleccionables con [`menu_grid_type`](#diseño-del-menú); usa `small_banners` por defecto incluso sin `config.ini`. |
 | **Nombres de archivo reales** | La lista muestra el **nombre del archivo** `.iso` en lugar del nombre interno del juego, y carga el banner correcto de cada disco en juegos multidisco (por ejemplo Resident Evil 0 Disco 1 / Disco 2). |
+| **Apps homebrew con banner** | Una carpeta con `default.dol` junto a `opening.bnr` aparece como una aplicación lanzable con su propio banner, en vez de una carpeta que hay que abrir. Mira [Apps homebrew](#apps-homebrew). |
 | **Recordar el último jugado** | [`remember_last_game = 1`](#recordar-el-último-jugado) abre el menú en la carpeta de tu último juego, ya resaltado — pulsas **A** y listo. |
 | **Juegos desde la SD del ODE** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
@@ -318,6 +320,30 @@ Dos cosas a tener en cuenta:
 
 La tarjeta del ODE se monta en solo lectura. Una consola sin ODE paga una consulta a la unidad
 por arranque por la entrada `gcldr`, que se rinde en cuanto responde una unidad óptica real.
+
+### Apps homebrew
+
+Una carpeta que tiene **`default.dol`** y **`opening.bnr`** juntos se trata como una
+aplicación, no como una carpeta. Aparece en la cuadrícula con el banner de su `opening.bnr`,
+y pulsar **A** ejecuta el `.dol` directamente en vez de abrir la carpeta.
+
+```
+/apps/
+  mi-app/
+    default.dol     <- lo que se lanza
+    opening.bnr     <- nombre, descripción y arte del banner
+  otra-app/
+    default.dol
+    opening.bnr
+```
+
+Los dos nombres de archivo son fijos. El banner usa el mismo formato que los discos
+originales, así que el título, la descripción y la imagen de 96x32 salen todos de ese archivo.
+
+Una carpeta a la que le falte cualquiera de los dos se comporta como siempre — entras y
+navegas. La comprobación cuesta un sondeo de archivo por carpeta mientras se construye la
+lista, y las carpetas sin `opening.bnr` se detienen ahí, así que una biblioteca de carpetas de
+juegos no se ve afectada.
 
 ### Iniciar Swiss desde el menú
 

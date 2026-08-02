@@ -34,6 +34,7 @@ bool emu_can_boot(gm_file_type_t type) {
     switch (type) {
         case GM_FILE_TYPE_GAME:
         case GM_FILE_TYPE_PROGRAM:
+        case GM_FILE_TYPE_APP:
             return found_swiss;
         default:
             return true;
