@@ -245,8 +245,8 @@ An apps folder past 128 entries would degrade to the same sliding window games u
 ## L. Header, branding and the banner tool
 
 - **Menu header** names the folder being browsed (`patches/source/menu.c`,
-  `custom_gameselect_menu`) instead of the fixed `"Games"`. At the card root there is no
-  folder name, so the old label stands in.
+  `custom_gameselect_menu`) instead of the fixed `"Games"`. The card root has no folder name
+  to show, so it carries the product name instead.
 - **Banner artwork and text** are the Cubiboot wordmark with `"GC Games and Apps Loader"` /
   `"build v1.6.0"` under it. Both the menu cube and the `.iso` BIOS intro read from
   `patches/data/default_opening.bin` -- `brand_gbi.py` copies its pixel data into `gbi.hdr`

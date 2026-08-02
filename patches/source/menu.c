@@ -601,10 +601,10 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     // u8 ui_alpha = alpha_2; // correct with animation
     GXColor white = {0xFF, 0xFF, 0xFF, ui_alpha};
 
-    // text -- the header names the folder you are browsing. At the card root there is no
-    // folder name to show, so the old fixed label stands in.
+    // text -- the header names the folder you are browsing. The card root has no folder
+    // name to show, so it carries the product name instead.
     char header[48];
-    const char *header_text = "Games";
+    const char *header_text = "CUBIBOOT New UI";
     int path_len = (int)strlen(game_enum_path);
     if (path_len > 0 && game_enum_path[path_len - 1] == '/')
         path_len--; // the scan path carries a trailing slash

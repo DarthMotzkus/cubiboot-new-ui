@@ -54,7 +54,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Recordar el último jugado** | [`remember_last_game = 1`](#recordar-el-último-jugado) abre el menú en la carpeta de tu último juego, ya resaltado — pulsas **A** y listo. |
 | **Juegos desde la SD del ODE** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
-| **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando en vez de decir siempre "Games". |
+| **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta dice "CUBIBOOT New UI". |
 | **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
 | **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader.uf2` flasheable. |
 
