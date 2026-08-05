@@ -159,30 +159,58 @@ cubiboot — sin modchip.
 
 ### Método 4: FlippyDrive
 
-Una FlippyDrive arranca su propio loader desde su **flash interna**, así que cubiboot va ahí,
-no en la tarjeta SD. Los juegos, el `config.ini` y Swiss siguen en la tarjeta como siempre.
+Una FlippyDrive arranca su propio loader desde su **flash interna**, así que cubiboot reemplaza
+la entrada `cubeboot` que hay ahí. Los juegos, el `config.ini` y Swiss siguen en la tarjeta SD
+como siempre.
 
-La unidad carga ese archivo **por su nombre**, así que tiene que acabar llamándose
-`cubeboot.dol` — el nombre que busca el loader de la propia unidad. Con cualquier otro nombre
-la unidad no arranca nada.
+La unidad lo carga **por su nombre**, así que tiene que acabar llamándose `cubeboot.dol`. Con
+cualquier otro nombre es solo un archivo más dentro de la flash.
+
+**Pon el archivo en la tarjeta SD de la unidad:**
 
 1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
    y **renómbralo a `cubeboot.dol`**. Es el mismo loader que `ipl.dol`; solo cambia el nombre
    que la unidad exige.
 2. Cópialo a la **raíz de la tarjeta SD de la FlippyDrive**.
-3. Enciende **manteniendo X** para entrar al menú del bootloader de la unidad.
-4. Elige cargar Swiss desde el DOL integrado.
-5. En Swiss, copia `cubeboot.dol` de la tarjeta SD sobre el `cubeboot.dol` que está en la
-   flash de la unidad.
-6. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
-7. Pon Swiss en la tarjeta como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
-   juegos.
+
+**Escríbelo en la flash de la unidad, usando Swiss:**
+
+3. Enciende **manteniendo X** para entrar al [menú del bootloader](https://docs.flippydrive.com/bootloader.html)
+   de la unidad.
+4. Elige **Boot Onboard DOL** → **swiss-gc**. (Swiss viene en la flash de la unidad, así que
+   esto funciona incluso antes de poner Swiss en la tarjeta.)
+5. En Swiss, activa **Enable File Management** en los ajustes si no lo está ya — sin eso, el
+   menú del paso 7 no aparece.
+6. Navega hasta `cubeboot.dol` en la tarjeta SD y resáltalo.
+7. Pulsa **Z** para abrir *Manage File*, y luego **X** para *Copy*.
+8. Elige **FlippyDrive Flash** como dispositivo de destino, y su raíz como carpeta de destino.
+   Confirma sobrescribir el `cubeboot.dol` que ya está ahí.
+9. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
+10. Pon Swiss en la tarjeta SD como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
+    juegos.
 
 > [!IMPORTANT]
-> El paso 3 no es opcional, y es el que la gente se salta. Arrancar normalmente deja al
-> loader de la unidad **con la copia de `cubeboot.dol` de la flash abierta**, y un archivo
-> abierto no se puede sobrescribir: la copia del paso 5 simplemente falla, a veces sin un
+> El paso 3 es lo que hace posible el paso 8, y es el que la gente se salta. Arrancar
+> normalmente deja al loader de la unidad **con la copia de `cubeboot.dol` de la flash
+> abierta**, y un archivo abierto no se puede sobrescribir: la copia falla, a veces sin un
 > error claro. Mantener X entrega el control sin que ese archivo llegue a abrirse.
+
+> [!WARNING]
+> **Actualizar el firmware de la FlippyDrive restaura el `cubeboot` original**, así que
+> cubiboot desaparece y hay que repetir esto. La documentación de la propia unidad lo dice
+> claro: *"any custom DOL files might get erased during the firmware update process."* No se
+> pierde nada de la tarjeta SD — solo la copia que está dentro de la unidad.
+
+Dos cosas que conviene saber, ninguna probada por nosotros:
+
+- El menú del bootloader también tiene una entrada **`remote`** que sirve la unidad por
+  FTP/SMB. Si llega a la flash, es una forma mucho más fácil de dejar el archivo ahí que los
+  pasos 5–8 — vale la pena intentarlo antes de la ruta por Swiss.
+- Un **`boot.dol`** en la raíz de la tarjeta SD se arranca *en lugar del* `cubeboot` de la
+  flash, según la documentación de la unidad. Si cubiboot funciona desde ahí no hace falta
+  flashear nada, sobrevive a las actualizaciones de firmware y se deshace borrando un archivo.
+  No tenemos ninguna FlippyDrive para confirmarlo, así que el método de la flash de arriba es
+  el que se sabe que funciona.
 
 ### Reinicio en el juego
 
@@ -221,23 +249,30 @@ loader de otra es exactamente la situación de la que habla esta sección.
 
 ### Actualizar una FlippyDrive
 
-El loader vive dentro de la unidad, así que no hay ningún archivo en la tarjeta que cambiar:
-hay que escribirlo sobre la copia que está en la flash de la unidad, igual que llegó ahí:
+El loader vive dentro de la unidad, así que no hay ningún archivo en la tarjeta que cambiar: el
+nuevo tiene que escribirse sobre la copia de la flash, igual que llegó ahí:
 
 1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol),
    **renómbralo a `cubeboot.dol`** y cópialo a la raíz de la tarjeta SD de la unidad,
-   reemplazando el que ya esté ahí si lo hay.
-2. Enciende **manteniendo X** para entrar al menú del bootloader de la unidad.
-3. Carga Swiss desde el DOL integrado.
-4. Copia `cubeboot.dol` de la tarjeta SD sobre el `cubeboot.dol` de la flash de la unidad.
+   reemplazando el anterior si lo hay.
+2. Enciende **manteniendo X** → **Boot Onboard DOL** → **swiss-gc**.
+3. En Swiss, resalta `cubeboot.dol` en la tarjeta SD, pulsa **Z** para *Manage File* y luego
+   **X** para *Copy*.
+4. Dispositivo de destino **FlippyDrive Flash**, carpeta de destino su raíz; confirma la
+   sobrescritura.
 5. Reinicia — la unidad carga el nuevo automáticamente.
+
+El detalle completo, incluido el ajuste de Swiss que hay que activar antes, está en el
+[Método 4](#método-4-flippydrive).
 
 > [!IMPORTANT]
 > Mantener X en el paso 2 es lo que hace posible el paso 4. Si arrancas normalmente, el loader
 > de la unidad ya tiene **la copia de la flash abierta**, así que la sobrescritura se rechaza:
-> la actualización parece haber funcionado y sigue arrancando la versión vieja. Si una release
-> nueva no cambia nada en una FlippyDrive, esta es la razón.
+> la actualización parece funcionar y sigue arrancando la versión vieja. Si una release nueva
+> no cambia nada en una FlippyDrive, esta es la razón.
 
+También conviene saber: actualizar el **firmware de la propia FlippyDrive** restaura el
+`cubeboot` original y borra cubiboot de la flash, así que repite los pasos de arriba después.
 Tu `config.ini`, tus juegos y `swiss-gc.dol` en la tarjeta SD no se tocan en ningún momento.
 
 Volver a extraer [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)

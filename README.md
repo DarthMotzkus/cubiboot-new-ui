@@ -156,29 +156,55 @@ modchip needed.
 
 ### Method 4: FlippyDrive
 
-A FlippyDrive boots its own loader out of its **internal flash**, so cubiboot goes in there,
-not on the SD card. Games, `config.ini` and Swiss stay on the card as usual.
+A FlippyDrive boots its own loader from its **internal flash**, so cubiboot replaces the
+`cubeboot` entry in there. Games, `config.ini` and Swiss stay on the SD card as usual.
 
-The drive loads that file **by name**, so it must end up called `cubeboot.dol` — the name the
-drive's own loader looks for. Under any other name the drive boots nothing.
+The drive loads it **by name**, so it has to end up called `cubeboot.dol`. Under any other
+name it is just another file sitting in flash.
+
+**Get the file onto the drive's SD card:**
 
 1. Download [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
    and **rename it to `cubeboot.dol`**. It is the same loader as `ipl.dol`; only the name the
    drive demands differs.
 2. Copy it to the **root of the FlippyDrive's SD card**.
-3. Power on **holding X** to reach the drive's bootloader menu.
-4. Choose to load Swiss from the onboard DOL.
-5. In Swiss, copy `cubeboot.dol` from the SD card over the `cubeboot.dol` in the drive's
-   flash.
-6. Reboot. The drive autoloads it and you land on the cubiboot menu.
-7. Put Swiss on the card as `swiss-gc.dol`, plus a [`config.ini`](#configuration) and your
-   games.
+
+**Write it into the drive's flash, using Swiss:**
+
+3. Power on **holding X** to reach the drive's [bootloader menu](https://docs.flippydrive.com/bootloader.html).
+4. Choose **Boot Onboard DOL** → **swiss-gc**. (Swiss ships in the drive's flash, so this
+   works before you have put Swiss on the card.)
+5. In Swiss, turn on **Enable File Management** in the settings, if it is not on already —
+   without it the menu in step 7 never appears.
+6. Browse to `cubeboot.dol` on the SD card and highlight it.
+7. Press **Z** to open *Manage File*, then **X** for *Copy*.
+8. Choose **FlippyDrive Flash** as the destination device, then its root as the destination
+   folder. Confirm overwriting the `cubeboot.dol` already there.
+9. Reboot. The drive autoloads it and you land on the cubiboot menu.
+10. Put Swiss on the SD card as `swiss-gc.dol`, plus a [`config.ini`](#configuration) and your
+    games.
 
 > [!IMPORTANT]
-> Step 3 is not optional, and it is the step people skip. Booting normally leaves the
-> drive's loader **holding the flash copy of `cubeboot.dol` open**, and an open file cannot
-> be overwritten — the copy in step 5 simply fails, sometimes without a clear error. Holding
-> X hands control over without that file ever being opened.
+> Step 3 is what makes step 8 possible, and it is the step people skip. Booting normally
+> leaves the drive's loader **holding the flash copy of `cubeboot.dol` open**, and an open
+> file cannot be overwritten — the copy fails, sometimes without a clear error. Holding X
+> hands control over without that file ever being opened.
+
+> [!WARNING]
+> **A FlippyDrive firmware update restores the stock `cubeboot`**, so cubiboot is gone and
+> you have to redo this. The drive's own docs put it plainly: *"any custom DOL files might get
+> erased during the firmware update process."* Nothing is lost from the SD card — only the
+> copy inside the drive.
+
+Two things worth knowing, neither of them tested by us:
+
+- The bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB. If it
+  reaches the flash, that is a far easier way to drop the file in than steps 5–8 — worth a try
+  before the Swiss route.
+- A **`boot.dol`** in the SD card root is booted *instead of* the flash `cubeboot`, per the
+  drive's docs. If cubiboot works from there it needs no flashing at all, survives firmware
+  updates, and is undone by deleting one file. We have no FlippyDrive to confirm it on, so the
+  flash method above is the one known to work.
 
 ### In-Game Reset
 
@@ -216,24 +242,31 @@ loader from another is the situation this section is about.
 
 ### Updating a FlippyDrive
 
-The loader lives inside the drive, so there is no file on the card to swap — it has to be
-written over the copy in the drive's flash, the same way it got there:
+The loader lives inside the drive, so there is no file on the card to swap — the new one has
+to be written over the copy in flash, the same way it got there:
 
 1. Download [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol),
-   **rename it to `cubeboot.dol`**, and copy it to the root of the drive's SD card,
-   replacing the one already there if present.
-2. Power on **holding X** to reach the drive's bootloader menu.
-3. Load Swiss from the onboard DOL.
-4. Copy `cubeboot.dol` from the SD card over the `cubeboot.dol` in the drive's flash.
+   **rename it to `cubeboot.dol`**, and copy it to the root of the drive's SD card, replacing
+   any older one.
+2. Power on **holding X** → **Boot Onboard DOL** → **swiss-gc**.
+3. In Swiss, highlight `cubeboot.dol` on the SD card, press **Z** for *Manage File*, then **X**
+   for *Copy*.
+4. Destination device **FlippyDrive Flash**, destination folder its root; confirm the
+   overwrite.
 5. Reboot — the drive autoloads the new one.
+
+Full detail, including the Swiss setting that has to be on first, is in
+[Method 4](#method-4-flippydrive).
 
 > [!IMPORTANT]
 > Holding X in step 2 is what makes step 4 possible. Boot normally and the drive's loader is
-> already **holding the flash copy open**, so the overwrite is refused; the update looks like
-> it worked and the old version keeps booting. If a new release seems to change nothing on a
+> already **holding the flash copy open**, so the overwrite is refused: the update appears to
+> work and the old version keeps booting. If a new release seems to change nothing on a
 > FlippyDrive, this is why.
 
-Your `config.ini`, games and `swiss-gc.dol` on the SD card are untouched by any of this.
+Also worth knowing: updating the **FlippyDrive's own firmware** restores the stock `cubeboot`
+and wipes cubiboot out of flash, so redo the steps above afterwards. Your `config.ini`, games
+and `swiss-gc.dol` on the SD card are never touched by any of this.
 
 Re-extracting [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)
 handles both in one step for Method 1, but it also carries `config.ini` and will overwrite
