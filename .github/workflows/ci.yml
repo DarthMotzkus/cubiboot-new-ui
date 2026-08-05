@@ -63,6 +63,11 @@ jobs:
           set -e
           mkdir -p dist/swiss/patches
           cp cubeboot/cubeboot.dol dist/ipl.dol
+          # Same binary again under the name a FlippyDrive's bootloader loads from its
+          # internal flash. It only boots a file called cubeboot.dol, so shipping it
+          # pre-named removes a manual rename whose failure mode is a drive that boots
+          # nothing at all.
+          cp cubeboot/cubeboot.dol dist/cubeboot.dol
           cp apploader.img         dist/swiss/patches/apploader.img
           cp cubiboot.iso          dist/cubiboot.iso
           # config.ini ships from .ci/config.ini so the template users receive is a real
@@ -88,6 +93,7 @@ jobs:
           name: cubiboot
           path: |
             dist/ipl.dol
+            dist/cubeboot.dol
             dist/swiss/patches/apploader.img
             dist/config.ini
             dist/cubiboot.iso
@@ -108,6 +114,7 @@ jobs:
           body_path: .ci/release-notes.md
           files: |
             dist/ipl.dol
+            dist/cubeboot.dol
             dist/swiss/patches/apploader.img
             dist/config.ini
             dist/cubiboot.iso
