@@ -10,4 +10,18 @@ Both boot-delay options are fixed. `preboot_delay_ms` and `postboot_delay_ms` ca
 
 Both options are described in the bundled `config.ini`, which until now covered the pair in a single line that fit neither of them.
 
+<!--
+STANDING BLOCK -- keep the "Updating from an earlier release" section below in every release,
+verbatim. It is not tied to what changed in any one version.
+
+Why it earns the space: apploader.img contains a whole second copy of the loader, so anyone
+who replaces only the loader keeps reaching the previous version through In-Game Reset, and
+nothing on the console says so. It reads as a fix that works until you reset out of a game.
+Only the per-version notes above and the compare link below need rewriting each release.
+-->
+
+### Updating from an earlier release
+
+`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
+
 **Full Changelog:** [v1.6.1...v1.6.2](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.1...v1.6.2)

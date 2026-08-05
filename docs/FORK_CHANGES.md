@@ -99,6 +99,12 @@ with `cubiboot.iso` embedded at flash `0x10031000` for both RP2040/RP2350 family
 `.ci/make_picoloader_uf2.py` (replicates makeo's PicoLoader converter). On a `v*` tag it
 publishes a GitHub Release with all six artifacts.
 
+The body comes from `.ci/release-notes.md`, written per release. It ends with a standing
+"Updating from an earlier release" block that every release repeats verbatim: `apploader.img`
+holds a second copy of the loader, so replacing only the loader leaves In-Game Reset on the
+previous version silently. Keep that block when rewriting the notes — the marked comment in
+the file says as much, so it survives whoever writes the next one.
+
 ## F. Filename titles + multi-disc banners  (`patches/source/games.c`)
 
 Upstream showed the **internal game name** from the disc header, so every disc of a
