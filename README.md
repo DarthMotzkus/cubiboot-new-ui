@@ -196,15 +196,16 @@ name it is just another file sitting in flash.
 > erased during the firmware update process."* Nothing is lost from the SD card — only the
 > copy inside the drive.
 
-Two things worth knowing, neither of them tested by us:
+**Swiss and In-Game Reset on a FlippyDrive** work the same as anywhere else, from the SD
+card: `swiss-gc.dol` in the card root, `apploader.img` in `swiss/patches/`. The drive's flash
+also carries a Swiss of its own, and cubiboot will accept that one if the card has none — but
+the `apploader.img` has to be ours, from the same release as the loader, so that one belongs
+on the card.
 
-- The bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB. If it
-  reaches the flash, that is a far easier way to drop the file in than steps 5–8 — worth a try
-  before the Swiss route.
-- A **`boot.dol`** in the SD card root is booted *instead of* the flash `cubeboot`, per the
-  drive's docs. If cubiboot works from there it needs no flashing at all, survives firmware
-  updates, and is undone by deleting one file. We have no FlippyDrive to confirm it on, so the
-  flash method above is the one known to work.
+> [!NOTE]
+> The drive's bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB.
+> If it reaches the flash, that is an easier way to drop the file in than steps 5–8. We have no
+> FlippyDrive to confirm what it exposes, so the Swiss route above is the documented one.
 
 ### In-Game Reset
 

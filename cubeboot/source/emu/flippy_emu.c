@@ -423,7 +423,16 @@ int dvd_custom_open_flash(const char *path, uint8_t type, uint8_t flags) {
 		// than the /cubiboot-on-the-card impersonation used below. It is also where the
 		// loader we are running came from. No close first, for the same reason as in
 		// dvd_custom_open().
-		return fldrv_open_flash(path, type, flags);
+		if (fldrv_open_flash(path, type, flags) == 0)
+			return 0;
+
+		// Then the SD card, because the two callers of this want different things. The
+		// drive's flash is right for what the drive shipped -- stub.bin, its own Swiss --
+		// but apploader.img has to be OUR build's, and the card root is where the docs
+		// tell people to put it. Flash-only here would silently cost FlippyDrive owners
+		// In-Game Reset, since a drive whose flash has no /swiss/patches would simply
+		// report no file and the option would switch itself off.
+		return fldrv_open(path, type, flags);
 	}
 
 	char flash_path[256];

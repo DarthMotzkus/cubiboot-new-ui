@@ -201,16 +201,17 @@ cualquier otro nombre es solo un archivo más dentro de la flash.
 > claro: *"any custom DOL files might get erased during the firmware update process."* No se
 > pierde nada de la tarjeta SD — solo la copia que está dentro de la unidad.
 
-Dos cosas que conviene saber, ninguna probada por nosotros:
+**Swiss y el reinicio en el juego** funcionan en una FlippyDrive igual que en cualquier otro
+sitio, desde la tarjeta SD: `swiss-gc.dol` en la raíz de la tarjeta y `apploader.img` en
+`swiss/patches/`. La flash de la unidad también trae su propio Swiss, y cubiboot lo acepta si
+la tarjeta no tiene ninguno — pero el `apploader.img` tiene que ser el nuestro, de la misma
+release que el loader, así que ese va en la tarjeta.
 
-- El menú del bootloader también tiene una entrada **`remote`** que sirve la unidad por
-  FTP/SMB. Si llega a la flash, es una forma mucho más fácil de dejar el archivo ahí que los
-  pasos 5–8 — vale la pena intentarlo antes de la ruta por Swiss.
-- Un **`boot.dol`** en la raíz de la tarjeta SD se arranca *en lugar del* `cubeboot` de la
-  flash, según la documentación de la unidad. Si cubiboot funciona desde ahí no hace falta
-  flashear nada, sobrevive a las actualizaciones de firmware y se deshace borrando un archivo.
-  No tenemos ninguna FlippyDrive para confirmarlo, así que el método de la flash de arriba es
-  el que se sabe que funciona.
+> [!NOTE]
+> El menú del bootloader de la unidad también tiene una entrada **`remote`** que la sirve por
+> FTP/SMB. Si llega a la flash, es una forma más fácil de dejar el archivo ahí que los pasos
+> 5–8. No tenemos ninguna FlippyDrive para confirmar qué expone, así que la ruta por Swiss de
+> arriba es la documentada.
 
 ### Reinicio en el juego
 
