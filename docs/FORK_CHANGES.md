@@ -2,7 +2,7 @@
 
 This fork = pristine **makeo/cubiboot `main`** + the `OffBroadway/cubeboot@custom-loader-menu`
 banner-grid layout + a cold-boot banner-corruption fix + Cubiboot branding + a CI that
-releases all artifacts + the menu/quality-of-life work in sections F–J. This document records
+releases all artifacts + the menu/quality-of-life work in sections F–M. This document records
 every change so it can be re-applied onto a fresh makeo clone.
 
 For how the pieces fit together — the two-binary split, how the BIOS is patched, how settings
@@ -22,6 +22,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | J | Storage selection + the ODE's SD card | `cubeboot/source/emu/gcode.c` + FatFs glue |
 | K | Homebrew apps as banner entries | `patches/source/games.c` |
 | L | Folder name in the header, rebranding, banner tool | `patches/source/menu.c`, `.ci/brand_*.py`, `tools/` |
+| M | Boot delays (`preboot_delay_ms`, `postboot_delay_ms`) that actually fire | `patches/source/main.c` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -257,7 +258,9 @@ An apps folder past 128 entries would degrade to the same sliding window games u
   `custom_gameselect_menu`) instead of the fixed `"Games"`. The card root has no folder name
   to show, so it carries the product name instead.
 - **Banner artwork and text** are the Cubiboot wordmark with `"GC Games and Apps Loader"` /
-  `"build v1.6.0"` under it. Both the menu cube and the `.iso` BIOS intro read from
+  `"build <version>"` under it, where the version is whatever `brand_opening.py` stamped: the
+  tag name on a release build, the short SHA otherwise. Both the menu cube and the `.iso` BIOS
+  intro read from
   `patches/data/default_opening.bin` -- `brand_gbi.py` copies its pixel data into `gbi.hdr`
   at iso-build time -- so replacing that one file covers both. The artwork is fitted to
   width, not stretched; the slot is 96x32, so a source's aspect ratio decides how many of
@@ -269,6 +272,38 @@ An apps folder past 128 entries would degrade to the same sliding window games u
 
 Note that the version string in the banner is baked into `default_opening.bin`, so a release
 that forgets to re-run `brand_opening.py` will show the previous version on the console.
+
+## M. Boot delays that actually fire  (`patches/source/main.c`)
+
+`preboot_delay_ms` and `postboot_delay_ms` are upstream cubeboot options. Both parse correctly
+here and both reach the patch as words, so the plumbing was never the problem — neither one
+produced the delay you asked for.
+
+**`preboot_delay_ms` was ~3.6x short.** `pre_menu_init()` converted milliseconds to fields as
+`preboot_delay_ms / fps`, the reciprocal of the real conversion (`ms * fps / 1000`). `15000`
+came out as 250 fields ≈ 4.2 s on NTSC, 300 fields = 6 s on PAL, instead of 15 s. Now
+`((u64)preboot_delay_ms * fields_per_sec) / 1000`. The wait deliberately still runs on
+`VIWaitForRetrace()` rather than the time base: keeping VI going through the wait is the whole
+point of the option, since a TV cannot lock onto a signal that isn't there.
+
+**`postboot_delay_ms` never fired at all.** It was handled in `bs2tick()`, gated on
+`start_passthrough_game` and measured from `completed_time`. Two faults, either one fatal:
+
+- `start_passthrough_game` is set only by the Z-trigger DVD passthrough path (`menu.c`).
+  Booting from the grid sets `*bs2start_ready` and nothing else, so the branch was
+  unreachable on the path essentially everyone uses.
+- `completed_time` is stamped when the *boot logo* animation finishes at cold boot. By the
+  time a game is picked out of the menu, minutes may have passed, so
+  `elapsed > postboot_delay_ms` was already true and it returned `STATE_START_GAME` at once.
+  Upstream this was sound — there, the game boots straight after the logo, so "since the
+  animation ended" and "since the game was chosen" are the same instant. The menu is what
+  broke the assumption.
+
+The wait now sits at the top of `bs2start()`, the single point every boot path converges on
+(grid game, program/app, DVD passthrough), which runs after the exit animation and ahead of
+the device and audio teardown. The IPL's frame loop has already exited by then, so the last
+frame it drew stays on screen for the whole wait — the effect the option exists to produce.
+`bs2tick()` therefore no longer returns `STATE_WAIT_LOAD` on any path.
 
 ## Re-applying onto a fresh makeo clone
 
@@ -282,8 +317,10 @@ that forgets to re-run `brand_opening.py` will show the previous version on the 
    (J) — `gcode.{c,h}`, `diskio.c`, `flippy_emu.c`, plus the `settings.c`/`main.c` wiring.
 6. Apply the app entries (K): `games.h` type + flag, `games.c` detection and banner load,
    plus the `GM_FILE_TYPE_APP` cases in `patches/source/main.c` and `emu/tweaks.c`.
-7. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+7. Apply the boot-delay fixes (M) in `patches/source/main.c`: the conversion in
+   `pre_menu_init()` and the wait moved out of `bs2tick()` into `bs2start()`.
+8. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
-8. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+9. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
    `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
    fork's.
