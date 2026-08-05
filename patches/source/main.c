@@ -407,10 +407,12 @@ __attribute_used__ void pre_menu_init(int unk) {
     mod_cube_text();
     mod_cube_anim();
 
-    // delay before boot animation (to wait for GCVideo)
-    const int fps = rmode->viTVMode >> 2 == VI_NTSC ? 60 : 50;
-    const int total_frames = preboot_delay_ms / fps;
-    for (int i = 0; i < total_frames; i++) {
+    // Delay before the boot animation, so a TV / GCVideo has time to lock onto the signal.
+    // Waiting on retrace rather than the time base keeps VI running through the wait, which
+    // is the whole point -- there has to be a signal present to lock onto.
+    const u32 fields_per_sec = rmode->viTVMode >> 2 == VI_NTSC ? 60 : 50;
+    const u32 total_frames = ((u64)preboot_delay_ms * fields_per_sec) / 1000;
+    for (u32 i = 0; i < total_frames; i++) {
         VIWaitForRetrace();
     }
 }
@@ -474,15 +476,11 @@ __attribute_used__ u32 bs2tick() {
         completed_time = gettime();
     }
 
+    // postboot_delay_ms is not handled here: this hook only runs while the IPL's own state
+    // machine is driving, and by the time a game is picked from the menu the animation has
+    // long since finished. The wait lives in bs2start() instead, where every boot path
+    // converges.
     if (start_passthrough_game) {
-        if (postboot_delay_ms) {
-            u64 elapsed = diff_msec(completed_time, gettime());
-            if (completed_time > 0 && elapsed > postboot_delay_ms) {
-                return STATE_START_GAME;
-            } else {
-                return STATE_WAIT_LOAD;
-            }
-        }
         return STATE_START_GAME;
     }
 
@@ -501,6 +499,15 @@ __attribute_used__ u32 bs2tick() {
 
 __attribute_used__ void bs2start() {
     OSReport("DONE\n");
+
+    // Optional dwell before the game takes over, to recover the feeling of waiting for a
+    // disc to spin up. The IPL's frame loop has already exited, so the last frame it drew
+    // stays on screen for the whole wait. Placed here, ahead of the device and audio
+    // teardown below, so it applies to every boot path: game, program and DVD passthrough.
+    if (postboot_delay_ms) {
+        u64 delay_start = gettime();
+        while (diff_msec(delay_start, gettime()) < postboot_delay_ms);
+    }
 
     // read boot info into lowmem
     struct dolphin_lowmem *lowmem = (struct dolphin_lowmem*)0x80000000;
