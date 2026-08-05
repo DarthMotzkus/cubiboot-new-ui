@@ -75,7 +75,12 @@ CI runs the same steps from `.ci/` on every branch — see `.github/workflows/ci
   try to validate a change that way.
 - **Commits are authored as `Richard "Darth" Motzkus`.** Pinned in the repo's local
   `.git/config`. Pushing needs `HOME=/home/richard` (Windows Git Credential Manager; there is
-  no `gh` CLI and no SSH key).
+  no SSH key).
+- **`gh` is installed but not logged in**, and reading the credential store to log it in gets
+  denied. The repo is public, so read-only checks need no auth at all — `curl` the API for
+  release and run status, e.g.
+  `curl -sfL https://api.github.com/repos/DarthMotzkus/cubiboot-new-ui/releases/tags/<tag>`.
+  Authenticated `gh` needs `gh auth login` in an interactive session, or `GH_TOKEN` in the env.
 - **Verify before claiming.** This is bare-metal code with no test suite and no emulator. If
   you can't run it, say so — disassembling the built `patches.elf` and comparing against a
   known-good build is the strongest evidence available, and it is cheap:
