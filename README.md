@@ -24,6 +24,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE and similar SD adapters.
   - [Method 2: PicoLoader with cubiboot flashed in](#method-2-picoloader-with-cubiboot-flashed-in)
   - [Method 3: GC Loader and other ODEs](#method-3-gc-loader-and-other-odes)
   - [In-Game Reset](#in-game-reset)
+- [Updating](#updating)
 - [Configuration](#configuration)
   - [All options](#all-options)
   - [Menu layout](#menu-layout)
@@ -91,7 +92,7 @@ Every tagged release (`v*`) publishes:
 | `ipl.dol` | The cubiboot loader (a GameCube IPL replacement). Booted via PicoBoot/PicoLoader + gekkoboot. |
 | `cubiboot_picoloader.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and other ODEs, branded with the Cubiboot banner. |
-| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu. Goes in `SD:/swiss/patches/`. |
+| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`. |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
 
 [**→ Latest release**](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest)
@@ -102,14 +103,14 @@ Pick the one that matches your console:
 
 | Your setup | Use |
 |---|---|
-| PicoBoot or PicoLoader modchip | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) — recommended, updates by swapping a file on the SD card |
+| PicoBoot or PicoLoader modchip | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) — recommended, updates by swapping files on the SD card |
 | PicoLoader, and you want no loader file on the card | [Method 2](#method-2-picoloader-with-cubiboot-flashed-in) |
 | GC Loader or another ODE, no modchip | [Method 3](#method-3-gc-loader-and-other-odes) |
 
 ### Method 1: PicoBoot or PicoLoader with gekkoboot
 
-**Recommended.** Updating cubiboot later is just replacing a file on the SD card — no
-disassembly.
+**Recommended.** Updating cubiboot later is just replacing files on the SD card — no
+disassembly. See [Updating](#updating) for which ones.
 
 1. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
    [PicoLoader](https://github.com/makeo/PicoLoader).
@@ -158,6 +159,37 @@ Optional, works with every method above.
 2. Extract it to the **root** of the SD card — this drops `apploader.img` into
    `swiss/patches/`.
 3. Press **Z + A + START** in a game to return to the cubiboot menu.
+
+## Updating
+
+> [!IMPORTANT]
+> `apploader.img` carries its own complete copy of the loader — that is how the reset combo
+> hands control back without a cold boot. So if you set up In-Game Reset, **`apploader.img`
+> has to be replaced on every update, together with the loader itself.** Replace only one of
+> the two and the console runs two different versions of cubiboot.
+
+Nothing warns you when they drift apart, which is what makes it worth knowing: a cold boot
+lands on the new menu, In-Game Reset lands on the old one. The symptom is a fix or a new
+setting that works fine until you reset out of a game, and then doesn't.
+
+If you never installed `apploader.img`, there is nothing to keep in sync — replace the loader
+and you are done.
+
+| Installed with | Replace |
+|---|---|
+| [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) | `ipl.dol` **and** `swiss/patches/apploader.img` |
+| [Method 2](#method-2-picoloader-with-cubiboot-flashed-in) | re-flash `cubiboot_picoloader.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
+| [Method 3](#method-3-gc-loader-and-other-odes) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
+
+Both files come from the same release — mixing an `apploader.img` from one release with a
+loader from another is the situation this section is about.
+
+Re-extracting [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)
+handles both in one step for Method 1, but it also carries `config.ini` and will overwrite
+yours — copy yours aside first, or take just those two files out of the zip.
+
+To check what is actually installed, the two lines under the Cubiboot wordmark in the menu
+name the build. Cold boot and In-Game Reset should show the same one.
 
 ## Configuration
 

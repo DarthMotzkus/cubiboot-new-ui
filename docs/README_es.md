@@ -26,6 +26,7 @@ con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares
   - [Método 2: PicoLoader con cubiboot integrado](#método-2-picoloader-con-cubiboot-integrado)
   - [Método 3: GC Loader y otros ODE](#método-3-gc-loader-y-otros-ode)
   - [Reinicio en el juego](#reinicio-en-el-juego)
+- [Actualizar](#actualizar)
 - [Configuración](#configuración)
   - [Todas las opciones](#todas-las-opciones)
   - [Diseño del menú](#diseño-del-menú)
@@ -94,7 +95,7 @@ Cada release etiquetada (`v*`) publica:
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
 | `cubiboot_picoloader.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
-| `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú. Va en `SD:/swiss/patches/`. |
+| `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
 
 [**→ Última release**](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest)
@@ -105,14 +106,14 @@ Elige el que corresponda a tu consola:
 
 | Tu equipo | Usa |
 |---|---|
-| Modchip PicoBoot o PicoLoader | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) — recomendado, se actualiza cambiando un archivo en la SD |
+| Modchip PicoBoot o PicoLoader | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) — recomendado, se actualiza cambiando archivos en la SD |
 | PicoLoader, y no quieres archivos del loader en la tarjeta | [Método 2](#método-2-picoloader-con-cubiboot-integrado) |
 | GC Loader u otro ODE, sin modchip | [Método 3](#método-3-gc-loader-y-otros-ode) |
 
 ### Método 1: PicoBoot o PicoLoader con gekkoboot
 
-**Recomendado.** Actualizar cubiboot después es solo reemplazar un archivo en la tarjeta SD
-— sin desarmar nada.
+**Recomendado.** Actualizar cubiboot después es solo reemplazar archivos en la tarjeta SD
+— sin desarmar nada. Mira [Actualizar](#actualizar) para saber cuáles.
 
 1. Flashea tu Pico con el `.uf2` de [PicoBoot](https://github.com/webhdx/PicoBoot) o
    [PicoLoader](https://github.com/makeo/PicoLoader).
@@ -161,6 +162,38 @@ Opcional, funciona con todos los métodos anteriores.
 2. Extráelo en la **raíz** de la tarjeta SD — esto deja `apploader.img` dentro de
    `swiss/patches/`.
 3. Pulsa **Z + A + START** dentro de un juego para volver al menú de cubiboot.
+
+## Actualizar
+
+> [!IMPORTANT]
+> `apploader.img` lleva su propia copia completa del loader — así es como la combinación de
+> reinicio devuelve el control sin arrancar en frío. Por eso, si configuraste el reinicio en
+> el juego, **hay que reemplazar `apploader.img` en cada actualización, junto con el loader
+> mismo.** Si reemplazas solo uno de los dos, la consola queda con dos versiones distintas de
+> cubiboot.
+
+Nada te avisa cuando se desincronizan, y eso es lo que hace que valga la pena saberlo: el
+arranque en frío entra al menú nuevo y el reinicio en el juego entra al viejo. El síntoma es
+un arreglo o una opción nueva que funciona bien hasta que reinicias desde un juego.
+
+Si nunca instalaste `apploader.img`, no hay nada que mantener sincronizado — reemplaza el
+loader y listo.
+
+| Instalado con | Reemplaza |
+|---|---|
+| [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
+| [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
+| [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
+
+Los dos archivos salen de la misma release — mezclar un `apploader.img` de una release con un
+loader de otra es exactamente la situación de la que habla esta sección.
+
+Volver a extraer [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)
+resuelve los dos de una vez en el Método 1, pero también trae `config.ini` y sobrescribirá el
+tuyo — copia el tuyo aparte primero, o saca del zip solo esos dos archivos.
+
+Para comprobar qué está instalado, las dos líneas bajo el logotipo de Cubiboot en el menú
+indican la versión. El arranque en frío y el reinicio en el juego deben mostrar la misma.
 
 ## Configuración
 
