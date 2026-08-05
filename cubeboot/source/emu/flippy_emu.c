@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ffs/ff.h"
 #include "tweaks.h"
+#include "drive_probe.h"
 
 #ifdef IPL_CODE
 #include "../dvd_threaded.h"
@@ -28,8 +29,24 @@ int emu_sd_device = -1;
 // hands the index over as `emu_sd_device`, the patched BIOS only ever mounts
 // device_prio[emu_sd_device]. Keep both trees in sync -- this file is copied
 // into patches/source/emu at build time.
-static const char* device_prio[] = { "gcldr", "sdc", "sdb", "sda" };
+//
+// These are FatFs volume names, with one exception: "fldrv" is a FlippyDrive, which
+// serves files itself over the drive interface and has no volume to mount. It is
+// named the way Swiss names it, because the name is handed to Swiss verbatim in the
+// Autoload= argument (see emu/loader.c) -- an invented spelling would need a
+// translation step there.
+//
+// New devices go on the END. The index is the loader-to-patches contract, so
+// inserting one in the middle silently renumbers every device above it.
+static const char* device_prio[] = { "gcldr", "sdc", "sdb", "sda", "fldrv" };
 #define EMU_DEV_GCLDR 0
+#define EMU_DEV_FLDRV 4
+
+// Whether this device serves files itself instead of being a FatFs volume. Such a
+// device must never reach f_mount, f_open or a "<vol>:" path.
+static inline bool emu_dev_is_native(int device) {
+	return device == EMU_DEV_FLDRV;
+}
 
 static bool passthrough = false;
 
@@ -57,11 +74,14 @@ static void emu_mount_path(int device, char* path) {
 // "sdc" meaning serial port 2 is not guessable. Both are accepted: the volume names have
 // to keep working because they are what the loader's own logging prints.
 static const struct { const char* alias; const char* volume; } emu_device_aliases[] = {
-	{ "sd2sp2",   "sdc"   },
-	{ "slot_b",   "sdb"   },
-	{ "slot_a",   "sda"   },
-	{ "ode",      "gcldr" },
-	{ "gcloader", "gcldr" },
+	{ "sd2sp2",      "sdc"   },
+	{ "slot_b",      "sdb"   },
+	{ "slot_a",      "sda"   },
+	{ "gcloader",    "gcldr" },
+	{ "flippy",      "fldrv" },
+	{ "flippydrive", "fldrv" },
+	// "ode" is deliberately absent: it names a category, not one device, and is
+	// resolved against what is actually on the bus. See emu_find_device().
 };
 
 static int emu_match_volume(const char* name, int len) {
@@ -74,15 +94,32 @@ static int emu_match_volume(const char* name, int len) {
 	return -1;
 }
 
+static bool emu_name_is(const char* name, int len, const char* candidate) {
+	return (int)strlen(candidate) == len && strncasecmp(candidate, name, len) == 0;
+}
+
 static int emu_find_device(const char* name, int len) {
 	int device = emu_match_volume(name, len);
 	if (device >= 0)
 		return device;
 
+	// "ode" means "whichever ODE is installed", not one particular protocol. There is
+	// a single drive connector, so a GC Loader and a FlippyDrive can never both be
+	// present -- which makes this answerable rather than ambiguous: ask the drive.
+	//
+	// Resolving it here rather than expanding it into two entries keeps the list a
+	// plain sequence of devices, and costs nothing: drive_probe() caches its inquiry,
+	// and by the time a device_order line is parsed the bootstrap has already probed.
+	// A console with neither falls through to gcldr, which then fails to mount exactly
+	// as it does today.
+	if (emu_name_is(name, len, "ode")) {
+		return drive_probe() == DRIVE_ID_FLIPPY ? EMU_DEV_FLDRV : EMU_DEV_GCLDR;
+	}
+
 	int aliases = sizeof(emu_device_aliases) / sizeof(emu_device_aliases[0]);
 	for (int i = 0; i < aliases; i++) {
 		const char* alias = emu_device_aliases[i].alias;
-		if ((int)strlen(alias) == len && strncasecmp(alias, name, len) == 0)
+		if (emu_name_is(name, len, alias))
 			return emu_match_volume(emu_device_aliases[i].volume, strlen(emu_device_aliases[i].volume));
 	}
 
@@ -108,6 +145,19 @@ static const char* emu_next_device(const char* p, int* device) {
 }
 
 static bool emu_try_mount(int device) {
+	if (emu_dev_is_native(device)) {
+		// A FlippyDrive is "mounted" by being present -- it serves paths itself, so
+		// there is no volume and f_mount would be meaningless.
+		//
+		// Refused for now regardless: the native file API is not wired up yet, so
+		// selecting this device would give a console that finds its drive and then
+		// cannot read a byte off it. Returning false keeps the search falling through
+		// to the card readers, which is what happens today. The next commit, which
+		// lands the file API, is what makes this reachable.
+		iprintf("mount %s: native backend not wired up yet\n", device_prio[device]);
+		return false;
+	}
+
 	static char mount_path[256];
 	emu_mount_path(device, mount_path);
 
