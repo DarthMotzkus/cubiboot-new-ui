@@ -94,7 +94,7 @@ Cada release etiquetada (`v*`) publica:
 |---------|--------|
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
-| `cubeboot.dol` | El mismo loader que `ipl.dol`, con el nombre que exige una **FlippyDrive**. Va en la flash interna de la unidad — mira el [Método 4](#método-4-flippydrive). |
+| `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). |
 | `cubiboot_picoloader.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. |
@@ -162,25 +162,27 @@ cubiboot — sin modchip.
 Una FlippyDrive arranca su propio loader desde su **flash interna**, así que cubiboot va ahí,
 no en la tarjeta SD. Los juegos, el `config.ini` y Swiss siguen en la tarjeta como siempre.
 
-La unidad carga ese archivo por su nombre, así que **tiene que llamarse `cubeboot.dol`** — el
-nombre que usa el loader de la propia unidad. Con cualquier otro nombre no arranca nada.
+La unidad carga ese archivo **por su nombre**, así que tiene que acabar llamándose
+`cubeboot.dol` — el nombre que busca el loader de la propia unidad. Con cualquier otro nombre
+la unidad no arranca nada.
 
-1. Descarga [`cubeboot.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubeboot.dol)
-   y cópialo a la **raíz de la tarjeta SD de la FlippyDrive**. (Es el mismo loader que
-   `ipl.dol`, publicado con el nombre que la unidad exige — no hay que renombrar nada.)
-2. Enciende **manteniendo X** para entrar al menú del bootloader de la unidad.
-3. Elige cargar Swiss desde el DOL integrado.
-4. En Swiss, copia `cubeboot.dol` de la tarjeta SD sobre el `cubeboot.dol` que está en la
+1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
+   y **renómbralo a `cubeboot.dol`**. Es el mismo loader que `ipl.dol`; solo cambia el nombre
+   que la unidad exige.
+2. Cópialo a la **raíz de la tarjeta SD de la FlippyDrive**.
+3. Enciende **manteniendo X** para entrar al menú del bootloader de la unidad.
+4. Elige cargar Swiss desde el DOL integrado.
+5. En Swiss, copia `cubeboot.dol` de la tarjeta SD sobre el `cubeboot.dol` que está en la
    flash de la unidad.
-5. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
-6. Pon Swiss en la tarjeta como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
+6. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
+7. Pon Swiss en la tarjeta como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
    juegos.
 
 > [!IMPORTANT]
-> El paso 2 no es opcional, y es el que la gente se salta. Arrancar normalmente deja al
+> El paso 3 no es opcional, y es el que la gente se salta. Arrancar normalmente deja al
 > loader de la unidad **con la copia de `cubeboot.dol` de la flash abierta**, y un archivo
-> abierto no se puede sobrescribir: la copia del paso 4 simplemente falla. Mantener X entrega
-> el control sin que ese archivo quede abierto.
+> abierto no se puede sobrescribir: la copia del paso 5 simplemente falla, a veces sin un
+> error claro. Mantener X entrega el control sin que ese archivo llegue a abrirse.
 
 ### Reinicio en el juego
 
@@ -212,10 +214,31 @@ loader y listo.
 | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
 | [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 | [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
-| [Método 4](#método-4-flippydrive) | vuelve a flashear `cubeboot.dol` en la unidad (todo el procedimiento con X otra vez), **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
+| [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo), **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 
 Los dos archivos salen de la misma release — mezclar un `apploader.img` de una release con un
 loader de otra es exactamente la situación de la que habla esta sección.
+
+### Actualizar una FlippyDrive
+
+El loader vive dentro de la unidad, así que no hay ningún archivo en la tarjeta que cambiar:
+hay que escribirlo sobre la copia que está en la flash de la unidad, igual que llegó ahí:
+
+1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol),
+   **renómbralo a `cubeboot.dol`** y cópialo a la raíz de la tarjeta SD de la unidad,
+   reemplazando el que ya esté ahí si lo hay.
+2. Enciende **manteniendo X** para entrar al menú del bootloader de la unidad.
+3. Carga Swiss desde el DOL integrado.
+4. Copia `cubeboot.dol` de la tarjeta SD sobre el `cubeboot.dol` de la flash de la unidad.
+5. Reinicia — la unidad carga el nuevo automáticamente.
+
+> [!IMPORTANT]
+> Mantener X en el paso 2 es lo que hace posible el paso 4. Si arrancas normalmente, el loader
+> de la unidad ya tiene **la copia de la flash abierta**, así que la sobrescritura se rechaza:
+> la actualización parece haber funcionado y sigue arrancando la versión vieja. Si una release
+> nueva no cambia nada en una FlippyDrive, esta es la razón.
+
+Tu `config.ini`, tus juegos y `swiss-gc.dol` en la tarjeta SD no se tocan en ningún momento.
 
 Volver a extraer [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)
 resuelve los dos de una vez en el Método 1, pero también trae `config.ini` y sobrescribirá el
