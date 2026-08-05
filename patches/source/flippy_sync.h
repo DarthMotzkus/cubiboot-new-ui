@@ -1,3 +1,6 @@
+#ifndef FLIPPY_SYNC_H
+#define FLIPPY_SYNC_H
+
 #include <gctypes.h>
 #include "os.h"
 #include "ipc.h"
@@ -56,3 +59,5 @@ int dvd_custom_open_flash(const char *path, uint8_t type, uint8_t flags);
 void dvd_custom_bypass_enter();
 void dvd_custom_bypass_exit();
 int dvd_custom_presence(bool playing, const char *status, const char* sub_status);
+
+#endif // FLIPPY_SYNC_H

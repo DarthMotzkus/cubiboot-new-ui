@@ -34,6 +34,7 @@ extern "C" {
 #define DI_MAR     5 // DMA Memory Address Register
 #define DI_LENGTH  6 // DI DMA Transfer Length Register
 #define DI_CR      7 // DI Control Register
+#define DI_CR_RW     (1 << 2) // access mode, 0: read, 1: write
 #define DI_CR_DMA    (1 << 1) // 0: immediate mode, 1: DMA mode
 #define DI_CR_TSTART (1 << 0) // transfer start / transfer pending
 
