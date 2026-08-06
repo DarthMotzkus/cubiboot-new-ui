@@ -237,11 +237,25 @@
 / System Configurations
 /---------------------------------------------------------------------------*/
 
-#define FF_FS_TINY		1
+#define FF_FS_TINY		0
 /* This option switches tiny buffer configuration. (0:Normal or 1:Tiny)
 /  At the tiny configuration, size of file object (FIL) is reduced FF_MAX_SS bytes.
 /  Instead of private sector buffer eliminated from the file object, common sector
-/  buffer in the filesystem object (FATFS) is used for the file data transfer. */
+/  buffer in the filesystem object (FATFS) is used for the file data transfer.
+/
+/  Set to 0 here, against the upstream default, because the shared buffer is exactly
+/  what this menu keeps thrashing. Enumerating a folder is: walk the directory to find
+/  a file, read the file, repeat. Under the tiny configuration the file data lands in
+/  the same buffer holding the directory sector we just walked to, so every read throws
+/  that sector away and the next lookup fetches it again from the card. With a private
+/  buffer per file, directory and FAT sectors survive the reads between them.
+/
+/  It costs FF_MAX_SS on the one FIL in emu/flippy_emu.c, which grows from 96 bytes to
+/  4192. The directory object is unaffected -- it never buffers sector data.
+/
+/  The image gets SMALLER, not bigger: the tiny configuration carries extra code to
+/  shuffle that shared buffer between uses, and dropping it saves more than the buffer
+/  costs (measured: ipl.dol 695,840 -> 694,528). */
 
 
 #define FF_FS_EXFAT		1
