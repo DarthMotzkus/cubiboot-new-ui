@@ -12,8 +12,8 @@ cube_color = 00ffff     # hex color code -- boot logo only
 menu_cube_color = green # hex color code, or a stock palette name
 menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
-cube_logo = path.png    # path to a 352x40px PNG image
-force_progressive = 1   # enables progressive scan
+preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
+postboot_delay_ms = 2000        # hold the last frame before the game boots
 device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
 ```
 

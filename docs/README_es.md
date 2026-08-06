@@ -245,12 +245,10 @@ remember_last_game = 0
 | [`menu_cube_color`](#colores) | RGB hex · `random` · nombre de paleta | `theme_color` | Cubos / banners de la cuadrícula |
 | [`menu_box_color`](#colores) | RGB hex · `random` | `theme_color` | Panel de info bajo la lista de juegos |
 | [`menu_start_color`](#colores) | RGB hex · `random` | `theme_color` | El "PRESS START" grande de bloques |
-| `force_progressive` | `1` · `0` | `0` | Fuerza el escaneo progresivo |
+| `preboot_delay_ms` | milisegundos | `0` | Espera antes de la animación de arranque, para que la TV sincronice |
+| `postboot_delay_ms` | milisegundos | `0` | Mantiene el último fotograma tras elegir un juego, antes de arrancarlo |
 
-Otras claves heredadas del upstream se leen en
-[`cubeboot/source/settings.c`](../cubeboot/source/settings.c); mira también
-[docs/settings.md](settings.md). Ten en cuenta que `cube_logo` y `button_*` **no funcionan**
-(mira [Limitaciones conocidas](#limitaciones-conocidas)).
+Esa es la lista completa. Referencia completa: [docs/settings.md](settings.md).
 
 ### Diseño del menú
 
@@ -423,11 +421,10 @@ Dos cosas que conviene saber:
   necesita ese archivo, porque todo lo demás se arranca a través de Swiss — pero Swiss no
   necesita encadenador. Así que una tarjeta que solo lleve Swiss como app puede arrancarlo,
   que es justo lo que quieres cuando lo que falta es ese archivo de la raíz.
-- **Las imágenes de disco solo necesitan el nombre si [`force_swiss_default`](#todas-las-opciones)
-  está activo.** Con él desactivado — el valor por defecto — cualquier imagen de disco arranca
-  igualmente por el propio apploader de cubiboot, así que un `.iso` de Swiss funciona se llame
-  como se llame. Activarlo enruta los discos a través de Swiss, y entonces el nombre es lo que
-  mantiene a Swiss fuera de ese camino.
+- **Las imágenes de disco no necesitan el nombre en absoluto.** Cualquier imagen de disco
+  arranca por el propio apploader de cubiboot, así que un `.iso` de Swiss funciona se llame
+  como se llame. La regla del nombre importa para el `.dol` y la carpeta de app, que son las
+  formas que pasan por Swiss.
 
 Todo esto es independiente del `swiss-gc.dol` de la **raíz** de la tarjeta, que es la copia
 con la que se lanzan los juegos y tiene que estar ahí de todos modos.
@@ -515,8 +512,6 @@ falta de memoria.
 
 - La carga de archivos es lenta en FAT32 — usa **exFAT**.
 - Ni `ipl.dol` ni `cubiboot.iso` funcionan en **Dolphin**, ni con un IPL.bin configurado.
-- Heredado del upstream: `cube_logo` y `button_*` no funcionan (usa gekkoboot para programas
-  asociados a botones).
 - Los diseños con banners pueden fallar en carpetas de más de 128 archivos — mira
   [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners).
 

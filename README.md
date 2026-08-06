@@ -243,12 +243,10 @@ remember_last_game = 0
 | [`menu_cube_color`](#colors) | hex RGB · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
 | [`menu_box_color`](#colors) | hex RGB · `random` | `theme_color` | Info panel under the game list |
 | [`menu_start_color`](#colors) | hex RGB · `random` | `theme_color` | The big block "PRESS START" |
-| `force_progressive` | `1` · `0` | `0` | Force progressive scan |
+| `preboot_delay_ms` | milliseconds | `0` | Wait before the boot animation, for a TV to lock on |
+| `postboot_delay_ms` | milliseconds | `0` | Hold the last frame after picking a game, before it boots |
 
-Other keys inherited from upstream are parsed in
-[`cubeboot/source/settings.c`](cubeboot/source/settings.c); see also
-[docs/settings.md](docs/settings.md). Note that `cube_logo` and `button_*` **do not work**
-(see [Known limitations](#known-limitations)).
+That is the whole list. Full reference: [docs/settings.md](docs/settings.md).
 
 ### Menu layout
 
@@ -415,10 +413,9 @@ Two things worth knowing:
   file, because everything else is booted through Swiss — but Swiss needs no chainloader. So
   a card that only carries Swiss as an app can still start it, which is what you want when
   that root file is what went missing.
-- **Disc images only need the name when [`force_swiss_default`](#all-options) is on.** With
-  it off — the default — every disc image boots through cubiboot's own apploader anyway, so
-  a Swiss `.iso` works whatever it is called. Turning it on routes discs through Swiss, and
-  then the name is what keeps Swiss out of that path.
+- **Disc images do not need the name at all.** Every disc image boots through cubiboot's own
+  apploader, so a Swiss `.iso` works whatever it is called. The naming rule matters for the
+  `.dol` and the app folder, which are the forms that go through Swiss.
 
 This is all separate from the `swiss-gc.dol` at the card **root**, which is the copy games
 are launched with and has to be there regardless.
@@ -504,8 +501,6 @@ The 128 limit is a fail-safe. It can be raised in code, but that risks out-of-me
 
 - File loading is slow on FAT32 — use **exFAT**.
 - Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin Emulator**, even with an IPL.bin set.
-- Inherited from upstream: `cube_logo` and `button_*` don't work (use gekkoboot for
-  held-button programs).
 - The banner layouts may crash in folders over 128 files — see
   [Large folders and the banner pool](#large-folders-and-the-banner-pool).
 
