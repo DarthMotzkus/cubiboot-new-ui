@@ -2,7 +2,7 @@
 
 This fork = pristine **makeo/cubiboot `main`** + the `OffBroadway/cubeboot@custom-loader-menu`
 banner-grid layout + a cold-boot banner-corruption fix + Cubiboot branding + a CI that
-releases all artifacts + the menu/quality-of-life work in sections F–M. This document records
+releases all artifacts + the menu/quality-of-life work in sections F–N. This document records
 every change so it can be re-applied onto a fresh makeo clone.
 
 For how the pieces fit together — the two-binary split, how the BIOS is patched, how settings
@@ -23,6 +23,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | K | Homebrew apps as banner entries | `patches/source/games.c` |
 | L | Folder name in the header, rebranding, banner tool | `patches/source/menu.c`, `.ci/brand_*.py`, `tools/` |
 | M | Boot delays (`preboot_delay_ms`, `postboot_delay_ms`) that actually fire | `patches/source/main.c` |
+| N | Faster game lists: per-file sector buffer + a sector cache | `cubeboot/source/emu/ffs/` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -311,6 +312,69 @@ the device and audio teardown. The IPL's frame loop has already exited by then, 
 frame it drew stays on screen for the whole wait — the effect the option exists to produce.
 `bs2tick()` therefore no longer returns `STATE_WAIT_LOAD` on any path.
 
+## N. Faster game lists  (`cubeboot/source/emu/ffs/`)
+
+Two changes under FatFs, both aimed at the same thing: a folder of games took long enough
+to populate that you could watch it fill in, and leaving the folder and coming back paid the
+whole cost again.
+
+**A private sector buffer per open file** (`ffconf.h`: `FF_FS_TINY` 1 -> 0). Under the tiny
+configuration a file has no buffer of its own and its data moves through the single shared
+buffer inside the filesystem object -- the same one holding directory and FAT sectors. That
+is precisely the wrong arrangement for this workload, which alternates between walking a
+directory and reading a file: every read discarded the directory sector just walked to, so
+the next lookup fetched it from the card again. It costs `FF_MAX_SS` on the one `FIL` (96 ->
+4192 bytes) and the image gets *smaller*, because the tiny configuration carries extra code
+to shuffle that shared buffer around: 695,840 -> 694,528.
+
+**A sector cache** (`ffs/sector_cache.{c,h}`), sitting between FatFs and the drivers with
+`disk_read`/`disk_write` routed through it. Nothing below FatFs cached anything and the SD
+paths issue one command per 512-byte sector, while FatFs resolves a path by walking its
+directory from the start on every open -- so listing N games re-walked the same sectors N
+times.
+
+It is **direct-mapped** rather than LRU, which is the only real design decision in it. A
+page's slot is its page number modulo the slot count. For a directory swept repeatedly from
+the start -- the one pattern that matters -- that gives a full hit rate with no bookkeeping at
+all once the working set fits, and an O(1) lookup instead of a list walked on every sector
+access. LRU has nothing to offer the pattern: when the set fits nothing is evicted either
+way, and when it does not, recency evicts exactly the page wanted next. Sizing is therefore a
+cliff and not a dial, and the comment in the file carries the arithmetic.
+
+384 KB of pages, sized to cover `games.c`'s own 1920-entry listing cap (~300 KB of directory
+at typical ISO name lengths), leaving ~350 KB of the region free. The pages live in
+`.data_lowmem`, which is NOLOAD -- reserved RAM that costs nothing in the image. In a loaded
+section this would have added 384 KB to `ipl.dol`; as it is, the whole thing costs ~5 KB of
+code. Whole-page-and-larger transfers bypass it: those are files being streamed and read
+once, so caching them would evict what the cache exists to keep.
+
+**The dangerous part** is that those pages sit in RAM the rest of the firmware treats as
+scratch, so two callers must disable the cache before clearing it, and both do:
+
+- `bs2start()` clears `0x80100000-0x81600000` before every boot, which is where the pages
+  are. Left enabled, the bookkeeping would keep reporting them valid and every read after
+  that point would return zeros -- and the files read next are the game and the apploader, so
+  nothing would boot on any device.
+- `load_dol()` clears an incoming DOL's BSS at whatever address the DOL declares, then reads
+  its text and data sections. That is a partial overwrite at an address only the DOL knows,
+  so unlike the wipe above it can destroy pages while leaving the cache's magic intact.
+
+The magic kept beside the pages catches a whole-region wipe as a backstop, and covers first
+use where the region is NOLOAD and holds whatever was there before. It cannot catch a partial
+overwrite, hence the explicit disables. `disable()` is one-way with no `enable()` to match:
+both callers are on the way out of the menu into a game.
+
+**Confirmed on hardware by the maintainer**, and the test that showed it matters: hold A to
+skip the boot animation. With the animation playing, the loading finishes behind it and both
+builds look identical -- that free time is what had been hiding the cost all along. Skipped,
+v1.6.2 still fills banners in while this build has them ready, and folder navigation is
+quicker. No banner corruption across cold boots.
+
+Still outstanding: re-entering a folder rebuilds its list from scratch -- every game reopened
+and its header re-read. The banners now come largely from memory rather than the card, which
+is the part that got faster, but the list itself is rebuilt. Remembering visited folders is
+the fix, and a separate piece of work.
+
 ## Re-applying onto a fresh makeo clone
 
 1. `git clone https://github.com/makeo/cubiboot && cd cubiboot`
@@ -325,8 +389,12 @@ frame it drew stays on screen for the whole wait — the effect the option exist
    plus the `GM_FILE_TYPE_APP` cases in `patches/source/main.c` and `emu/tweaks.c`.
 7. Apply the boot-delay fixes (M) in `patches/source/main.c`: the conversion in
    `pre_menu_init()` and the wait moved out of `bs2tick()` into `bs2start()`.
-8. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+8. Apply the list-speed work (N): `FF_FS_TINY` 0 in `emu/ffs/ffconf.h`,
+   `emu/ffs/sector_cache.{c,h}`, the `disk_read`/`disk_write` routing in `emu/ffs/diskio.c`,
+   and the `sector_cache_disable()` calls in `patches/source/main.c` (`bs2start`) and
+   `patches/source/boot.c` (`load_dol`).
+9. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
-9. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+10. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
    `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
    fork's.
