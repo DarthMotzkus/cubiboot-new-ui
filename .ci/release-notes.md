@@ -1,14 +1,18 @@
-## What's new in v1.6.2
+## What's new in v1.6.3
 
-Both boot-delay options are fixed. `preboot_delay_ms` and `postboot_delay_ms` came from upstream cubeboot, and neither produced the delay you configured — one waited about a quarter of it, the other did nothing whatsoever. The values are milliseconds, and that is now what you get.
+Game lists load faster, and the settings list now only contains options this fork actually stands behind.
 
-* **`preboot_delay_ms` waited roughly a quarter of the time you asked for** — the millisecond value was divided by the frame rate instead of multiplied by it, so `preboot_delay_ms = 15000` held for about 4 seconds on NTSC and 6 on PAL rather than 15. This is the option to reach for when a TV or GCVideo needs a moment to lock onto the signal before the boot animation starts, so coming out short defeated the point of setting it. Worth knowing: a value that felt about right before will now wait roughly 3.6x longer on NTSC.
+* **Folders of games populate noticeably faster** — two changes underneath, both about the same thing. Finding a file meant reading through the folder's index from the beginning every single time, so a folder of 60 games read the same index off the card 60-plus times, in tiny pieces the card is slow at. Cubiboot now remembers what it has already read, so those repeat trips stop happening. Separately, reading a game's banner used to wipe the folder index that had just been read — they were sharing one scratch area — which forced it to be fetched again immediately; they now have their own. Leaving a folder and coming back is quicker too.
     _Designed by [@DarthMotzkus](https://github.com/DarthMotzkus)._
 
-* **`postboot_delay_ms` did nothing at all** — it was checked at a point in the boot that only the Z-trigger DVD passthrough ever reached, and it measured its wait from the end of the cold-boot logo animation, which by the time you pick a game is long past. Choosing a game from the grid never reached it. The wait now happens where every boot path converges, holding the last frame on screen before the game takes over — games, homebrew programs and disc passthrough alike. Pure flair: it recovers the feeling of waiting for a disc to spin up.
+* **How to actually see it: hold A at power-on to skip the boot animation.** With the animation playing, the loading finishes behind it and this release looks identical to the last one — those few seconds were hiding the whole cost. Skip the animation and v1.6.2 still fills banners in while this build has them ready. It is also how the change was confirmed on hardware.
+
+* **Four settings removed from the documentation and the bundled `config.ini`** — `force_progressive`, `force_swiss_default`, `disable_mcp_select` and `show_watermark`, along with the inherited-from-upstream keys that never worked here (`cube_logo`, `button_b`, `default_program`). Listing an option is a promise that it behaves as described, and those had not been verified in this fork. Nothing is taken away from a card that already sets one — the loader still reads them exactly as before — they are simply no longer presented as things to try. What remains is what has been used and tested.
     _Designed by [@DarthMotzkus](https://github.com/DarthMotzkus)._
 
-Both options are described in the bundled `config.ini`, which until now covered the pair in a single line that fit neither of them.
+* **The two boot delays are now listed in the README's options table**, which they had never been, and moved into a section of their own in `config.ini`. They shared a heading with `force_progressive`, and with that gone the heading no longer described them.
+
+Still to come: re-entering a folder rebuilds its list from scratch. The banners now come mostly from memory, which is the half that got faster, but every game is reopened to rebuild the list. Remembering folders you have already visited is the next piece of work.
 
 <!--
 STANDING BLOCK -- keep the "Updating from an earlier release" section below in every release,
@@ -24,4 +28,4 @@ Only the per-version notes above and the compare link below need rewriting each 
 
 `apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
-**Full Changelog:** [v1.6.1...v1.6.2](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.1...v1.6.2)
+**Full Changelog:** [v1.6.2...v1.6.3](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.2...v1.6.3)
