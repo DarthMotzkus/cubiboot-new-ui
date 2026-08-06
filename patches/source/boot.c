@@ -49,6 +49,17 @@ static dol_info_t load_dol(uint64_t offset, uint8_t fd) {
     DOLHEADER *hdr = &dol_hdr;
     dvd_read(hdr, sizeof(DOLHEADER), offset, fd);
 
+    // The sector cache keeps its pages low in RAM, and a DOL is free to put its BSS
+    // anywhere -- including on top of them. Unlike the wipe in bs2start() this is a
+    // partial overwrite at an address only the DOL knows, so the magic the cache keeps
+    // beside its pages may survive while the pages themselves do not. It would then serve
+    // zeros for the text and data sections read just below, out of a file that is fine.
+    //
+    // Nothing is lost by dropping it here: those section reads are bulk transfers, which
+    // bypass the cache anyway.
+    extern void sector_cache_disable(void);
+    sector_cache_disable();
+
     // Clear BSS
     // TODO: check if this overlaps with IPL?
     if (hdr->bssAddress && hdr->bssLength) {

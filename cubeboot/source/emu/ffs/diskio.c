@@ -11,6 +11,7 @@
 #include "diskio.h"
 #include "../tsd.h"
 #include "../gcode.h"
+#include "sector_cache.h"
 
 static bool disk_is_sd(BYTE pdrv) {
 	return pdrv == 0 || pdrv == 1 || pdrv == 2;
@@ -42,6 +43,9 @@ DSTATUS disk_status(BYTE pdrv) {
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize(BYTE pdrv) {
+	// Anything cached described whatever was behind this drive before.
+	sector_cache_invalidate();
+
 	if (disk_is_sd(pdrv))
 		return tsd_sd_init(exi_port_map[pdrv]) ? 0 : STA_NOINIT;
 
@@ -57,7 +61,9 @@ DSTATUS disk_initialize(BYTE pdrv) {
 /* Read Sector(s)                                                        */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
+// Uncached device access. Only sector_cache.c should call these; everything else goes
+// through disk_read()/disk_write() below and gets the cache.
+DRESULT disk_read_raw(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
 	if (disk_is_sd(pdrv))
 		return tsd_sd_read(exi_port_map[pdrv], sector, buff, count) ? RES_OK : RES_ERROR;
 
@@ -65,6 +71,10 @@ DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
 		return gcode_sd_read(sector, buff, count) ? RES_OK : RES_ERROR;
 
 	return RES_PARERR;
+}
+
+DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
+	return sector_cache_read(pdrv, buff, sector, count);
 }
 
 
@@ -75,7 +85,8 @@ DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
 
 #if FF_FS_READONLY == 0
 
-DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count) {
+// Uncached; see disk_read_raw() above.
+DRESULT disk_write_raw(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count) {
 	if (disk_is_sd(pdrv))
 		return tsd_sd_write(exi_port_map[pdrv], sector, buff, count) ? RES_OK : RES_WRPRT;
 
@@ -83,6 +94,10 @@ DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count) {
 		return gcode_sd_write(sector, buff, count) ? RES_OK : RES_WRPRT;
 
 	return RES_PARERR;
+}
+
+DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count) {
+	return sector_cache_write(pdrv, buff, sector, count);
 }
 
 #endif

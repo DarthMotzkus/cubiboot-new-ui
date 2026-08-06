@@ -553,6 +553,15 @@ __attribute_used__ void bs2start() {
     u32 end_addr = 0x81600000;
     u32 len = end_addr - start_addr;
 
+    // The sector cache keeps its pages inside the range about to be cleared, and its
+    // bookkeeping would go on claiming those pages are valid -- so every read after this
+    // point would be served zeros. That is not a subtle failure: the files read below are
+    // the game and the apploader, so nothing would boot on any device. Disable it here,
+    // where the wipe is, rather than trusting the magic it keeps alongside the pages to
+    // catch it.
+    extern void sector_cache_disable(void);
+    sector_cache_disable();
+
     memset((void*)start_addr, 0, len); // cleanup
     DCFlushRange((void*)start_addr, len);
     ICInvalidateRange((void*)start_addr, len);
