@@ -1,3 +1,21 @@
+<!--
+STANDING BLOCK -- the quoted block immediately below goes FIRST in every release, verbatim,
+before the "What's new" heading. Do not move it to the end and do not reword it.
+
+The ">>" prefix is deliberate: it renders as a quote, which sets it apart from the release's
+own notes as a standing notice rather than something that changed in this version.
+
+Why it earns the top of the page: apploader.img contains a whole second copy of the loader,
+so anyone who replaces only the loader keeps reaching the previous version through In-Game
+Reset, and nothing on the console says so. It reads as a fix that works until you reset out
+of a game -- which is why it belongs where nobody can miss it.
+
+Only the "What's new" notes and the compare link at the bottom get rewritten each release.
+-->
+
+>>## Updating from an earlier release?
+>>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
+
 ## What's new in v1.6.3
 
 Game lists load faster, and the settings list now only contains options this fork actually stands behind.
@@ -13,19 +31,5 @@ Game lists load faster, and the settings list now only contains options this for
 * **The two boot delays are now listed in the README's options table**, which they had never been, and moved into a section of their own in `config.ini`. They shared a heading with `force_progressive`, and with that gone the heading no longer described them.
 
 Still to come: re-entering a folder rebuilds its list from scratch. The banners now come mostly from memory, which is the half that got faster, but every game is reopened to rebuild the list. Remembering folders you have already visited is the next piece of work.
-
-<!--
-STANDING BLOCK -- keep the "Updating from an earlier release" section below in every release,
-verbatim. It is not tied to what changed in any one version.
-
-Why it earns the space: apploader.img contains a whole second copy of the loader, so anyone
-who replaces only the loader keeps reaching the previous version through In-Game Reset, and
-nothing on the console says so. It reads as a fix that works until you reset out of a game.
-Only the per-version notes above and the compare link below need rewriting each release.
--->
-
-### Updating from an earlier release
-
-`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
 **Full Changelog:** [v1.6.2...v1.6.3](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.2...v1.6.3)
