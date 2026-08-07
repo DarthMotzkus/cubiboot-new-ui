@@ -1318,7 +1318,28 @@ void gm_setup_grid(int line_count, bool initial) {
     }
 }
 
+// Cold boot: the starting folder is decided HERE, on the enum thread, not in
+// pre_thread_init. That hook runs too early for the memory card slot readers: on EXI
+// channels 0/1 the BIOS still owns the channel, so the very first SD access fails and
+// falls back to the root -- which silently disabled default_folder and
+// remember_last_game on slot A/B while SD2SP2 (channel 2, uncontended) kept working.
+// This thread is where the root listing already loads from, so its first access is the
+// one that works. Same reads, same order, just later.
+static bool gm_cold_boot_resolve = false;
+extern char* resolve_default_folder(void);
+
 void *gm_thread_worker(void* param) {
+    if (gm_cold_boot_resolve) {
+        gm_cold_boot_resolve = false;
+        const char *resolved = gm_last_played_folder();
+        if (resolved == NULL)
+            resolved = resolve_default_folder();
+        strcpy(game_enum_path, resolved);
+        if (game_enum_path[strlen(game_enum_path) - 1] != '/')
+            strcat(game_enum_path, "/");
+        OSReport("Cold boot folder: %s\n", game_enum_path);
+    }
+
     const char *target = &game_enum_path[0];
     if (target == NULL || strlen(target) == 0) {
         OSReport("ERROR: target is NULL\n");
@@ -1374,6 +1395,13 @@ void gm_start_thread(const char *target) {
     if (game_enum_running) {
         OSReport("ERROR: game enum thread is already running\n");
         return;
+    }
+
+    // NULL is the cold-boot start: the real folder is resolved on the worker (see
+    // gm_cold_boot_resolve above). "/" is only what the header shows until then.
+    if (target == NULL) {
+        gm_cold_boot_resolve = true;
+        target = "/";
     }
 
     // pop one path element

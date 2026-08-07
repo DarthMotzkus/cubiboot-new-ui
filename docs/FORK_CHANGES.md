@@ -131,10 +131,22 @@ The `default_folder` option by [wins1ey](https://github.com/wins1ey), via the
 ([merge](https://github.com/Hazado/cubiboot/commit/c91066b4889346fec288393f6a9fe41304652e49)),
 ported onto this tree.
 
-`resolve_default_folder()` runs from `pre_thread_init()`. It adds a leading `/` when the
-value omits one, verifies the folder opens, and falls back to `/` when it doesn't. The string
-reaches the patch as a `strcpy` into the `default_folder` buffer (not a `set_patch_value`
-word) — see [ARCHITECTURE.md](ARCHITECTURE.md#the-loader-to-patches-contract).
+`resolve_default_folder()` adds a leading `/` when the value omits one, verifies the folder
+opens, and falls back to `/` when it doesn't. The string reaches the patch as a `strcpy`
+into the `default_folder` buffer (not a `set_patch_value` word) — see
+[ARCHITECTURE.md](ARCHITECTURE.md#the-loader-to-patches-contract).
+
+**Where it runs matters.** It used to run from `pre_thread_init()`, and that silently broke
+both this option and `remember_last_game` on the memory card slot readers: that hook fires
+so early that on EXI channels 0/1 the BIOS still owns the channel, the driver's
+`EXILock`/`EXISelect` fail immediately (NULL callback — no waiting), the very first mount
+fails, and the menu fell back to the root — always, while the same config worked on SD2SP2
+(channel 2, which the BIOS never touches). The card itself was fine: the enum thread's later
+mount succeeded, which is why the root listing still appeared and the folder could be opened
+by hand. The fix moves the decision, not the logic: `pre_thread_init()` passes `NULL` to
+`gm_start_thread()`, and `gm_thread_worker()` resolves last-played → `default_folder` as its
+first act, on the thread whose first SD access is the one that demonstrably works. Same
+reads, same order, no retries or delays added anywhere.
 
 ## H. `remember_last_game`  (`patches/source/games.c`, `main.c`)
 
@@ -150,7 +162,9 @@ Consequence worth knowing: **Swiss's Recent List must be On** (`RecentListLevel=
 `default_folder`.
 
 `gm_last_played_folder()` strips the filename to get the containing folder — so a letter or
-genre subfolder is honoured, not just `default_folder` — and verifies it still opens.
+genre subfolder is honoured, not just `default_folder` — and verifies it still opens. Like
+`resolve_default_folder()`, it is called from `gm_thread_worker()`, not `pre_thread_init()`
+— calling it that early breaks the slot A/B card readers (see section G).
 
 The cold-boot path is deliberately not banner-blocking. `gm_arm_last_played()` marks the scan
 so `gm_check_files` skips the resident banner preload; the folder is scanned by headers only,
