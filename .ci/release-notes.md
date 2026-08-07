@@ -16,20 +16,13 @@ Only the "What's new" notes and the compare link at the bottom get rewritten eac
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
-## What's new in v1.6.3
+## What's new in v1.6.4
 
-Game lists load faster, and the settings list now only contains options this fork actually stands behind.
+`default_folder` and `remember_last_game` now work on SD Gecko card readers in the memory card slots.
 
-* **Folders of games populate noticeably faster** — two changes underneath, both about the same thing. Finding a file meant reading through the folder's index from the beginning every single time, so a folder of 60 games read the same index off the card 60-plus times, in tiny pieces the card is slow at. Cubiboot now remembers what it has already read, so those repeat trips stop happening. Separately, reading a game's banner used to wipe the folder index that had just been read — they were sharing one scratch area — which forced it to be fetched again immediately; they now have their own. Leaving a folder and coming back is quicker too.
-    _Designed by [@DarthMotzkus](https://github.com/DarthMotzkus)._
+* **Fixed: the starting folder was ignored on memory card slot readers** — with the SD card in slot A or B, `default_folder` always fell back to the card root and `remember_last_game` never pre-selected anything, while the exact same `config.ini` worked on an SD2SP2. The folder itself was fine: it opened normally from the menu. The cause was *when* the folder was chosen, not *where*: the choice ran so early in the boot that on the memory card slots the console's BIOS still owns the port, the very first card access failed, and the menu silently fell back to the root — every boot. The SD2SP2 sits on a port the BIOS never touches, which is why it was immune. The decision now happens a moment later, on the same path that loads the game list — the one access that demonstrably works — with no retries, no waiting, and no change to how fast anything loads.
+    _Reported on Discord by a slot B user, who also confirmed the fix on real hardware._
 
-* **How to actually see it: hold A at power-on to skip the boot animation.** With the animation playing, the loading finishes behind it and this release looks identical to the last one — those few seconds were hiding the whole cost. Skip the animation and v1.6.2 still fills banners in while this build has them ready. It is also how the change was confirmed on hardware.
+Still to come: re-entering a folder rebuilds its list from scratch. The banners now come mostly from memory, but every game is reopened to rebuild the list. Remembering folders you have already visited is the next piece of work.
 
-* **Four settings removed from the documentation and the bundled `config.ini`** — `force_progressive`, `force_swiss_default`, `disable_mcp_select` and `show_watermark`, along with the inherited-from-upstream keys that never worked here (`cube_logo`, `button_b`, `default_program`). Listing an option is a promise that it behaves as described, and those had not been verified in this fork. Nothing is taken away from a card that already sets one — the loader still reads them exactly as before — they are simply no longer presented as things to try. What remains is what has been used and tested.
-    _Designed by [@DarthMotzkus](https://github.com/DarthMotzkus)._
-
-* **The two boot delays are now listed in the README's options table**, which they had never been, and moved into a section of their own in `config.ini`. They shared a heading with `force_progressive`, and with that gone the heading no longer described them.
-
-Still to come: re-entering a folder rebuilds its list from scratch. The banners now come mostly from memory, which is the half that got faster, but every game is reopened to rebuild the list. Remembering folders you have already visited is the next piece of work.
-
-**Full Changelog:** [v1.6.2...v1.6.3](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.2...v1.6.3)
+**Full Changelog:** [v1.6.3...v1.6.4](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.3...v1.6.4)
