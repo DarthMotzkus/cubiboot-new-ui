@@ -383,14 +383,11 @@ __attribute_used__ void pre_thread_init() {
     gm_init_heap();
     gm_init_thread();
     if (!start_passthrough_game) {
-        // Open the folder containing the last-played game (any folder, e.g. letter/genre
-        // subfolders) when remember_last_game is on and one is saved; otherwise fall back
-        // to default_folder.
-        const char *target = gm_last_played_folder();
-        if (target == NULL) {
-            target = resolve_default_folder();
-        }
-        gm_start_thread(target);
+        // NULL = cold boot. The starting folder (last-played when remember_last_game is
+        // on, else default_folder) is resolved on the enum thread, NOT here: this hook
+        // runs too early for the memory card slot readers, whose first SD access fails
+        // while the BIOS still owns EXI channels 0/1 -- see gm_thread_worker.
+        gm_start_thread(NULL);
     }
 }
 
