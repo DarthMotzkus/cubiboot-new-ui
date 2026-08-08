@@ -2,7 +2,7 @@
 
 This fork = pristine **makeo/cubiboot `main`** + the `OffBroadway/cubeboot@custom-loader-menu`
 banner-grid layout + a cold-boot banner-corruption fix + Cubiboot branding + a CI that
-releases all artifacts + the menu/quality-of-life work in sections F–N. This document records
+releases all artifacts + the menu/quality-of-life work in sections F–O. This document records
 every change so it can be re-applied onto a fresh makeo clone.
 
 For how the pieces fit together — the two-binary split, how the BIOS is patched, how settings
@@ -24,6 +24,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | L | Folder name in the header, rebranding, banner tool | `patches/source/menu.c`, `.ci/brand_*.py`, `tools/` |
 | M | Boot delays (`preboot_delay_ms`, `postboot_delay_ms`) that actually fire | `patches/source/main.c` |
 | N | Faster game lists: per-file sector buffer + a sector cache | `cubeboot/source/emu/ffs/` |
+| O | Native FlippyDrive support | `cubeboot/source/emu/drive_probe.c`, `fldrv.c`, `flippy_emu.c` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -243,7 +244,8 @@ did plus what it could not: excluding a card reader, reordering slots, or naming
 does not exist yet.
 
 Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
-Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered.
+Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered
+by this driver — section O adds it natively.
 
 ## K. Homebrew apps as banner entries  (`patches/source/games.c`)
 
@@ -390,6 +392,66 @@ Still outstanding: re-entering a folder rebuilds its list from scratch -- every 
 and its header re-read. The banners now come largely from memory rather than the card, which
 is the part that got faster, but the list itself is rebuilt. Remembering visited folders is
 the fix, and a separate piece of work.
+## O. Native FlippyDrive support  (`cubeboot/source/emu/`)
+
+cubeboot was written against the FlippyDrive's own file protocol; this fork commented
+that path out of both `flippy_sync.c` copies and put FatFs emulation in its place, which
+left `device_prio` with no entry a FlippyDrive could answer to. So the loader ran on one
+and found nothing.
+
+**Identification is shared, not per device.** There is one drive connector, so a GC Loader
+and a FlippyDrive can never both be installed -- which makes "what is on the bus" a single
+question with a single answer. `drive_probe()` asks it once with an OEM inquiry, caches the
+result, and both backends read it; `gcode_sd_init()` is now just a comparison against that.
+Two independent probes would have meant a second retry loop and a second bounded timeout on
+a console with no drive at all, the case that runs on every boot and can only ever fail.
+The DI registers and the bounded wait moved there too, since three call sites drive them.
+
+Detection is read-only, which is sufficient rather than merely careful. Swiss's
+`flippy_init()` requires `rel_date == 0x20220426` from a plain inquiry before its file API
+works, and its `flippy_bypass(false)` sends nothing when the drive already reports
+`0x2022042x`. Nothing is written to a drive we have only just met, so a console with a real
+optical drive or a GC Loader is untouched by the new code path.
+
+**The device is not a volume.** `fldrv` serves paths itself, so it never reaches `f_mount`,
+`f_open` or a `"<vol>:"` prefix. It is also deliberately absent from `FF_VOLUME_STRS`, so
+FatFs would reject `f_mount("fldrv:")` outright -- a second line of defence under
+`emu_dev_is_native()`. Every `dvd_custom_*` entry point in `flippy_emu.c` forks on which
+side owns the current device.
+
+The name is Swiss's, not a choice: `emu/loader.c` builds `Autoload=<dev>:<path>` and hands
+that string to Swiss, so an invented spelling would need translating there. `flippy` and
+`flippydrive` are config spellings for it, and `ode` stopped being a static alias for
+`gcldr` -- it now resolves against what the drive says it is, so a user does not have to
+know which command set their ODE speaks.
+
+**What the protocol actually needed.** Almost none of it was new. The file read is the
+ordinary drive read command with the handle in bits 16-23 -- the same transfer passthrough
+already used for a real disc -- so `dvd_read()` only gained the native case beside
+`passthrough`. The remaining commands were the dormant ones in `flippy_sync.c`, rewritten as
+one transfer helper plus thin wrappers: written out per command, as they had been, the
+differences between them stop being visible, which is how a whole file API gets commented
+out as a block without anyone noticing the read was the odd one out. The helper bounds its
+wait, unlike the unbounded `TSTART` spins this protocol is usually written with -- this runs
+as the IPL, where a drive that stops answering hangs a console with no menu to return to.
+
+**Inherited handles.** `fldrv_init()` releases handles 1..31 and the flash handle before
+anything else. The bootloader loads our DOL out of the drive's flash and leaves that handle
+open -- which is why updating cubiboot on one of these requires holding X to reach the
+bootloader menu, so it hands over without claiming the file and the flash copy can be
+overwritten. Arriving normally, we inherit it. Swiss guards identically, with
+`flippy_closefrom(1)` at the end of `flippy_init()`.
+
+Two places the emulation's habits would have been wrong on real hardware: `dvd_custom_open()`
+skips its "close fd 1 first" step, which exists only because the emulation keeps one `FIL`
+and hands the fiction of fd 1 to every caller -- a real drive gives out real handles and
+several can be open at once. And `dvd_custom_status()` returns the drive's answer without the
+byte swap, since that swap exists to imitate the format the drive already sends.
+
+**Confirmed on hardware by the maintainer**: this build runs on a real FlippyDrive and works
+normally. A console without one cannot reach any of it -- the probe has to positively
+identify a FlippyDrive first, and everything else falls through to the card readers as
+before.
 
 ## Re-applying onto a fresh makeo clone
 
@@ -409,8 +471,11 @@ the fix, and a separate piece of work.
    `emu/ffs/sector_cache.{c,h}`, the `disk_read`/`disk_write` routing in `emu/ffs/diskio.c`,
    and the `sector_cache_disable()` calls in `patches/source/main.c` (`bs2start`) and
    `patches/source/boot.c` (`load_dol`).
-9. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+9. Apply the FlippyDrive work (O): `emu/drive_probe.{c,h}` and `emu/fldrv.{c,h}`, the
+   `device_prio`/alias/dispatch changes in `emu/flippy_emu.c`, the include guard on both
+   `flippy_sync.h` copies, and the `flippydrive.dol` artifact in the workflow.
+10. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
-10. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+11. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
    `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
    fork's.

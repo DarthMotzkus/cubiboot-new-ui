@@ -96,7 +96,9 @@ the volume everything comes off: the IPL dump, `swiss-gc.dol`, banners and the g
 | `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
 | `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
 | `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
-| `ode`, `gcloader` (or `gcldr`) | The SD card **inside the ODE** — a [GC Loader](https://gcloaderhq.com/) or anything answering the same drive commands |
+| `ode` | **Whichever ODE is installed** — resolved by asking the drive, so it covers both of the two below |
+| `gcloader` (or `gcldr`) | The SD card **inside a [GC Loader](https://gcloaderhq.com/)**, or anything answering the same drive commands |
+| `flippy`, `flippydrive` (or `fldrv`) | The SD card **inside a FlippyDrive** |
 
 Separate the names with commas or spaces; case does not matter. Unknown names are reported
 and skipped. Default when the key is absent:
@@ -104,6 +106,11 @@ and skipped. Default when the key is absent:
 ```ini
 device_order = sd2sp2, slot_b, slot_a, ode
 ```
+
+`ode` is the one to reach for: there is a single drive connector, so a GC Loader and a
+FlippyDrive can never both be installed, and cubiboot identifies which one is there from the
+drive's own inquiry. Naming a specific one is only useful for forcing the issue while
+diagnosing something.
 
 Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
 A console with both an SD2SP2 and a GC Loader, whose games live on the ODE, writes:
@@ -124,6 +131,17 @@ Two things to know:
 If nothing in the list mounts, cubiboot keeps whatever the search settled on rather than
 booting into an empty menu over one bad line.
 
-The ODE's card is mounted read-only. A console without an ODE pays one drive inquiry per
-boot for the `gcldr` entry, which gives up as soon as a real optical drive answers, or as
-soon as nothing answers at all.
+A GC Loader's card is mounted read-only. A console without an ODE pays **one** drive inquiry
+per boot no matter how many ODE names are in the list — the inquiry identifies every drive
+cubiboot knows in one answer, and gives up as soon as a real optical drive replies, or as
+soon as nothing replies at all.
+
+A FlippyDrive is not mounted at all, because it is not a disk: it serves files itself and
+cubiboot asks it for paths directly. Nothing about that is visible in `config.ini` — the
+same `device_order`, the same `config.ini` on the card root, the same everything. It matters
+only in that the drive, not cubiboot, decides what the filesystem looks like.
+
+> [!NOTE]
+> On a FlippyDrive, cubiboot itself lives in the **drive's internal flash**, not on the SD
+> card — see [Method 4](../README.md#method-4-flippydrive) in the README. The SD card still
+> holds `config.ini`, Swiss and your games, exactly as on any other setup.

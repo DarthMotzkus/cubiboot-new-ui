@@ -25,6 +25,7 @@ con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares
   - [Método 1: PicoBoot o PicoLoader con gekkoboot](#método-1-picoboot-o-picoloader-con-gekkoboot)
   - [Método 2: PicoLoader con cubiboot integrado](#método-2-picoloader-con-cubiboot-integrado)
   - [Método 3: GC Loader y otros ODE](#método-3-gc-loader-y-otros-ode)
+  - [Método 4: FlippyDrive](#método-4-flippydrive)
   - [Reinicio en el juego](#reinicio-en-el-juego)
 - [Actualizar](#actualizar)
 - [Configuración](#configuración)
@@ -93,6 +94,7 @@ Cada release etiquetada (`v*`) publica:
 |---------|--------|
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
+| `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). |
 | `cubiboot_picoloader.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. |
@@ -109,6 +111,7 @@ Elige el que corresponda a tu consola:
 | Modchip PicoBoot o PicoLoader | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) — recomendado, se actualiza cambiando archivos en la SD |
 | PicoLoader, y no quieres archivos del loader en la tarjeta | [Método 2](#método-2-picoloader-con-cubiboot-integrado) |
 | GC Loader u otro ODE, sin modchip | [Método 3](#método-3-gc-loader-y-otros-ode) |
+| FlippyDrive | [Método 4](#método-4-flippydrive) — la unidad arranca cubiboot por sí misma |
 
 ### Método 1: PicoBoot o PicoLoader con gekkoboot
 
@@ -154,6 +157,61 @@ cubiboot — sin modchip.
    - **De un adaptador SD** (SD2SP2 / SD Gecko): no hay nada que configurar — los lectores de
      tarjeta van primero por defecto. Prepara la tarjeta del adaptador como siempre.
 
+### Método 4: FlippyDrive
+
+Una FlippyDrive arranca su propio loader desde su **flash interna**, así que cubiboot reemplaza
+la entrada `cubeboot` que hay ahí. Los juegos, el `config.ini` y Swiss siguen en la tarjeta SD
+como siempre.
+
+La unidad lo carga **por su nombre**, así que tiene que acabar llamándose `cubeboot.dol`. Con
+cualquier otro nombre es solo un archivo más dentro de la flash.
+
+**Pon el archivo en la tarjeta SD de la unidad:**
+
+1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
+   y **renómbralo a `cubeboot.dol`**. Es el mismo loader que `ipl.dol`; solo cambia el nombre
+   que la unidad exige.
+2. Cópialo a la **raíz de la tarjeta SD de la FlippyDrive**.
+
+**Escríbelo en la flash de la unidad, usando Swiss:**
+
+3. Enciende **manteniendo X** para entrar al [menú del bootloader](https://docs.flippydrive.com/bootloader.html)
+   de la unidad.
+4. Elige **Boot Onboard DOL** → **swiss-gc**. (Swiss viene en la flash de la unidad, así que
+   esto funciona incluso antes de poner Swiss en la tarjeta.)
+5. En Swiss, activa **Enable File Management** en los ajustes si no lo está ya — sin eso, el
+   menú del paso 7 no aparece.
+6. Navega hasta `cubeboot.dol` en la tarjeta SD y resáltalo.
+7. Pulsa **Z** para abrir *Manage File*, y luego **X** para *Copy*.
+8. Elige **FlippyDrive Flash** como dispositivo de destino, y su raíz como carpeta de destino.
+   Confirma sobrescribir el `cubeboot.dol` que ya está ahí.
+9. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
+10. Pon Swiss en la tarjeta SD como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
+    juegos.
+
+> [!IMPORTANT]
+> El paso 3 es lo que hace posible el paso 8, y es el que la gente se salta. Arrancar
+> normalmente deja al loader de la unidad **con la copia de `cubeboot.dol` de la flash
+> abierta**, y un archivo abierto no se puede sobrescribir: la copia falla, a veces sin un
+> error claro. Mantener X entrega el control sin que ese archivo llegue a abrirse.
+
+> [!WARNING]
+> **Actualizar el firmware de la FlippyDrive restaura el `cubeboot` original**, así que
+> cubiboot desaparece y hay que repetir esto. La documentación de la propia unidad lo dice
+> claro: *"any custom DOL files might get erased during the firmware update process."* No se
+> pierde nada de la tarjeta SD — solo la copia que está dentro de la unidad.
+
+**Swiss y el reinicio en el juego** funcionan en una FlippyDrive igual que en cualquier otro
+sitio, desde la tarjeta SD: `swiss-gc.dol` en la raíz de la tarjeta y `apploader.img` en
+`swiss/patches/`. La flash de la unidad también trae su propio Swiss, y cubiboot lo acepta si
+la tarjeta no tiene ninguno — pero el `apploader.img` tiene que ser el nuestro, de la misma
+release que el loader, así que ese va en la tarjeta.
+
+> [!NOTE]
+> El menú del bootloader de la unidad también tiene una entrada **`remote`** que la sirve por
+> FTP/SMB. Si llega a la flash, es una forma más fácil de dejar el archivo ahí que los pasos
+> 5–8. No hemos verificado qué expone, así que la ruta por Swiss de arriba es la documentada.
+
 ### Reinicio en el juego
 
 Opcional, funciona con todos los métodos anteriores.
@@ -184,9 +242,38 @@ loader y listo.
 | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
 | [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 | [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
+| [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo), **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 
 Los dos archivos salen de la misma release — mezclar un `apploader.img` de una release con un
 loader de otra es exactamente la situación de la que habla esta sección.
+
+### Actualizar una FlippyDrive
+
+El loader vive dentro de la unidad, así que no hay ningún archivo en la tarjeta que cambiar: el
+nuevo tiene que escribirse sobre la copia de la flash, igual que llegó ahí:
+
+1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol),
+   **renómbralo a `cubeboot.dol`** y cópialo a la raíz de la tarjeta SD de la unidad,
+   reemplazando el anterior si lo hay.
+2. Enciende **manteniendo X** → **Boot Onboard DOL** → **swiss-gc**.
+3. En Swiss, resalta `cubeboot.dol` en la tarjeta SD, pulsa **Z** para *Manage File* y luego
+   **X** para *Copy*.
+4. Dispositivo de destino **FlippyDrive Flash**, carpeta de destino su raíz; confirma la
+   sobrescritura.
+5. Reinicia — la unidad carga el nuevo automáticamente.
+
+El detalle completo, incluido el ajuste de Swiss que hay que activar antes, está en el
+[Método 4](#método-4-flippydrive).
+
+> [!IMPORTANT]
+> Mantener X en el paso 2 es lo que hace posible el paso 4. Si arrancas normalmente, el loader
+> de la unidad ya tiene **la copia de la flash abierta**, así que la sobrescritura se rechaza:
+> la actualización parece funcionar y sigue arrancando la versión vieja. Si una release nueva
+> no cambia nada en una FlippyDrive, esta es la razón.
+
+También conviene saber: actualizar el **firmware de la propia FlippyDrive** restaura el
+`cubeboot` original y borra cubiboot de la flash, así que repite los pasos de arriba después.
+Tu `config.ini`, tus juegos y `swiss-gc.dol` en la tarjeta SD no se tocan en ningún momento.
 
 Volver a extraer [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip)
 resuelve los dos de una vez en el Método 1, pero también trae `config.ini` y sobrescribirá el
@@ -325,7 +412,9 @@ primera entrada que monte se convierte en el volumen del que sale todo: el volca
 | `sd2sp2` (o `sdc`) | Puerto serie 2 — un **SD2SP2** |
 | `slot_b` (o `sdb`) | **Ranura B** de memory card — un SD Gecko |
 | `slot_a` (o `sda`) | **Ranura A** de memory card — un SD Gecko |
-| `ode`, `gcloader` (o `gcldr`) | La tarjeta SD **dentro del ODE** — un [GC Loader](https://gcloaderhq.com/) o cualquiera que responda a los mismos comandos de unidad |
+| `ode` | **El ODE que tengas instalado** — se resuelve preguntando a la unidad, así que cubre los dos de abajo |
+| `gcloader` (o `gcldr`) | La tarjeta SD **dentro de un [GC Loader](https://gcloaderhq.com/)**, o cualquiera que responda a los mismos comandos de unidad |
+| `flippy`, `flippydrive` (o `fldrv`) | La tarjeta SD **dentro de una FlippyDrive** |
 
 El valor por defecto, cuando la clave no está:
 

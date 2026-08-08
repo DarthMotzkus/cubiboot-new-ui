@@ -3,6 +3,8 @@
 #include <string.h>
 #include "ffs/ff.h"
 #include "tweaks.h"
+#include "drive_probe.h"
+#include "fldrv.h"
 
 #ifdef IPL_CODE
 #include "../dvd_threaded.h"
@@ -28,8 +30,30 @@ int emu_sd_device = -1;
 // hands the index over as `emu_sd_device`, the patched BIOS only ever mounts
 // device_prio[emu_sd_device]. Keep both trees in sync -- this file is copied
 // into patches/source/emu at build time.
-static const char* device_prio[] = { "gcldr", "sdc", "sdb", "sda" };
+//
+// These are FatFs volume names, with one exception: "fldrv" is a FlippyDrive, which
+// serves files itself over the drive interface and has no volume to mount. It is
+// named the way Swiss names it, because the name is handed to Swiss verbatim in the
+// Autoload= argument (see emu/loader.c) -- an invented spelling would need a
+// translation step there.
+//
+// New devices go on the END. The index is the loader-to-patches contract, so
+// inserting one in the middle silently renumbers every device above it.
+static const char* device_prio[] = { "gcldr", "sdc", "sdb", "sda", "fldrv" };
 #define EMU_DEV_GCLDR 0
+#define EMU_DEV_FLDRV 4
+
+// Whether this device serves files itself instead of being a FatFs volume. Such a
+// device must never reach f_mount, f_open or a "<vol>:" path.
+static inline bool emu_dev_is_native(int device) {
+	return device == EMU_DEV_FLDRV;
+}
+
+// Whether the device currently in use is one. Every dvd_custom_* entry point below
+// forks on this: same API, either the drive answers it or FatFs does.
+static inline bool emu_is_native(void) {
+	return emu_sd_device >= 0 && emu_dev_is_native(emu_sd_device);
+}
 
 static bool passthrough = false;
 
@@ -45,7 +69,10 @@ const char* emu_get_device() {
 // what device_order falls back to when config.ini does not set it. Card readers first, the
 // ODE last, so a console without one only reaches the drive-interface inquiry once
 // everything else has been ruled out.
-#define EMU_DEFAULT_DEVICE_ORDER "sdc, sdb, sda, gcldr"
+// fldrv sits beside gcldr rather than after the readers for a reason of its own: the
+// two are the same physical connector, so only one of them can ever answer, and their
+// relative order never decides anything on a real console.
+#define EMU_DEFAULT_DEVICE_ORDER "sdc, sdb, sda, gcldr, fldrv"
 
 static void emu_mount_path(int device, char* path) {
 	memcpy(path, device_prio[device], strlen(device_prio[device]) + 1);
@@ -57,11 +84,14 @@ static void emu_mount_path(int device, char* path) {
 // "sdc" meaning serial port 2 is not guessable. Both are accepted: the volume names have
 // to keep working because they are what the loader's own logging prints.
 static const struct { const char* alias; const char* volume; } emu_device_aliases[] = {
-	{ "sd2sp2",   "sdc"   },
-	{ "slot_b",   "sdb"   },
-	{ "slot_a",   "sda"   },
-	{ "ode",      "gcldr" },
-	{ "gcloader", "gcldr" },
+	{ "sd2sp2",      "sdc"   },
+	{ "slot_b",      "sdb"   },
+	{ "slot_a",      "sda"   },
+	{ "gcloader",    "gcldr" },
+	{ "flippy",      "fldrv" },
+	{ "flippydrive", "fldrv" },
+	// "ode" is deliberately absent: it names a category, not one device, and is
+	// resolved against what is actually on the bus. See emu_find_device().
 };
 
 static int emu_match_volume(const char* name, int len) {
@@ -74,15 +104,32 @@ static int emu_match_volume(const char* name, int len) {
 	return -1;
 }
 
+static bool emu_name_is(const char* name, int len, const char* candidate) {
+	return (int)strlen(candidate) == len && strncasecmp(candidate, name, len) == 0;
+}
+
 static int emu_find_device(const char* name, int len) {
 	int device = emu_match_volume(name, len);
 	if (device >= 0)
 		return device;
 
+	// "ode" means "whichever ODE is installed", not one particular protocol. There is
+	// a single drive connector, so a GC Loader and a FlippyDrive can never both be
+	// present -- which makes this answerable rather than ambiguous: ask the drive.
+	//
+	// Resolving it here rather than expanding it into two entries keeps the list a
+	// plain sequence of devices, and costs nothing: drive_probe() caches its inquiry,
+	// and by the time a device_order line is parsed the bootstrap has already probed.
+	// A console with neither falls through to gcldr, which then fails to mount exactly
+	// as it does today.
+	if (emu_name_is(name, len, "ode")) {
+		return drive_probe() == DRIVE_ID_FLIPPY ? EMU_DEV_FLDRV : EMU_DEV_GCLDR;
+	}
+
 	int aliases = sizeof(emu_device_aliases) / sizeof(emu_device_aliases[0]);
 	for (int i = 0; i < aliases; i++) {
 		const char* alias = emu_device_aliases[i].alias;
-		if ((int)strlen(alias) == len && strncasecmp(alias, name, len) == 0)
+		if (emu_name_is(name, len, alias))
 			return emu_match_volume(emu_device_aliases[i].volume, strlen(emu_device_aliases[i].volume));
 	}
 
@@ -108,6 +155,19 @@ static const char* emu_next_device(const char* p, int* device) {
 }
 
 static bool emu_try_mount(int device) {
+	if (emu_dev_is_native(device)) {
+		// A FlippyDrive is "mounted" by being present: it serves paths itself, so there
+		// is no volume and f_mount would be meaningless. All that is needed is to take
+		// back the handles the bootloader left open.
+		if (!fldrv_init()) {
+			iprintf("mount %s fail\n", device_prio[device]);
+			return false;
+		}
+
+		iprintf("mount %s OK (native)\n", device_prio[device]);
+		return true;
+	}
+
 	static char mount_path[256];
 	emu_mount_path(device, mount_path);
 
@@ -122,6 +182,12 @@ static bool emu_try_mount(int device) {
 }
 
 static void emu_drop_mount(int device) {
+	if (emu_dev_is_native(device)) {
+		// Nothing was mounted, so there is nothing to unmount. The probe result stays
+		// cached either way -- the drive does not stop being there.
+		return;
+	}
+
 	static char mount_path[256];
 	emu_mount_path(device, mount_path);
 	f_mount(NULL, mount_path, 0);
@@ -139,6 +205,25 @@ static void emu_drop_mount(int device) {
 static bool emu_try_mount_with_config(int device) {
 	if (!emu_try_mount(device))
 		return false;
+
+	if (emu_dev_is_native(device)) {
+		// The drive takes the path as-is; there is no volume to prefix. This reaches the
+		// SD card in the FlippyDrive, which is where config.ini lives -- the drive's
+		// internal flash holds only the loader the bootloader autoloads.
+		if (fldrv_open(EMU_CONFIG_PATH, FILE_ENTRY_TYPE_FILE, 0) != 0) {
+			iprintf("no %s on %s\n", EMU_CONFIG_PATH, device_prio[device]);
+			return false;
+		}
+
+		// Hand the handle straight back. Real handles are a finite resource here, and
+		// leaking one from a probe is how you end up short later for no visible reason.
+		static GCN_ALIGNED(file_status_t) probe_status;
+		if (fldrv_status(&probe_status) == 0)
+			fldrv_close(probe_status.fd);
+
+		iprintf("found %s on %s\n", EMU_CONFIG_PATH, device_prio[device]);
+		return true;
+	}
 
 	char probe_path[256 + sizeof(EMU_CONFIG_PATH)];
 	emu_mount_path(device, probe_path);
@@ -161,6 +246,11 @@ static void emu_unmount_current() {
 		return;
 
 	dvd_custom_close(1); // drop whatever file/dir is still open
+
+	if (emu_dev_is_native(emu_sd_device)) {
+		emu_sd_device = -1;
+		return;
+	}
 
 	static char mount_path[256];
 	emu_mount_path(emu_sd_device, mount_path);
@@ -225,6 +315,17 @@ bool flippy_emu_mount() {
 	if (emu_sd_device < 0)
 		return false;
 
+	if (emu_is_native()) {
+		// The loader already took the handles back before handing over; this side only
+		// has to confirm the drive is still the one answering.
+		if (!fldrv_init())
+			return false;
+
+		mounted = true;
+		emu_update_boot();
+		return true;
+	}
+
 	static char mount_path[256];
 	memcpy(mount_path, device_prio[emu_sd_device], strlen(device_prio[emu_sd_device]) + 1);
 	strcat(mount_path, ":");
@@ -274,6 +375,20 @@ int dvd_custom_open(const char* path, uint8_t type, uint8_t flags) {
 	if (!flippy_emu_mount())
 		return 1;
 
+	if (emu_is_native()) {
+		// Straight through, path unchanged: the drive resolves it. Both files and
+		// directories are the same call, distinguished by type, so there is no separate
+		// opendir here the way FatFs needs one.
+		//
+		// Note this skips the close below. That close exists because the emulation keeps
+		// exactly one FIL and one FFDIR, so opening a second thing without closing the
+		// first would strand it -- fd 1 is a fiction it hands to every caller. A real
+		// drive gives out real handles, several can be open at once, and callers close
+		// the fd they were given. Closing "1" here would shut whichever file happened to
+		// hold that handle.
+		return fldrv_open(path, type, flags);
+	}
+
 	dvd_custom_close(1);
 
 	char dev_path[256];
@@ -300,6 +415,26 @@ int dvd_custom_open_flash(const char *path, uint8_t type, uint8_t flags) {
 	if (type != FILE_ENTRY_TYPE_FILE)
 		return 1;
 
+	if (emu_is_native()) {
+		if (!flippy_emu_mount())
+			return 1;
+
+		// The drive has real flash of its own, so this is a different command rather
+		// than the /cubiboot-on-the-card impersonation used below. It is also where the
+		// loader we are running came from. No close first, for the same reason as in
+		// dvd_custom_open().
+		if (fldrv_open_flash(path, type, flags) == 0)
+			return 0;
+
+		// Then the SD card, because the two callers of this want different things. The
+		// drive's flash is right for what the drive shipped -- stub.bin, its own Swiss --
+		// but apploader.img has to be OUR build's, and the card root is where the docs
+		// tell people to put it. Flash-only here would silently cost FlippyDrive owners
+		// In-Game Reset, since a drive whose flash has no /swiss/patches would simply
+		// report no file and the option would switch itself off.
+		return fldrv_open(path, type, flags);
+	}
+
 	char flash_path[256];
 	strcpy(flash_path, "/cubiboot");
 	strcat(flash_path, path);
@@ -316,9 +451,25 @@ file_status_t* dvd_custom_status() {
 #else
 int dvd_custom_status(file_status_t* status) {
 #endif
+	if (emu_is_native()) {
+		// Straight from the drive: a real handle and the real size, where everything
+		// below is the emulation manufacturing both. Note it is not byte-swapped here --
+		// the swap below exists to imitate the format the drive already sends.
+		if (fldrv_status(status) != 0) {
+			memset(status, 0, sizeof(file_status_t));
+			status->result = 1;
+		}
+
+		#ifdef IPL_CODE
+		return status;
+		#else
+		return 0;
+		#endif
+	}
+
 	memset(status, 0, sizeof(file_status_t));
 	status->fd = 1;
-	
+
 	if (file.obj.fs == NULL && dir.obj.fs == NULL) {
 		status->result = 1;
 		status->fsize = 0;
@@ -339,7 +490,12 @@ int dvd_custom_status(file_status_t* status) {
 }
 
 int dvd_read(void* dst, unsigned int len, uint64_t offset, unsigned int fd) {
-	if (passthrough) {
+	// A FlippyDrive serves file reads through the ordinary drive read command with the
+	// handle in it -- the same transfer passthrough already uses for a real disc, which
+	// is why there is nothing device-specific to add here. Callers that cannot promise
+	// an aligned buffer, length and offset go through dvd_read_data() instead, exactly
+	// as they must for passthrough.
+	if (passthrough || emu_is_native()) {
 		extern int normal_dvd_read(void* dst, unsigned int len, uint64_t offset, unsigned int fd);
 		return normal_dvd_read(dst, len, offset, fd);
 	}
@@ -365,6 +521,13 @@ int dvd_threaded_read(void* dst, unsigned int len, uint64_t offset, unsigned int
 }
 
 int dvd_custom_readdir(file_entry_t* dst, unsigned int fd) {
+	if (emu_is_native()) {
+		// The drive fills in a file_entry_t directly -- the same struct this function
+		// spends its FatFs half translating a FILINFO into. An empty name still means
+		// end of directory, so callers see no difference.
+		return fldrv_readdir(dst, fd);
+	}
+
 	FILINFO fno;
 	FRESULT res;
 
@@ -394,6 +557,11 @@ int dvd_custom_mkdir(char* path) {
 }
 
 void dvd_custom_close(uint32_t fd) {
+	if (emu_is_native()) {
+		fldrv_close(fd);
+		return;
+	}
+
 	f_close(&file);
 	f_closedir(&dir);
 }
@@ -427,7 +595,11 @@ int dvd_custom_write(char *buf, uint32_t offset, uint32_t length, uint32_t fd) {
 }
 
 void dvd_set_default_fd(uint32_t current_fd, uint32_t second_fd) {
-
+	// Only a real drive can act on this: it tells the drive which open file to present
+	// as the disc, so an image boots through the drive itself. There is nothing for the
+	// FatFs emulation to do, which is why it stayed empty.
+	if (emu_is_native())
+		fldrv_set_default_fd(current_fd, second_fd);
 }
 
 int dvd_custom_unlink(char *path) {

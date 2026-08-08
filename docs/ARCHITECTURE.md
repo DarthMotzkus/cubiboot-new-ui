@@ -243,31 +243,39 @@ Layers, top to bottom:
 ```
 dvd_custom_open / dvd_read / dvd_custom_readdir ...   flippy_emu.c
         (the file API both the loader and the menu call)
-                          |
-                        FatFs                          emu/ffs/ff.c
-                          |
-                   disk_read / disk_write              emu/ffs/diskio.c
-                     |                  |
-              tsd_sd_read         gcode_sd_read
-              (EXI: SD2SP2,       (drive interface:
-               SD Gecko)           GC Loader / ODE)
-                tsd.c                 gcode.c
+                     |                       |
+                   FatFs                     |         emu/ffs/ff.c
+                     |                       |
+              disk_read / disk_write         |         emu/ffs/diskio.c
+                |                  |         |
+         tsd_sd_read        gcode_sd_read  fldrv_*
+         (EXI: SD2SP2,      (drive iface:  (FlippyDrive: the drive
+          SD Gecko)          GC Loader)     serves files itself)
+           tsd.c               gcode.c       fldrv.c
 ```
 
 `diskio.c` maps FatFs drive numbers to drivers: `0..2` are the EXI ports, `7` (`DEV_GCLDR`) is
-the ODE. The volume strings come from `ffconf.h` `FF_VOLUME_STRS`.
+the ODE. The volume strings come from `ffconf.h` `FF_VOLUME_STRS`. A FlippyDrive is the
+exception to the whole stack: it answers the file API directly over its own protocol
+(`fldrv.c`), is never a FatFs volume, and is deliberately absent from `FF_VOLUME_STRS` — see
+`emu_dev_is_native()` in `flippy_emu.c`.
 
 ### Device selection
 
-`device_prio[] = { "gcldr", "sdc", "sdb", "sda" }` in
+`device_prio[] = { "gcldr", "sdc", "sdb", "sda", "fldrv" }` in
 [flippy_emu.c](../cubeboot/source/emu/flippy_emu.c).
 
 The array leads with the ODE because the IPL patches index straight into it, but the loader
-works from `EMU_DEFAULT_DEVICE_ORDER` — `"sdc, sdb, sda, gcldr"` — so a console without an ODE
-only reaches the drive-interface inquiry after everything else has been ruled out. That one
-string is both the bootstrap's search order and the default for `device_order`. config.ini also
-accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`) which resolve
-onto the same volumes.
+works from `EMU_DEFAULT_DEVICE_ORDER` — `"sdc, sdb, sda, gcldr, fldrv"` — so a console without
+an ODE only reaches the drive-interface inquiry after everything else has been ruled out. That
+one string is both the bootstrap's search order and the default for `device_order`. config.ini
+also accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`, `flippy`,
+`flippydrive`) which resolve onto the same volumes.
+
+There is one drive connector, so at most one ODE is installed — which ODE it is gets decided
+once: `drive_probe()` (`emu/drive_probe.c`) sends a single OEM inquiry, caches the answer, and
+both `gcode.c` and `fldrv.c` compare against it. `ode` in `device_order` resolves against that
+answer too.
 
 The bootstrap runs that order **twice**. The first pass takes the device that actually holds a
 `/config.ini`; only if none does, a second pass settles for the first device that merely

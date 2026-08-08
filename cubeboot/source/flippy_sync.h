@@ -1,3 +1,6 @@
+#ifndef FLIPPY_SYNC_H
+#define FLIPPY_SYNC_H
+
 #include <gctypes.h>
 #include <ogc/cache.h>
 #include "ipc.h"
@@ -57,3 +60,5 @@ void dvd_custom_bypass();
 
 // utils
 int dvd_read_data(void* dst, unsigned int len, uint64_t offset, unsigned int fd);
+
+#endif // FLIPPY_SYNC_H
