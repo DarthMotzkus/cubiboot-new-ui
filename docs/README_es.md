@@ -210,8 +210,7 @@ release que el loader, así que ese va en la tarjeta.
 > [!NOTE]
 > El menú del bootloader de la unidad también tiene una entrada **`remote`** que la sirve por
 > FTP/SMB. Si llega a la flash, es una forma más fácil de dejar el archivo ahí que los pasos
-> 5–8. No tenemos ninguna FlippyDrive para confirmar qué expone, así que la ruta por Swiss de
-> arriba es la documentada.
+> 5–8. No hemos verificado qué expone, así que la ruta por Swiss de arriba es la documentada.
 
 ### Reinicio en el juego
 

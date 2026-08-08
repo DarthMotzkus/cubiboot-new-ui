@@ -204,8 +204,8 @@ on the card.
 
 > [!NOTE]
 > The drive's bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB.
-> If it reaches the flash, that is an easier way to drop the file in than steps 5–8. We have no
-> FlippyDrive to confirm what it exposes, so the Swiss route above is the documented one.
+> If it reaches the flash, that is an easier way to drop the file in than steps 5–8. We haven't
+> verified what it exposes, so the Swiss route above is the documented one.
 
 ### In-Game Reset
 

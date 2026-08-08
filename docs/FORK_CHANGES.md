@@ -244,7 +244,8 @@ did plus what it could not: excluding a card reader, reordering slots, or naming
 does not exist yet.
 
 Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
-Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered.
+Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered
+by this driver — section O adds it natively.
 
 ## K. Homebrew apps as banner entries  (`patches/source/games.c`)
 
@@ -447,9 +448,10 @@ and hands the fiction of fd 1 to every caller -- a real drive gives out real han
 several can be open at once. And `dvd_custom_status()` returns the drive's answer without the
 byte swap, since that swap exists to imitate the format the drive already sends.
 
-Not validated on hardware: nobody working on this fork owns the drive. A console without one
-cannot reach any of it -- the probe has to positively identify a FlippyDrive first, and
-everything else falls through to the card readers as before.
+**Confirmed on hardware by the maintainer**: this build runs on a real FlippyDrive and works
+normally. A console without one cannot reach any of it -- the probe has to positively
+identify a FlippyDrive first, and everything else falls through to the card readers as
+before.
 
 ## Re-applying onto a fresh makeo clone
 
