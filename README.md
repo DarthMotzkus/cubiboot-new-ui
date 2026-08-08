@@ -8,7 +8,7 @@
 
 A fork of [makeo/cubiboot](https://github.com/makeo/cubiboot) — itself a fork of
 [cubeboot](https://github.com/OffBroadway/cubeboot) by [TeamOffBroadway](https://github.com/OffBroadway) —
-with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE and similar SD adapters.
+with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar SD adapters.
 
 </div>
 
@@ -52,7 +52,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Real filenames** | The list shows the `.iso` **filename** instead of the internal game name, and loads the correct banner for each disc of a multi-disc game (e.g. Resident Evil 0 Disc 1 / Disc 2). |
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
-| **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE, so the menu lists what is already on it with no second card reader. |
+| **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
