@@ -988,7 +988,7 @@ void gm_line_load(int line_num) {
         if (index >= gm_entry_count) break;
 
         gm_file_entry_t *entry = gm_entry_backing[index];
-        if (entry->type == GM_FILE_TYPE_GAME) {
+        if (entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP) {
             gm_icon_load(&entry->asset.icon);
             if (gm_evict_on_scroll) {
                 // sliding window (>128): re-read from disc, no bnr_cache => no ARAM.
@@ -1015,7 +1015,7 @@ void gm_line_free(int line_num) {
         if (index >= gm_entry_count) break;
 
         gm_file_entry_t *entry = gm_entry_backing[index];
-        if (entry->type == GM_FILE_TYPE_GAME) {
+        if (entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP) {
             gm_banner_free(&entry->asset.banner);
         }
     }
@@ -1213,7 +1213,9 @@ static void gm_bg_load_line(int line_num, bool use_cache) {
         int index = (line_num * columns_per_line) + i;
         if (index >= gm_entry_count) break;
         gm_file_entry_t *entry = gm_entry_backing[index];
-        if (entry->type == GM_FILE_TYPE_GAME) {
+        // Apps use the same banner pool; gm_load_banner itself skips the ARAM cache
+        // for them (standalone_bnr), so use_cache can pass through unchanged.
+        if (entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP) {
             gm_load_banner(entry, 0, false, use_cache);
         }
     }
@@ -1226,10 +1228,12 @@ static void gm_bg_load_line(int line_num, bool use_cache) {
 // game_enum_running stays true throughout so a boot (Start -> gm_deinit_thread) still joins this
 // thread; navigation/boot interrupt it via game_enum_mutex.
 static void gm_bg_load_last_played(int target_slot) {
-    // Count games: only banners use the pool, and only <=ASSET_BUFFER_COUNT fit resident.
+    // Count banner-bearing entries (games AND apps -- both take a pool buffer): only
+    // <=ASSET_BUFFER_COUNT fit resident.
     int game_count = 0;
     for (int i = 0; i < gm_entry_count; i++) {
-        if (gm_entry_backing[i]->type == GM_FILE_TYPE_GAME) game_count++;
+        int type = gm_entry_backing[i]->type;
+        if (type == GM_FILE_TYPE_GAME || type == GM_FILE_TYPE_APP) game_count++;
     }
     bool resident = (game_count <= ASSET_BUFFER_COUNT);
     // >pool: must use the sliding window (banners load/free on scroll). <=pool: stay resident
