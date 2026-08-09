@@ -116,7 +116,7 @@ Pick the one that matches your console:
 disassembly. See [Updating](#updating) for which ones.
 
 1. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
-   [PicoLoader](https://github.com/makeo/PicoLoader).
+   [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2).
 2. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    and copy it to the **root** of your SD card.
 3. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
@@ -127,7 +127,7 @@ disassembly. See [Updating](#updating) for which ones.
 Cubiboot lives in the Pico's firmware, so nothing but games and `swiss-gc.dol` needs to be
 on the card.
 
-1. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader).
+1. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
 2. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
 3. Hold the button on the RP2040 Pico while plugging it into your PC.
 4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
