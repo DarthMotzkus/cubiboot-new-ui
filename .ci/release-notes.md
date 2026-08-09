@@ -16,16 +16,10 @@ Only the "What's new" notes and the compare link at the bottom get rewritten eac
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
-## What's new in v1.7.0
+## What's new in v1.7.1
 
-cubiboot now runs natively on a **FlippyDrive** — tested on real hardware.
+One bug fix, confirmed on real hardware.
 
-* **New: native FlippyDrive support** — the drive boots cubiboot itself, from its internal flash, and the menu reads games straight off the drive's SD card. No EXI card reader needed. This release ships a new artifact, **`flippydrive.dol`** — the same binary as `ipl.dol`, named so it can be told apart in this listing. Rename it to `cubeboot.dol` and flash it into the drive: [Method 4](https://github.com/DarthMotzkus/cubiboot-new-ui#method-4-flippydrive) in the README has the step-by-step.
-* **`device_order` learns the new names** — `flippy` / `flippydrive` name the drive's SD card, and `ode` now means *whichever ODE is installed*: there is only one drive connector, so cubiboot asks the drive what it is and `ode` resolves to a GC Loader or a FlippyDrive accordingly. Existing configs keep working unchanged.
-* Files cubiboot looks for in the drive's flash are also searched on the SD card — so **In-Game Reset works with `apploader.img` in `swiss/patches/` on the card**, where every install doc puts it, without flashing it into the drive.
+* **Fixed: apps showed a blank banner and no title/description when they lived in the same folder as the last-played game.** With `remember_last_game` on, that folder loads its banners in the background so the menu can appear instantly — and the background loader only knew about games, so any app (`<dir>/default.dol` + `opening.bnr`) in the folder never had its `opening.bnr` read. Apps now load, scroll and release their banners exactly like games do, everywhere. Folders without the last-played game, or setups with the option off, were never affected.
 
-Two things FlippyDrive owners should know, both in the README: **updating cubiboot means re-flashing it inside the drive** (plus the usual `apploader.img` on the card — see [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating)), and **a FlippyDrive firmware update restores the stock `cubeboot`**, so cubiboot has to be re-flashed after one.
-
-Still to come: re-entering a folder rebuilds its list from scratch. The banners now come mostly from memory, but every game is reopened to rebuild the list. Remembering folders you have already visited is the next piece of work.
-
-**Full Changelog:** [v1.6.4...v1.7.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.6.4...v1.7.0)
+**Full Changelog:** [v1.7.0...v1.7.1](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.7.0...v1.7.1)
