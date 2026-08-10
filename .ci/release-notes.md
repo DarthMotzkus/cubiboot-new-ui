@@ -16,10 +16,9 @@ Only the "What's new" notes and the compare link at the bottom get rewritten eac
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
-## What's new in v1.7.1
+## What's new in v1.8.0
 
-One bug fix, confirmed on real hardware.
+* **New: PicoBoot `.uf2` install method.** Three new release files for [PicoBoot](https://github.com/webhdx/PicoBoot) owners: `cubiboot_picoboot_pico.uf2` (Pico) and `cubiboot_picoboot_pico2.uf2` (Pico 2) are the official PicoBoot v0.5.0 firmware with cubiboot embedded — flash one and the SD card needs no `ipl.dol` or gekkoboot. On later updates flash only the small `cubiboot_picoboot_payload.uf2`, which swaps the embedded cubiboot without re-flashing the firmware (works on both boards). See [Method 2](https://github.com/DarthMotzkus/cubiboot-new-ui#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader).
+* **Docs: In-Game Reset now spells out the required Swiss setting** — **Settings → Global Game Settings (4/6) → In-Game Reset = `Apploader`**. With any other value Swiss never reads `apploader.img`.
 
-* **Fixed: apps showed a blank banner and no title/description when they lived in the same folder as the last-played game.** With `remember_last_game` on, that folder loads its banners in the background so the menu can appear instantly — and the background loader only knew about games, so any app (`<dir>/default.dol` + `opening.bnr`) in the folder never had its `opening.bnr` read. Apps now load, scroll and release their banners exactly like games do, everywhere. Folders without the last-played game, or setups with the option off, were never affected.
-
-**Full Changelog:** [v1.7.0...v1.7.1](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.7.0...v1.7.1)
+**Full Changelog:** [v1.7.1...v1.8.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.7.1...v1.8.0)

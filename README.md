@@ -96,7 +96,7 @@ Every tagged release (`v*`) publishes:
 | `cubiboot_picoboot_pico.uf2` / `_pico2.uf2` | **PicoBoot** firmware with cubiboot **embedded** — flash it to the Pico (RP2040) or Pico 2 (RP2350); no `ipl.dol` or gekkoboot needed on the card. |
 | `cubiboot_picoboot_payload.uf2` | Payload-only update for a Pico **already running** PicoBoot ≥ v0.5.0 — swaps the embedded loader without re-flashing the firmware. Works on both boards. |
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and other ODEs, branded with the Cubiboot banner. |
-| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`. |
+| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](#in-game-reset)). |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
 
 [**→ Latest release**](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest)
@@ -108,7 +108,7 @@ Pick the one that matches your console:
 | Your setup | Use |
 |---|---|
 | PicoBoot or PicoLoader modchip | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) — recommended, updates by swapping files on the SD card |
-| PicoLoader, and you want no loader file on the card | [Method 2](#method-2-picoloader-with-cubiboot-flashed-in) |
+| PicoBoot or PicoLoader, and you want no loader file on the card | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) |
 | GC Loader or another ODE, no modchip | [Method 3](#method-3-gc-loader-and-other-odes) |
 | FlippyDrive | [Method 4](#method-4-flippydrive) — the drive boots cubiboot itself |
 
@@ -124,26 +124,33 @@ disassembly. See [Updating](#updating) for which ones.
 3. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
    `swiss-gc.dol`, plus a [`config.ini`](#configuration) and your games.
 
-> [!TIP]
-> **PicoBoot, but flashed-in like Method 2:** flash
-> [`cubiboot_picoboot_pico.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico.uf2)
-> (Pico) or
-> [`cubiboot_picoboot_pico2.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico2.uf2)
-> (Pico 2) instead — PicoBoot firmware with cubiboot embedded, so the card needs no
-> `ipl.dol`. On later updates flash only
-> [`cubiboot_picoboot_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_payload.uf2).
-
-### Method 2: PicoLoader with cubiboot flashed in
+### Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)
 
 Cubiboot lives in the Pico's firmware, so nothing but games and `swiss-gc.dol` needs to be
 on the card.
+
+**PicoBoot (Pico or Pico 2):**
+
+1. Hold the **BOOTSEL** button on the Pico while plugging it into your PC.
+2. Copy [`cubiboot_picoboot_pico.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico.uf2)
+   (Pico) or [`cubiboot_picoboot_pico2.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico2.uf2)
+   (Pico 2) to the USB drive that appears — it is the official PicoBoot firmware with
+   cubiboot embedded, so it also replaces a stock PicoBoot install; no separate PicoBoot
+   flash is needed.
+3. On later updates flash only
+   [`cubiboot_picoboot_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_payload.uf2)
+   — it swaps the embedded cubiboot without touching the firmware (works on both boards;
+   needs the PicoBoot ≥ v0.5.0 firmware the full images carry).
+
+**PicoLoader:**
 
 1. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
 2. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
 3. Hold the button on the RP2040 Pico while plugging it into your PC.
 4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
-5. Put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
-   [`config.ini`](#configuration) and your games.
+
+**Either way:** put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
+[`config.ini`](#configuration) and your games.
 
 > [!WARNING]
 > With this method every cubiboot update means opening the console and re-flashing the Pico.
@@ -225,7 +232,11 @@ Optional, works with every method above.
 1. Download [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip).
 2. Extract it to the **root** of the SD card — this drops `apploader.img` into
    `swiss/patches/`.
-3. Press **Z + A + START** in a game to return to the cubiboot menu.
+3. In Swiss, go to **Settings → Global Game Settings (4/6)** and set **In-Game Reset** to
+   **`Apploader`**, then *Save & Exit*. With any other value (`Disabled` / `Reboot`) Swiss
+   never reads `apploader.img` — its own description of the option says "Apploader —
+   Requires /swiss/patches/apploader.img".
+4. Press **Z + A + START** in a game to return to the cubiboot menu.
 
 ## Updating
 
@@ -245,8 +256,8 @@ and you are done.
 | Installed with | Replace |
 |---|---|
 | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) | `ipl.dol` **and** `swiss/patches/apploader.img` |
-| Method 1, cubiboot flashed into PicoBoot | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
-| [Method 2](#method-2-picoloader-with-cubiboot-flashed-in) | re-flash `cubiboot_picoloader.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
+| [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoBoot) | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
+| [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 3](#method-3-gc-loader-and-other-odes) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
 | [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below), **and** replace `swiss/patches/apploader.img` on the card |
 
