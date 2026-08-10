@@ -196,6 +196,7 @@ Current contract:
 | `cube_color` | `config.ini` |
 | `theme_color`, `menu_cube_color`, `menu_box_color`, `menu_start_color` | `config.ini` (see below) |
 | `force_progressive` | `config.ini` |
+| `force_widescreen` | `config.ini` |
 | `force_swiss_boot` | `config.ini` |
 | `disable_mcp_select` | `config.ini` |
 | `remember_last_game` | `config.ini` |

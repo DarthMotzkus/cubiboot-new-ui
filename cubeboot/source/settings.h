@@ -18,6 +18,7 @@ typedef struct settings {
     u32 disable_mcp_select;
     u32 remember_last_game;
     u32 progressive_enabled;
+    u32 force_widescreen;
     u32 preboot_delay_ms;
     u32 postboot_delay_ms;
     // Raw [cubeboot] device_order value: FatFs volume names, in the order the loader

@@ -49,6 +49,7 @@ __attribute_data__ char cube_logo_path[MAX_FILE_NAME] = {0};
 __attribute_data__ char default_folder[MAX_FILE_NAME] = {0};
 __attribute_data__ u32 remember_last_game = 0;
 __attribute_data__ u32 force_progressive = 0;
+__attribute_data__ u32 force_widescreen = 0;
 __attribute_data__ u32 force_swiss_boot = 0;
 
 // used if we are switching to 60Hz on a PAL IPL
@@ -81,6 +82,23 @@ __attribute_data__ static GXColorS10 color_cube_low;
 __attribute_data__ static GXColorS10 color_bg_inner;
 __attribute_data__ static GXColorS10 color_bg_outer_0;
 __attribute_data__ static GXColorS10 color_bg_outer_1;
+
+// These are technically separate floating-point constants, but they are laid out
+// contiguously in this order in all IPL versions
+typedef struct {
+    struct {
+        float aspect_ratio;
+    } perspective;
+
+    struct {
+        float top;
+        float bottom;
+        float left;
+        float right;
+    } orthographic;
+} projection_parameters_t;
+
+__attribute_reloc__ projection_parameters_t *projection_parameters;
 
 // start
 __attribute_data__ gm_file_entry_t boot_entry;
@@ -454,6 +472,19 @@ __attribute_used__ void pre_main() {
         rmode->vfilter[4] = 21;
         rmode->vfilter[5] = 0;
         rmode->vfilter[6] = 0;
+    }
+
+    if (force_widescreen) {
+        // In all IPL versions, the default projection matrices use:
+        // - a perspective aspect ratio of 1.3214285
+        // - an orthographic screen size of (t: 224, b: -224, l: -296, r: 292)
+        // (Note that the perspective and orthographic aspect ratios don't seem to match up,
+        // and neither are actually 4:3)
+        // Stretch these by the same ratio as 4:3 -> 16:9. The left/right values are the
+        // originals times 4/3, floored to integers (floorf is unavailable here).
+        projection_parameters->perspective.aspect_ratio = 1.3214285f * (4.0f / 3.0f);
+        projection_parameters->orthographic.left = -395.0f;
+        projection_parameters->orthographic.right = 389.0f;
     }
 
     main();
