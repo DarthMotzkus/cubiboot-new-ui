@@ -21,7 +21,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar S
 - [Downloads](#downloads)
 - [Installation](#installation)
   - [Method 1: PicoBoot or PicoLoader with gekkoboot](#method-1-picoboot-or-picoloader-with-gekkoboot)
-  - [Method 2: PicoLoader with cubiboot flashed in](#method-2-picoloader-with-cubiboot-flashed-in)
+  - [Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
   - [Method 3: GC Loader and other ODEs](#method-3-gc-loader-and-other-odes)
   - [Method 4: FlippyDrive](#method-4-flippydrive)
   - [In-Game Reset](#in-game-reset)
