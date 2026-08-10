@@ -35,6 +35,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar S
   - [Where games are read from](#where-games-are-read-from)
   - [Launching Swiss from the menu](#launching-swiss-from-the-menu)
   - [Colors](#colors)
+  - [Widescreen (16:9)](#widescreen-169)
 - [Large folders and the banner pool](#large-folders-and-the-banner-pool)
 - [Known limitations](#known-limitations)
 - [Building](#building)
@@ -53,6 +54,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
 | **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
+| **16:9 widescreen menu** | [`force_widescreen = 1`](#widescreen-169) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
@@ -336,6 +338,9 @@ remember_last_game = 0
 ; The FatFs volume names (sdc, sdb, sda, gcldr) also work.
 ; Leave commented for the default below.
 ; device_order = sd2sp2, slot_b, slot_a, ode
+
+; Render the menu anamorphic for a 16:9 TV (set the TV or GCVideo to Full/16:9):
+; force_widescreen = 1
 ```
 
 ### All options
@@ -353,6 +358,7 @@ remember_last_game = 0
 | [`menu_start_color`](#colors) | hex RGB · `random` | `theme_color` | The big block "PRESS START" |
 | `preboot_delay_ms` | milliseconds | `0` | Wait before the boot animation, for a TV to lock on |
 | `postboot_delay_ms` | milliseconds | `0` | Hold the last frame after picking a game, before it boots |
+| [`force_widescreen`](#widescreen-169) | `1` · `0` | `0` | Render the menu anamorphic for a 16:9 TV |
 
 That is the whole list. Full reference: [docs/settings.md](docs/settings.md).
 
@@ -583,6 +589,24 @@ small `Press START to begin!` line above it is a separate draw and always stays 
 
 > [!NOTE]
 > `000000` works as an actual black, and `random` picks a fresh color on every boot.
+
+### Widescreen (16:9)
+
+`force_widescreen = 1` renders the menu **anamorphic**: the picture is squeezed horizontally
+in the signal, and a TV set to **Full/16:9** stretches it back into correct proportions —
+the same trick GameCube games with a 16:9 option use. Everything scales together: boot
+animation, grid, banners, info panel.
+
+Two things to know:
+
+- **Set the TV (or GCVideo) to Full/16:9.** On a 4:3 screen, or a TV left in 4:3 mode, the
+  menu just looks horizontally squeezed.
+- The same 640 pixels now cover a wider image, so some effective horizontal resolution is
+  lost. That trade-off is inherent to anamorphic output.
+
+Off by default. This only affects cubiboot's own menu — what a game does with the screen is
+between the game and Swiss. Ported from
+[cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57) by BenHetherington.
 
 ## Large folders and the banner pool
 
