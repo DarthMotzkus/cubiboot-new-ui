@@ -98,8 +98,16 @@ On push it builds in the reproducible `cubiboot-dev` Docker image (`.ci/Dockerfi
 (= `ipl.dol` + `config.ini` + `swiss/patches/apploader.img`), and builds
 `cubiboot_picoloader.uf2` — PicoLoader firmware (`makeo.github.io/PicoLoader/fw/picoloader.uf2`)
 with `cubiboot.iso` embedded at flash `0x10031000` for both RP2040/RP2350 family ids, via
-`.ci/make_picoloader_uf2.py` (replicates makeo's PicoLoader converter). On a `v*` tag it
-publishes a GitHub Release with all six artifacts.
+`.ci/make_picoloader_uf2.py` (replicates makeo's PicoLoader converter). It also builds the
+`cubiboot_picoboot_{payload,pico,pico2}.uf2` set via `.ci/make_picoboot_uf2.py`: the payload
+is `entry/entry.dol` (stage 1, linked at `0x81300000` — the only DOL PicoBoot can inject,
+**not** the released `ipl.dol`, which is `cubeboot.dol` at `0x80003100`), flattened,
+scrambled with the BS2 bootrom scrambler (keystream offset `0x720`) and framed with
+PicoBoot's `IPLBOOT `+size header and trailing `PICO` tag — replicating PicoBoot's
+`tools/process_ipl.py`. The payload-only `.uf2` targets flash `0x10080000` with interleaved
+RP2040/RP2350 family blocks; the pico/pico2 full images splice that payload into the
+firmware blocks of the pinned official PicoBoot release (v0.5.0, the earliest whose firmware
+validates this framing). On a `v*` tag it publishes a GitHub Release with all the artifacts.
 
 The body comes from `.ci/release-notes.md`, written per release. It **opens** with a standing
 "Updating from an earlier release?" block that every release repeats verbatim, quoted with a

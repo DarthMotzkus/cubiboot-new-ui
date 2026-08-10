@@ -88,6 +88,21 @@ jobs:
           python3 .ci/make_picoloader_uf2.py picoloader.uf2 dist/cubiboot.iso dist/cubiboot_picoloader.uf2
           ls -la dist/cubiboot_picoloader.uf2
 
+      # cubiboot_picoboot_{payload,pico,pico2}.uf2: PicoBoot (webhdx) images with cubiboot
+      # embedded. The payload is entry/entry.dol — the stage-1 stub linked at 0x81300000,
+      # the only DOL PicoBoot can inject — scrambled like BS2 ROM. Firmware blocks are
+      # taken verbatim from the pinned official PicoBoot release; the full images are its
+      # firmware + our payload, the payload-only file updates a Pico already running
+      # PicoBoot >= v0.5.0. See .ci/make_picoboot_uf2.py.
+      - name: Build cubiboot_picoboot uf2s
+        run: |
+          set -e
+          PICOBOOT_RELEASE=https://github.com/webhdx/PicoBoot/releases/download/v0.5.0
+          curl -fsSL -o pb_full_pico.uf2  "$PICOBOOT_RELEASE/picoboot_full_pico.uf2"
+          curl -fsSL -o pb_full_pico2.uf2 "$PICOBOOT_RELEASE/picoboot_full_pico2.uf2"
+          python3 .ci/make_picoboot_uf2.py entry/entry.dol pb_full_pico.uf2 pb_full_pico2.uf2 dist/
+          ls -la dist/cubiboot_picoboot_*.uf2
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -99,6 +114,9 @@ jobs:
             dist/config.ini
             dist/cubiboot.iso
             dist/cubiboot_picoloader.uf2
+            dist/cubiboot_picoboot_payload.uf2
+            dist/cubiboot_picoboot_pico.uf2
+            dist/cubiboot_picoboot_pico2.uf2
             dist/EXTRACT_TO_ROOT.zip
 
       # On a tag push (v*), publish a GitHub Release with the artifacts.
@@ -120,4 +138,7 @@ jobs:
             dist/config.ini
             dist/cubiboot.iso
             dist/cubiboot_picoloader.uf2
+            dist/cubiboot_picoboot_payload.uf2
+            dist/cubiboot_picoboot_pico.uf2
+            dist/cubiboot_picoboot_pico2.uf2
             dist/EXTRACT_TO_ROOT.zip

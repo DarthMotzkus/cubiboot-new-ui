@@ -331,18 +331,19 @@ patches/        --make-->  patches.elf
                              |  (validate-patches.go, objcopy strips .comment)
                              v
 cubeboot/       --make-->  cubeboot.dol      (patches.elf embedded as data)
+                             |                 == released ipl.dol / flippydrive.dol
                              |  gzip
                              v
-entry/          --make-->  entry.dol  ==  ipl.dol
+entry/          --make-->  entry.dol         (stub + cubeboot.gz, linked at 0x81300000)
                              |
-        +--------------------+---------------------+
-        v                                          v
-  build_apploader.sh                         build_iso.sh
-  (swiss-gc packer +                   (genisoimage, El-Torito,
-   apploader header)                    gbi.hdr re-branded)
-        |                                          |
-        v                                          v
-  apploader.img                              cubiboot.iso
+        +--------------------+---------------------+---------------------+
+        v                                          v                     v
+  build_apploader.sh                         build_iso.sh        make_picoboot_uf2.py
+  (swiss-gc packer +                   (genisoimage, El-Torito,  (BS2-scramble entry.dol,
+   apploader header)                    gbi.hdr re-branded)       splice into PicoBoot fw)
+        |                                          |                     |
+        v                                          v                     v
+  apploader.img                              cubiboot.iso       cubiboot_picoboot_*.uf2
                                                    |
                                           make_picoloader_uf2.py
                                                    v

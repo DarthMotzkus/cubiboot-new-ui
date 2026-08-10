@@ -20,7 +20,7 @@ them. Fork chain: `OffBroadway/cubeboot` → `makeo/cubiboot` → this repo.
 | Runs as | a normal DOL, with libogc | code injected into the stock BIOS |
 | Job | read `config.ini`, load the IPL, patch it, jump to BS2 | everything the user sees: grid, banners, booting games |
 | Has libogc? | yes | **no** — freestanding, `-DIPL_CODE` |
-| Ends up | gzipped inside `entry.dol` (= `ipl.dol`) | embedded as a blob inside `cubeboot.dol` |
+| Ends up | gzipped inside `entry.dol`; also shipped raw as `ipl.dol`/`flippydrive.dol` | embedded as a blob inside `cubeboot.dol` |
 
 Adding a "menu feature" almost always means editing `patches/`, not `cubeboot/`.
 
@@ -33,7 +33,9 @@ programs from one source.
 ## Repo map
 
 ```
-entry/              stage 1: tiny gzip stub; output entry.dol == the released ipl.dol
+entry/              stage 1: gzip stub linked at 0x81300000; output entry.dol is the
+                    PicoBoot payload (.ci/make_picoboot_uf2.py). The released ipl.dol is
+                    cubeboot.dol itself (see ci.yml), NOT entry.dol.
 cubeboot/source/    stage 2: the loader
   emu/              SHARED with patches (copied at build time)
     ffs/            FatFs (ChaN) + diskio glue
