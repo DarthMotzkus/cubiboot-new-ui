@@ -16,9 +16,8 @@ Only the "What's new" notes and the compare link at the bottom get rewritten eac
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui#updating).
 
-## What's new in v1.8.0
+## What's new in v1.9.0
 
-* **New: PicoBoot `.uf2` install method.** Three new release files for [PicoBoot](https://github.com/webhdx/PicoBoot) owners: `cubiboot_picoboot_pico.uf2` (Pico) and `cubiboot_picoboot_pico2.uf2` (Pico 2) are the official PicoBoot v0.5.0 firmware with cubiboot embedded — flash one and the SD card needs no `ipl.dol` or gekkoboot. On later updates flash only the small `cubiboot_picoboot_payload.uf2`, which swaps the embedded cubiboot without re-flashing the firmware (works on both boards). See [Method 2](https://github.com/DarthMotzkus/cubiboot-new-ui#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader).
-* **Docs: In-Game Reset now spells out the required Swiss setting** — **Settings → Global Game Settings (4/6) → In-Game Reset = `Apploader`**. With any other value Swiss never reads `apploader.img`.
+* **New: 16:9 widescreen menu.** Set `force_widescreen = 1` in `config.ini` and the menu renders **anamorphic**: squeezed in the signal, proportioned again once the TV (or GCVideo) is set to **Full/16:9** — the same trick GameCube games with a 16:9 option use. The whole UI scales together: boot animation, grid, banners, info panel. On a 4:3 screen it just looks squeezed, so leave it off (the default) there; the trade-off is some effective horizontal resolution, inherent to anamorphic output. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57) by BenHetherington. See [Widescreen (16:9)](https://github.com/DarthMotzkus/cubiboot-new-ui#widescreen-169).
 
-**Full Changelog:** [v1.7.1...v1.8.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.7.1...v1.8.0)
+**Full Changelog:** [v1.8.0...v1.9.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.8.0...v1.9.0)

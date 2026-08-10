@@ -14,6 +14,7 @@ menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
 preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
 postboot_delay_ms = 2000        # hold the last frame before the game boots
+force_widescreen = 1            # render the menu anamorphic for a 16:9 TV
 device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
 ```
 
@@ -85,6 +86,17 @@ Neither derivation is a straight fill:
 The parsing lives in [`cubeboot/source/settings.c`](../cubeboot/source/settings.c)
 (`ini_get_color`), the derivations in
 [`patches/source/theme.c`](../patches/source/theme.c).
+
+## `force_widescreen`
+
+Renders the menu anamorphic for a 16:9 TV: the IPL's perspective and orthographic
+projections are widened by 4:3 → 16:9, which squeezes the picture horizontally in the
+framebuffer so it comes out proportioned once the TV stretches it back. Set the TV (or
+GCVideo) to Full/16:9 mode; on a 4:3 screen the menu just looks squeezed. The whole UI —
+boot animation, grid, banners — goes through the same projection, so everything scales
+together. The trade-off is inherent to anamorphic output: the same 640 pixels now cover a
+wider image, so effective horizontal resolution drops. Off by default. Ported from
+[OffBroadway/cubeboot#57](https://github.com/OffBroadway/cubeboot/pull/57).
 
 ## `device_order`
 
