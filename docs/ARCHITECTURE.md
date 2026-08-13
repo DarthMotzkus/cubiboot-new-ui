@@ -341,14 +341,14 @@ entry/          --make-->  entry.dol         (stub + cubeboot.gz, linked at 0x81
         v                                          v                     v
   build_apploader.sh                         build_iso.sh        make_picoboot_uf2.py
   (swiss-gc packer +                   (genisoimage, El-Torito,  (BS2-scramble entry.dol,
-   apploader header)                    gbi.hdr re-branded)       splice into PicoBoot fw)
+   apploader header)                    gbi.hdr re-branded)       payload-only UF2 @0x80000)
         |                                          |                     |
         v                                          v                     v
-  apploader.img                              cubiboot.iso       cubiboot_picoboot_*.uf2
+  apploader.img                              cubiboot.iso    cubiboot_picoboot_payload.uf2
                                                    |
                                           make_picoloader_uf2.py
                                                    v
-                                        cubiboot_picoloader.uf2
+                                     cubiboot_picoloader_payload.uf2
 ```
 
 `entry/Makefile` drives the whole chain, including the `cubeboot/source/emu` →

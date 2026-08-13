@@ -58,7 +58,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
-| **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader.uf2`. |
+| **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader_payload.uf2`. |
 
 Full changelog against upstream: [docs/FORK_CHANGES.md](docs/FORK_CHANGES.md).
 How it all fits together: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -94,9 +94,8 @@ Every tagged release (`v*`) publishes:
 | **`EXTRACT_TO_ROOT.zip`** | Everything that belongs on the SD card (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extract it to the root of the card — the easiest starting point. |
 | `ipl.dol` | The cubiboot loader (a GameCube IPL replacement). Booted via PicoBoot/PicoLoader + gekkoboot. |
 | `flippydrive.dol` | The loader for a **FlippyDrive** — same binary as `ipl.dol`. **Rename it to `cubeboot.dol`** and flash it into the drive; see [Method 4](#method-4-flippydrive). |
-| `cubiboot_picoloader.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
-| `cubiboot_picoboot_pico.uf2` / `_pico2.uf2` | **PicoBoot** firmware with cubiboot **embedded** — flash it to the Pico (RP2040) or Pico 2 (RP2350); no `ipl.dol` or gekkoboot needed on the card. |
-| `cubiboot_picoboot_payload.uf2` | Payload-only update for a Pico **already running** PicoBoot ≥ v0.5.0 — swaps the embedded loader without re-flashing the firmware. Works on both boards. |
+| `cubiboot_picoloader_payload.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
+| `cubiboot_picoboot_payload.uf2` | The cubiboot payload for **PicoBoot** — flash it on top of the official [PicoBoot](https://github.com/webhdx/PicoBoot/releases) firmware (≥ v0.4; Pico 2 needs v0.5.0) and it replaces the stock gekkoboot in place; no `ipl.dol` or gekkoboot needed on the card. One file for both boards. |
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and other ODEs, branded with the Cubiboot banner. |
 | `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](#in-game-reset)). |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
@@ -133,21 +132,29 @@ on the card.
 
 **PicoBoot (Pico or Pico 2):**
 
-1. Hold the **BOOTSEL** button on the Pico while plugging it into your PC.
-2. Copy [`cubiboot_picoboot_pico.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico.uf2)
-   (Pico) or [`cubiboot_picoboot_pico2.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_pico2.uf2)
-   (Pico 2) to the USB drive that appears — it is the official PicoBoot firmware with
-   cubiboot embedded, so it also replaces a stock PicoBoot install; no separate PicoBoot
-   flash is needed.
-3. On later updates flash only
+1. Flash the **official PicoBoot firmware** first, if the Pico doesn't run it yet: hold
+   the **BOOTSEL** button on the Pico while plugging it into your PC, and copy
+   `picoboot_full_pico.uf2` (Pico) or `picoboot_full_pico2.uf2` (Pico 2) from the
+   [PicoBoot releases](https://github.com/webhdx/PicoBoot/releases) to the USB drive that
+   appears. Already running PicoBoot ≥ v0.4 (Pico 2 shipped with v0.5.0)? Skip this step.
+2. Enter BOOTSEL mode again (the Pico reboots after step 1 — unplug, hold the button,
+   replug) and copy
    [`cubiboot_picoboot_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_payload.uf2)
-   — it swaps the embedded cubiboot without touching the firmware (works on both boards;
-   needs the PicoBoot ≥ v0.5.0 firmware the full images carry).
+   — it replaces the gekkoboot payload embedded in the firmware with cubiboot, leaving
+   the firmware itself untouched. One file for both boards, and the only file to
+   re-flash on later updates.
+
+> [!TIP]
+> Pico misbehaving, or no idea what is flashed on it? In BOOTSEL mode, copy
+> [`universal_flash_nuke.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/raw/main/tools/flash-nuke/universal_flash_nuke.uf2)
+> to it first — it wipes the flash completely and drops the Pico straight back into
+> BOOTSEL, ready for step 1. Works on both boards; see
+> [tools/flash-nuke](tools/flash-nuke/README.md).
 
 **PicoLoader:**
 
 1. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
-2. Download [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
+2. Download [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
 3. Hold the button on the RP2040 Pico while plugging it into your PC.
 4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
 
@@ -259,7 +266,7 @@ and you are done.
 |---|---|
 | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) | `ipl.dol` **and** `swiss/patches/apploader.img` |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoBoot) | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
-| [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
+| [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 3](#method-3-gc-loader-and-other-odes) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
 | [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below), **and** replace `swiss/patches/apploader.img` on the card |
 
@@ -643,7 +650,7 @@ The 128 limit is a fail-safe. It can be raised in code, but that risks out-of-me
 ### CI (recommended)
 
 Every push builds `ipl.dol` + `apploader.img` + `cubiboot.iso` + `config.ini` +
-`cubiboot_picoloader.uf2` + the `cubiboot_picoboot_*.uf2` set and uploads them as
+`cubiboot_picoloader_payload.uf2` + `cubiboot_picoboot_payload.uf2` and uploads them as
 artifacts. Pushing a `v*` tag publishes a GitHub Release with those files plus
 `EXTRACT_TO_ROOT.zip`. See [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
@@ -672,15 +679,16 @@ docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.
   [cubeboot-tools'](https://github.com/makeo/cubeboot-tools) `gbi.hdr` (re-branded to the
   Cubiboot banner), with the loader `.dol` as the boot image. See
   [.ci/build_iso.sh](.ci/build_iso.sh).
-- **`cubiboot_picoloader.uf2`** — the [PicoLoader](https://github.com/makeo/PicoLoader)
+- **`cubiboot_picoloader_payload.uf2`** — the [PicoLoader](https://github.com/makeo/PicoLoader)
   firmware with `cubiboot.iso` embedded as the payload, replicating makeo's PicoLoader
   converter. See [.ci/make_picoloader_uf2.py](.ci/make_picoloader_uf2.py).
-- **`cubiboot_picoboot_{payload,pico,pico2}.uf2`** — [PicoBoot](https://github.com/webhdx/PicoBoot)
-  images. The payload is `entry/entry.dol` (the stage-1 stub linked at `0x81300000` — the
-  only DOL PicoBoot can inject), scrambled with the BS2 bootrom scrambler and stamped with
-  PicoBoot's `IPLBOOT `/`PICO` payload framing, replicating PicoBoot's `tools/process_ipl.py`.
-  The full images splice that payload (at flash `0x80000`) into the firmware blocks of the
-  pinned official PicoBoot release. See [.ci/make_picoboot_uf2.py](.ci/make_picoboot_uf2.py).
+- **`cubiboot_picoboot_payload.uf2`** — the [PicoBoot](https://github.com/webhdx/PicoBoot)
+  payload-only update. The payload is `entry/entry.dol` (the stage-1 stub linked at
+  `0x81300000` — the only DOL PicoBoot can inject), scrambled with the BS2 bootrom
+  scrambler and stamped with PicoBoot's `IPLBOOT `/`PICO` payload framing, replicating
+  PicoBoot's `tools/process_ipl.py`. It targets flash `0x80000`, where official PicoBoot
+  firmware ≥ v0.4 streams the payload from — which is why the official firmware has to be
+  flashed first. See [.ci/make_picoboot_uf2.py](.ci/make_picoboot_uf2.py).
 
 </details>
 

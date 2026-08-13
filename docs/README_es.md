@@ -58,7 +58,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
 | **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta dice "CUBIBOOT New UI". |
 | **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
-| **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader.uf2` flasheable. |
+| **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader_payload.uf2` flasheable. |
 
 Lista completa de cambios frente al upstream: [docs/FORK_CHANGES.md](FORK_CHANGES.md).
 Cómo encaja todo (en inglés): [docs/ARCHITECTURE.md](ARCHITECTURE.md).
@@ -95,7 +95,7 @@ Cada release etiquetada (`v*`) publica:
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
 | `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). |
-| `cubiboot_picoloader.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
+| `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
@@ -131,7 +131,7 @@ Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta
 `swiss-gc.dol`.
 
 1. Flashea tu Pico con el `.uf2` de [PicoLoader](https://github.com/makeo/PicoLoader).
-2. Descarga [`cubiboot_picoloader.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader.uf2).
+2. Descarga [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
 3. Mantén pulsado el botón de la RP2040 Pico mientras la conectas al PC.
 4. Copia el `.uf2` a la unidad USB que aparece; la Pico se reinicia ejecutando cubiboot.
 5. Pon Swiss en tu tarjeta SD2SP2 / SD Gecko como `swiss-gc.dol`, junto con un
@@ -240,7 +240,7 @@ loader y listo.
 | Instalado con | Reemplaza |
 |---|---|
 | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
-| [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
+| [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader_payload.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 | [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
 | [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo), **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 
@@ -609,7 +609,7 @@ falta de memoria.
 ### CI (recomendado)
 
 Cada push compila `ipl.dol` + `apploader.img` + `cubiboot.iso` + `config.ini` +
-`cubiboot_picoloader.uf2` y los sube como artefactos. Empujar una etiqueta `v*` publica una
+`cubiboot_picoloader_payload.uf2` y los sube como artefactos. Empujar una etiqueta `v*` publica una
 Release de GitHub con esos archivos más `EXTRACT_TO_ROOT.zip`. Mira
 [.github/workflows/ci.yml](../.github/workflows/ci.yml).
 
@@ -638,7 +638,7 @@ docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.
   a partir del `gbi.hdr` de [cubeboot-tools](https://github.com/makeo/cubeboot-tools)
   (rebrandeado al banner de Cubiboot), con el `.dol` del loader como imagen de arranque. Mira
   [.ci/build_iso.sh](../.ci/build_iso.sh).
-- **`cubiboot_picoloader.uf2`** — el firmware de
+- **`cubiboot_picoloader_payload.uf2`** — el firmware de
   [PicoLoader](https://github.com/makeo/PicoLoader) con `cubiboot.iso` incrustado como
   payload, replicando el conversor de PicoLoader de makeo. Mira
   [.ci/make_picoloader_uf2.py](../.ci/make_picoloader_uf2.py).

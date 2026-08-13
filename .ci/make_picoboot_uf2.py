@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Build the PicoBoot .uf2 set from the cubiboot stage-1 DOL (entry/entry.dol).
+"""Build cubiboot_picoboot_payload.uf2 from the cubiboot stage-1 DOL (entry/entry.dol).
 
 PicoBoot (github.com/webhdx/PicoBoot) is the RP2040/RP2350 IPL-injection modchip:
 the Pico streams a payload to the GameCube as if it were the scrambled BS2 ROM.
-Its firmware expects, at flash offset 0x80000, a payload image shaped like this
-(built by PicoBoot's tools/process_ipl.py, replicated here):
+Its firmware DMA-streams the payload straight from flash offset 0x80000 (limit
+1.5 MiB, per its memmap_picoboot.ld), expecting the shape built by PicoBoot's
+tools/process_ipl.py, replicated here:
 
   [32B header: "IPLBOOT " + u32be total-size + 20B zero]
   [flattened DOL image, scrambled with the BS2 scrambler (keystream offset 0x720)]
@@ -15,19 +16,19 @@ where entry/nosys.ld links the cubiboot stage-1 stub. So the payload is
 entry.dol (stub + gzipped cubeboot loader), not the released ipl.dol
 (= cubeboot.dol, linked at 0x80003100, which PicoBoot cannot boot).
 
-Outputs (same set the PicoBoot project releases, with cubiboot as the payload):
+Output:
   cubiboot_picoboot_payload.uf2  universal payload-only update (RP2040 + RP2350
-                                 family blocks interleaved); drop onto a Pico
-                                 that already runs PicoBoot >= v0.5.0 firmware
-  cubiboot_picoboot_pico.uf2     PicoBoot firmware + cubiboot payload, Pico (RP2040)
-  cubiboot_picoboot_pico2.uf2    PicoBoot firmware + cubiboot payload, Pico 2 (RP2350)
-
-The firmware blocks are lifted verbatim from the official picoboot_full_*.uf2
-release assets (their gekkoboot payload region at >= 0x10080000 is dropped and
-replaced with ours, blocks renumbered) — no pico-sdk toolchain needed.
+                                 family blocks interleaved). Flash it onto a Pico
+                                 already running the official PicoBoot firmware
+                                 >= v0.4 (Pico 2: >= v0.5.0, the first RP2350
+                                 build); it replaces the stock gekkoboot payload
+                                 in place, firmware untouched. Older firmware
+                                 (<= v0.3.x) has no separate payload region and
+                                 silently ignores this file — flash the official
+                                 picoboot_full_*.uf2 first.
 
 Usage:
-  make_picoboot_uf2.py <entry.dol> <picoboot_full_pico.uf2> <picoboot_full_pico2.uf2> <outdir>
+  make_picoboot_uf2.py <entry.dol> <outdir>
 """
 
 import math
@@ -154,67 +155,22 @@ def pack_uf2(data, base_address, family_ids):
     return bytes(out)
 
 
-def read_uf2_blocks(path):
-    """-> list of (addr, family, data) in file order."""
-    raw = Path(path).read_bytes()
-    blocks = []
-    for i in range(len(raw) // 512):
-        blk = raw[i * 512:(i + 1) * 512]
-        m0, m1, flags, addr, psize, blkno, numblk, fam = struct.unpack("<8I", blk[:32])
-        if m0 != UF2_MAGIC0 or m1 != UF2_MAGIC1 or struct.unpack("<I", blk[508:])[0] != UF2_MAGIC_END:
-            raise SystemExit(f"ERROR: {path}: bad UF2 magic at block {i}")
-        blocks.append((addr, fam, blk[32:32 + psize]))
-    return blocks
-
-
-def join_full(firmware_uf2, payload, family):
-    """Official picoboot_full_*.uf2 minus its payload region, plus ours."""
-    fw_blocks = [(a, d) for a, f, d in read_uf2_blocks(firmware_uf2)
-                 if f == family and a < PAYLOAD_FLASH_ADDR]
-    if not fw_blocks:
-        raise SystemExit(f"ERROR: no family-0x{family:08X} firmware blocks in {firmware_uf2}")
-
-    # Payload zero-padded to the RP2040/RP2350 4K flash-sector size, as
-    # PicoBoot's own release images do.
-    padded = payload.ljust(math.ceil(len(payload) / 4096) * 4096, b"\x00")
-    pay_blocks = [(PAYLOAD_FLASH_ADDR + i * CHUNK, padded[i * CHUNK:(i + 1) * CHUNK])
-                  for i in range(len(padded) // CHUNK)]
-
-    blocks = fw_blocks + pay_blocks
-    total = len(blocks)
-    out = bytearray()
-    for seq, (addr, data) in enumerate(blocks):
-        out += struct.pack(
-            "< 8I 476s I",
-            UF2_MAGIC0, UF2_MAGIC1, 0x00002000,
-            addr, CHUNK, seq, total, family,
-            data, UF2_MAGIC_END,
-        )
-    return bytes(out)
-
-
 def main():
-    if len(sys.argv) != 5:
-        print(f"Usage: {sys.argv[0]} <entry.dol> <picoboot_full_pico.uf2> "
-              f"<picoboot_full_pico2.uf2> <outdir>")
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <entry.dol> <outdir>")
         return 1
 
-    dol, fw_pico, fw_pico2, outdir = sys.argv[1:]
+    dol, outdir = sys.argv[1:]
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
     print(f"payload from {dol}:")
     payload = build_payload(dol)
 
-    targets = [
-        ("cubiboot_picoboot_payload.uf2",
-         pack_uf2(payload, PAYLOAD_FLASH_ADDR, [FAMILY_RP2040, FAMILY_RP2350])),
-        ("cubiboot_picoboot_pico.uf2", join_full(fw_pico, payload, FAMILY_RP2040)),
-        ("cubiboot_picoboot_pico2.uf2", join_full(fw_pico2, payload, FAMILY_RP2350)),
-    ]
-    for name, blob in targets:
-        (outdir / name).write_bytes(blob)
-        print(f"  wrote {outdir / name} ({len(blob)} bytes)")
+    blob = pack_uf2(payload, PAYLOAD_FLASH_ADDR, [FAMILY_RP2040, FAMILY_RP2350])
+    out = outdir / "cubiboot_picoboot_payload.uf2"
+    out.write_bytes(blob)
+    print(f"  wrote {out} ({len(blob)} bytes)")
 
 
 if __name__ == "__main__":
