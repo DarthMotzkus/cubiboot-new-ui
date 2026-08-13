@@ -22,7 +22,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar S
 - [Installation](#installation)
   - [Method 1: PicoBoot or PicoLoader with gekkoboot](#method-1-picoboot-or-picoloader-with-gekkoboot)
   - [Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
-  - [Method 3: GC Loader and CUBE-ODE](#method-3-gc-loader-and-other-odes)
+  - [Method 3: GC Loader and CUBE-ODE](#method-3-gc-loader-and-cube-ode)
   - [Method 4: FlippyDrive](#method-4-flippydrive)
   - [In-Game Reset](#in-game-reset)
 - [Updating](#updating)
@@ -267,7 +267,7 @@ and you are done.
 | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) | `ipl.dol` **and** `swiss/patches/apploader.img` |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoBoot) | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
-| [Method 3](#method-3-gc-loader-and-other-odes) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
+| [Method 3](#method-3-gc-loader-and-cube-ode) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
 | [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below), **and** replace `swiss/patches/apploader.img` on the card |
 
 Both files come from the same release — mixing an `apploader.img` from one release with a
