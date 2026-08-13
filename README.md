@@ -22,7 +22,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar S
 - [Installation](#installation)
   - [Method 1: PicoBoot or PicoLoader with gekkoboot](#method-1-picoboot-or-picoloader-with-gekkoboot)
   - [Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
-  - [Method 3: GC Loader and other ODEs](#method-3-gc-loader-and-other-odes)
+  - [Method 3: GC Loader and CUBE-ODE](#method-3-gc-loader-and-other-odes)
   - [Method 4: FlippyDrive](#method-4-flippydrive)
   - [In-Game Reset](#in-game-reset)
 - [Updating](#updating)
@@ -53,7 +53,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Real filenames** | The list shows the `.iso` **filename** instead of the internal game name, and loads the correct banner for each disc of a multi-disc game (e.g. Resident Evil 0 Disc 1 / Disc 2). |
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
-| **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader style ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
+| **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **16:9 widescreen menu** | [`force_widescreen = 1`](#widescreen-169) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
@@ -96,7 +96,7 @@ Every tagged release (`v*`) publishes:
 | `flippydrive.dol` | The loader for a **FlippyDrive** — same binary as `ipl.dol`. **Rename it to `cubeboot.dol`** and flash it into the drive; see [Method 4](#method-4-flippydrive). |
 | `cubiboot_picoloader_payload.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
 | `cubiboot_picoboot_payload.uf2` | The cubiboot payload for **PicoBoot** — flash it on top of the official [PicoBoot](https://github.com/webhdx/PicoBoot/releases) firmware (≥ v0.4; Pico 2 needs v0.5.0) and it replaces the stock gekkoboot in place; no `ipl.dol` or gekkoboot needed on the card. One file for both boards. |
-| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and other ODEs, branded with the Cubiboot banner. |
+| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and **CUBE-ODE**, branded with the Cubiboot banner. |
 | `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](#in-game-reset)). |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
 
@@ -110,7 +110,7 @@ Pick the one that matches your console:
 |---|---|
 | PicoBoot or PicoLoader modchip | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) — recommended, updates by swapping files on the SD card |
 | PicoBoot or PicoLoader, and you want no loader file on the card | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) |
-| GC Loader or another ODE, no modchip | [Method 3](#method-3-gc-loader-and-other-odes) |
+| GC Loader or CUBE-ODE, no modchip | [Method 3](#method-3-gc-loader-and-other-odes) |
 | FlippyDrive | [Method 4](#method-4-flippydrive) — the drive boots cubiboot itself |
 
 ### Method 1: PicoBoot or PicoLoader with gekkoboot
@@ -165,7 +165,7 @@ on the card.
 > With this method every cubiboot update means opening the console and re-flashing the Pico.
 > Method 1 is easier to live with.
 
-### Method 3: GC Loader and other ODEs
+### Method 3: GC Loader and CUBE-ODE
 
 `cubiboot.iso` is a bootable GameCube disc image that simply *is* the cubiboot loader — no
 modchip needed.
