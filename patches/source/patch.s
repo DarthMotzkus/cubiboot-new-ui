@@ -65,16 +65,10 @@ patch_inst_pal "_gameselect_replace_draw" 0x81314e58 0x81314444 0x81314f98 bl mo
 patch_inst_ntsc "_gameselect_replace_input" 0x81326818 0x81326f94 0x8132732c 0x81327344 bl handle_gameselect_inputs
 patch_inst_pal "_gameselect_replace_input" 0x81327968 0x81326ec0 0x81327aa8 bl handle_gameselect_inputs
 
-.macro routine_gameselect_matrix_helper
-    addi r3, r1, 0x74
-    addi r4, r1, 0x14
-    bl set_gameselect_view
-    repeat_inst 44 nop
-.endm
-
-// NOTE: this is a mid-function patch
-patch_inst_ntsc "_gameselect_draw_helper" 0x81326c14 0x81327430 0x813277c8 0x813277e0 routine_gameselect_matrix_helper
-patch_inst_pal "_gameselect_draw_helper" 0x81327e04 0x8132735c 0x81327f44 routine_gameselect_matrix_helper
+// NOTE: this is a mid-function patch. The dispatcher captures the matrices and skips
+// the stock widgets for Cubiboot, or resumes the untouched renderer in stock-disc mode.
+patch_inst_ntsc "_gameselect_draw_helper" 0x81326c14 0x81327430 0x813277c8 0x813277e0 b gameselect_draw_dispatch
+patch_inst_pal "_gameselect_draw_helper" 0x81327e04 0x8132735c 0x81327f44 b gameselect_draw_dispatch
 
 .macro routine_load_r0_r3_val1
     li r0, 1
