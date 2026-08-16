@@ -498,6 +498,9 @@ __attribute_used__ u32 get_tvmode() {
 
 __attribute_data__ int frame_count = 0;
 __attribute_used__ u32 bs2tick() {
+    extern u32 stock_disc_mode;
+    extern u32 original_bs2tick();
+
     frame_count++;
     if (!completed_time && cube_state->cube_anim_done) {
         OSReport("FINISHED (%d frames)\n", frame_count);
@@ -508,6 +511,12 @@ __attribute_used__ u32 bs2tick() {
     // machine is driving, and by the time a game is picked from the menu the animation has
     // long since finished. The wait lives in bs2start() instead, where every boot path
     // converges.
+    // The stock routine polls the drive asynchronously and publishes the intermediate
+    // cover-open, reading and ready states consumed by the Game Play submenu.
+    if (stock_disc_mode) {
+        return original_bs2tick();
+    }
+
     if (start_passthrough_game) {
         return STATE_START_GAME;
     }

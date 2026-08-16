@@ -14,6 +14,9 @@ __attribute_reloc__ u32 *prev_menu_id;
 __attribute_reloc__ u32 *cur_menu_id;
 __attribute_reloc__ u32 *main_menu_id;
 __attribute_reloc__ GXRModeObj *rmode;
+__attribute_reloc__ void *stock_bs2tick_resume;
+__attribute_reloc__ void *stock_gameselect_draw_resume;
+__attribute_reloc__ void *stock_gameselect_draw_skip;
 
 // from main
 __attribute_reloc__ state *cube_state;
