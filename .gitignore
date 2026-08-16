@@ -14,6 +14,9 @@ ipl.rom
 *.bin
 *.bin.scrambled
 
+# local BIOS dumps for offset verification (never commit)
+bios/
+
 patches/include/secret.h
 patches/tests
 
