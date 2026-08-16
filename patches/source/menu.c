@@ -17,7 +17,6 @@
 #include "extruded_save_cube.h"
 
 #include "dolphin_dvd.h"
-#include "gc_dvd.h"
 
 #include "dir_tex_bin.h"
 #include "dol_tex_bin.h"
@@ -42,9 +41,6 @@ __attribute_reloc__ void (*menu_alpha_setup)();
 __attribute_reloc__ void (*prep_text_mode)();
 __attribute_reloc__ void (*gx_draw_text)(u16 index, text_group* text, text_draw_group* text_draw, GXColor* color);
 __attribute_reloc__ void (*setup_gameselect_menu)(u8 alpha_0, u8 alpha_1, u8 alpha_2);
-__attribute_reloc__ void (*stock_gameselect_init)(u32 initialize_assets);
-__attribute_reloc__ s32 (*stock_gameselect_input)();
-__attribute_reloc__ void (*stock_bs2_reset)();
 __attribute_reloc__ GXColorS10 *(*get_save_color)(u32 color_index, s32 save_type);
 __attribute_reloc__ void (*setup_gameselect_anim)();
 __attribute_reloc__ void (*setup_cube_anim)();
@@ -97,13 +93,6 @@ __attribute_reloc__ void (*apply_save_rot)(s32 x, s32 y, s32 z, Mtx matrix);
 __attribute_reloc__ u32 *bs2start_ready;
 __attribute_reloc__ u32 *banner_pointer;
 __attribute_reloc__ u32 *banner_ready;
-
-// menu_init allocates the IPL's 8 KiB disc-banner buffer before Cubiboot installs its
-// default banner. Keep that allocation so the stock Game Play reader can DMA opening.bnr
-// into the buffer it expects when Z hands the screen back to it.
-__attribute_data__ static u32 stock_banner_pointer = 0;
-__attribute_data__ static u32 stock_banner_cached_ready = 0;
-__attribute_data__ static bool stock_disc_lid_opened = true;
 
 typedef struct {
     f32 scale;
@@ -219,10 +208,6 @@ void set_textured_icon_unselected() {
 }
 
 __attribute_used__ void custom_gameselect_init() {
-    if (stock_banner_pointer == 0) {
-        stock_banner_pointer = *banner_pointer;
-    }
-
     // default banner
     *banner_pointer = (u32)&default_opening_bin[0];
     *banner_ready = 1;
@@ -627,10 +612,6 @@ static const char *device_header_text(void) {
 }
 
 __attribute_data__ u32 current_gameselect_state = SUBMENU_GAMESELECT_LOADER;
-// While this is set, the IPL owns the Game Play screen and its asynchronous disc state
-// machine. The assembly draw dispatcher uses the same flag to restore the stock portion
-// of the renderer which Cubiboot normally skips for its custom browser.
-__attribute_data__ u32 stock_disc_mode = 0;
 __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8 broken_alpha_2) {
     // color
     u8 ui_alpha = alpha_1;
@@ -842,11 +823,6 @@ __attribute_used__ void pre_menu_alpha_setup() {
 }
 
 __attribute_used__ void mod_gameselect_draw(u8 alpha_0, u8 alpha_1, u8 alpha_2) {
-    if (stock_disc_mode) {
-        setup_gameselect_menu(alpha_0, alpha_1, alpha_2);
-        return;
-    }
-
     // this is for the camera
     setup_gameselect_menu(0, 0, 0);
     draw_grid(global_gameselect_matrix, alpha_1);
@@ -866,33 +842,6 @@ __attribute_used__ void mod_gameselect_draw(u8 alpha_0, u8 alpha_1, u8 alpha_2) 
 }
 
 __attribute_used__ s32 handle_gameselect_inputs() {
-    extern u32 start_passthrough_game;
-
-    // B leaves the stock Game Play screen without handing control back to the IPL's
-    // top-level menu. Its normal input routine returns menu id 1 here, which is useful
-    // to the unmodified menu but would move Cubiboot through the wrong transition.
-    if (stock_disc_mode) {
-        if (pad_status->buttons_down & PAD_BUTTON_B) {
-            stock_banner_cached_ready = *banner_ready;
-            stock_disc_mode = 0;
-            start_passthrough_game = 0;
-            *banner_pointer = (u32)&default_opening_bin[0];
-            *banner_ready = 1;
-            stock_gameselect_init(0);
-            return MENU_GAMESELECT_TRANSITION_ID;
-        }
-
-        return stock_gameselect_input();
-    }
-
-    // Reading the cover register does not issue a drive command or stall the frame. Keep
-    // sampling it while the browser is visible so a disc swap cannot reuse the preceding
-    // disc's banner when the user returns to Game Play.
-    if (dvd_cover_status()) {
-        stock_banner_cached_ready = 0;
-        stock_disc_lid_opened = true;
-    }
-
     update_icon_positions();
     grid_update_icon_positions();
 
@@ -930,22 +879,15 @@ __attribute_used__ s32 handle_gameselect_inputs() {
     }
 
     if (pad_status->buttons_down & PAD_TRIGGER_Z) {
-        // Let the original IPL probe and read the drive on its own state machine. This
-        // keeps the frame loop alive, so the stock no-disc / reading-disc UI can animate.
-        start_passthrough_game = 1;
-        *banner_pointer = stock_banner_pointer;
-        *banner_ready = stock_banner_cached_ready;
-        if (stock_disc_lid_opened || !stock_banner_cached_ready) {
-            // The IPL stays in STATE_START_GAME after a successful read. Its restart
-            // routine moves that state machine back to the drive-probing path so a newly
-            // inserted disc gets a fresh ID, banner and description.
-            *banner_ready = 0;
-            stock_bs2_reset();
-            stock_disc_lid_opened = false;
-        }
-        stock_gameselect_init(0);
-        stock_disc_mode = 1;
+        if (emu_has_dvd()) {
+            Jac_StopSoundAll();
+            Jac_PlaySe(SOUND_MENU_FINAL);
 
+            extern u32 start_passthrough_game;
+            start_passthrough_game = 1;
+            *bs2start_ready = 1;
+        }
+        
         // add test code here
         /*load_stub(); // exit to loader again
         u32 *sig = (u32*)0x80001804;
