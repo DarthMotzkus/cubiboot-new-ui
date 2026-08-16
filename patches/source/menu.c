@@ -609,6 +609,23 @@ void fix_gameselect_view() {
     GXSetCurrentMtx(0);
 }
 
+// Indexed by emu_sd_device, whose order is the device_prio[] loader-to-patches
+// contract in emu/flippy_emu.c: { gcldr, sdc, sdb, sda, fldrv }.
+static const char *device_header_names[] = {
+    "ODE SD",    // gcldr
+    "SD2SP2",    // sdc
+    "SLOT B SD", // sdb
+    "SLOT A SD", // sda
+    "ODE SD",    // fldrv
+};
+
+static const char *device_header_text(void) {
+    extern int emu_sd_device;
+    if (emu_sd_device >= 0 && emu_sd_device < (int)(sizeof(device_header_names) / sizeof(device_header_names[0])))
+        return device_header_names[emu_sd_device];
+    return "CUBIBOOT New UI";
+}
+
 __attribute_data__ u32 current_gameselect_state = SUBMENU_GAMESELECT_LOADER;
 // While this is set, the IPL owns the Game Play screen and its asynchronous disc state
 // machine. The assembly draw dispatcher uses the same flag to restore the stock portion
@@ -621,9 +638,9 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     GXColor white = {0xFF, 0xFF, 0xFF, ui_alpha};
 
     // text -- the header names the folder you are browsing. The card root has no folder
-    // name to show, so it carries the product name instead.
+    // name to show, so it names the device the games come from instead.
     char header[48];
-    const char *header_text = "CUBIBOOT New UI";
+    const char *header_text = device_header_text();
     int path_len = (int)strlen(game_enum_path);
     if (path_len > 0 && game_enum_path[path_len - 1] == '/')
         path_len--; // the scan path carries a trailing slash
