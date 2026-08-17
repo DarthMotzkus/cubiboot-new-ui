@@ -558,8 +558,20 @@ __attribute_used__ void bs2start() {
         dvd_custom_bypass_enter();
         udelay(10 * 1000);
 
-        int ret = dvd_read_id();
-        int err = dvd_get_error();
+        // Entering bypass resets the drive, so a disc that was spinning a moment ago is
+        // spinning down again here. A single read lands inside that window and reports the
+        // disc as unreadable, dropping a perfectly good boot into the loader stub below --
+        // the same spin-up window the disc screen has to wait out before it can read a
+        // banner. Retry rather than treating the first answer as final.
+        int ret = 1;
+        int err = 1;
+        for (int i = 0; i < 8; i++) {
+            ret = dvd_read_id();
+            err = dvd_get_error();
+            if (ret == 0 && err == 0) break;
+            udelay(250 * 1000);
+        }
+
         if (ret != 0 || err != 0) {
             custom_OSReport("Failed to read disc ID\n");
             dvd_custom_bypass_exit();
