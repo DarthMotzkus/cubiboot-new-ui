@@ -49,6 +49,7 @@ pal10_stock_gameselect_init = 0x813275f4;
 pal10_stock_gameselect_input = 0x813276ac;
 pal10_stock_bs2tick_resume = 0x8130096c;
 pal10_stock_bs2_reset = 0x81300668;
+pal10_dvd_state = 0x814ad268;
 pal10_stock_gameselect_draw_resume = 0x81327e08;
 pal10_stock_gameselect_draw_skip = 0x81327ec0;
 pal10_setup_cube_anim = 0x81329c98;

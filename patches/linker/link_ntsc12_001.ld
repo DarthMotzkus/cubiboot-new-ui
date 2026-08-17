@@ -48,6 +48,7 @@ ntsc12_001_stock_gameselect_init = 0x81326fb8;
 ntsc12_001_stock_gameselect_input = 0x81327070;
 ntsc12_001_stock_bs2tick_resume = 0x81300d0c;
 ntsc12_001_stock_bs2_reset = 0x813009a4;
+ntsc12_001_dvd_state = 0x814834a0;
 ntsc12_001_stock_gameselect_draw_resume = 0x813277cc;
 ntsc12_001_stock_gameselect_draw_skip = 0x81327884;
 ntsc12_001_setup_cube_anim = 0x81328fb8;

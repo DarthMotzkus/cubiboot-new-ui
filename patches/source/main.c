@@ -511,10 +511,13 @@ __attribute_used__ u32 bs2tick() {
     // machine is driving, and by the time a game is picked from the menu the animation has
     // long since finished. The wait lives in bs2start() instead, where every boot path
     // converges.
-    // The stock routine polls the drive asynchronously and publishes the intermediate
-    // cover-open, reading and ready states consumed by the Game Play submenu.
+    // While the disc screen is up, Cubiboot drives the read itself and reports the state
+    // the screen renders from. The IPL's own machine is deliberately not run: its route to
+    // a banner goes through the apploader, which loads the game over the memory Cubiboot
+    // occupies and takes the console down mid-read.
     if (stock_disc_mode) {
-        return original_bs2tick();
+        extern u32 stock_disc_tick(void);
+        return stock_disc_tick();
     }
 
     if (start_passthrough_game) {
