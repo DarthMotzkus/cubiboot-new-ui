@@ -50,7 +50,8 @@ __attribute_data__ char default_folder[MAX_FILE_NAME] = {0};
 __attribute_data__ u32 remember_last_game = 0;
 __attribute_data__ u32 force_progressive = 0;
 __attribute_data__ u32 force_widescreen = 0;
-__attribute_data__ u32 force_swiss_boot = 0;
+// On by default: a physical disc boots through Swiss unless config.ini turns it off.
+__attribute_data__ u32 swiss_on_dvd_boot = 1;
 
 // used if we are switching to 60Hz on a PAL IPL
 __attribute_data__ static int fix_pal_ntsc = 0;
@@ -498,6 +499,8 @@ __attribute_used__ u32 get_tvmode() {
 
 __attribute_data__ int frame_count = 0;
 __attribute_used__ u32 bs2tick() {
+    extern u32 stock_disc_mode;
+
     frame_count++;
     if (!completed_time && cube_state->cube_anim_done) {
         OSReport("FINISHED (%d frames)\n", frame_count);
@@ -508,6 +511,15 @@ __attribute_used__ u32 bs2tick() {
     // machine is driving, and by the time a game is picked from the menu the animation has
     // long since finished. The wait lives in bs2start() instead, where every boot path
     // converges.
+    // While the disc screen is up, Cubiboot drives the read itself and reports the state
+    // the screen renders from. The IPL's own machine is deliberately not run: its route to
+    // a banner goes through the apploader, which loads the game over the memory Cubiboot
+    // occupies and takes the console down mid-read.
+    if (stock_disc_mode) {
+        extern u32 stock_disc_tick(void);
+        return stock_disc_tick();
+    }
+
     if (start_passthrough_game) {
         return STATE_START_GAME;
     }
@@ -540,14 +552,26 @@ __attribute_used__ void bs2start() {
     // read boot info into lowmem
     struct dolphin_lowmem *lowmem = (struct dolphin_lowmem*)0x80000000;
 
-    if (!start_passthrough_game || force_swiss_boot) {
+    if (!start_passthrough_game || swiss_on_dvd_boot) {
         gm_deinit_thread();
     } else {
         dvd_custom_bypass_enter();
         udelay(10 * 1000);
 
-        int ret = dvd_read_id();
-        int err = dvd_get_error();
+        // Entering bypass resets the drive, so a disc that was spinning a moment ago is
+        // spinning down again here. A single read lands inside that window and reports the
+        // disc as unreadable, dropping a perfectly good boot into the loader stub below --
+        // the same spin-up window the disc screen has to wait out before it can read a
+        // banner. Retry rather than treating the first answer as final.
+        int ret = 1;
+        int err = 1;
+        for (int i = 0; i < 8; i++) {
+            ret = dvd_read_id();
+            err = dvd_get_error();
+            if (ret == 0 && err == 0) break;
+            udelay(250 * 1000);
+        }
+
         if (ret != 0 || err != 0) {
             custom_OSReport("Failed to read disc ID\n");
             dvd_custom_bypass_exit();
@@ -612,9 +636,9 @@ __attribute_used__ void bs2start() {
     } else {
         custom_OSReport("Booting ISO\n");
 
-        if (!force_swiss_boot || is_swiss_image(boot_path)) {
+        if (!swiss_on_dvd_boot || is_swiss_image(boot_path)) {
             // Swiss disc images always take the native apploader path (see chainload_boot_game),
-            // even when force_swiss_boot is on -- routing them through Swiss resets to the IPL.
+            // even when swiss_on_dvd_boot is on -- routing them through Swiss resets to the IPL.
             custom_OSReport("Booting ISO (custom apploader)\n");
             chainload_boot_game(&boot_entry, false);
         } else {

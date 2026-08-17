@@ -17,6 +17,7 @@
 #include "extruded_save_cube.h"
 
 #include "dolphin_dvd.h"
+#include "gc_dvd.h"
 
 #include "dir_tex_bin.h"
 #include "dol_tex_bin.h"
@@ -41,6 +42,8 @@ __attribute_reloc__ void (*menu_alpha_setup)();
 __attribute_reloc__ void (*prep_text_mode)();
 __attribute_reloc__ void (*gx_draw_text)(u16 index, text_group* text, text_draw_group* text_draw, GXColor* color);
 __attribute_reloc__ void (*setup_gameselect_menu)(u8 alpha_0, u8 alpha_1, u8 alpha_2);
+__attribute_reloc__ void (*stock_gameselect_init)(u32 initialize_assets);
+__attribute_reloc__ s32 (*stock_gameselect_input)();
 __attribute_reloc__ GXColorS10 *(*get_save_color)(u32 color_index, s32 save_type);
 __attribute_reloc__ void (*setup_gameselect_anim)();
 __attribute_reloc__ void (*setup_cube_anim)();
@@ -93,6 +96,46 @@ __attribute_reloc__ void (*apply_save_rot)(s32 x, s32 y, s32 z, Mtx matrix);
 __attribute_reloc__ u32 *bs2start_ready;
 __attribute_reloc__ u32 *banner_pointer;
 __attribute_reloc__ u32 *banner_ready;
+
+// The disc's own banner, read by Cubiboot and handed to the stock renderer. In lowmem
+// because it is 8 KiB and nothing loads a game over it any more on this path.
+__attribute_aligned_data_lowmem__ static BNR disc_banner;
+
+__attribute_data__ static u32 stock_banner_pointer = 0;
+__attribute_data__ static u32 stock_banner_cached_ready = 0;
+__attribute_data__ static bool stock_disc_lid_opened = true;
+
+// States the stock disc screen renders from. Cubiboot reports these itself instead of
+// running the IPL's disc machine, so the screen animates a read, then shows the banner --
+// with no apploader stage in between to load a game over Cubiboot's own memory.
+#define STOCK_DVD_STATE_READY   16 // banner + PRESS START
+#define STOCK_DVD_STATE_READING 13 // "Reading disc..."
+#define STOCK_DVD_STATE_NO_DISC 18 // "Please insert a NINTENDO GAMECUBE DISC."
+
+__attribute_data__ u32 stock_disc_state = STOCK_DVD_STATE_NO_DISC;
+__attribute_data__ static bool stock_disc_reading = false;
+
+// Called from bs2tick() every frame while the disc screen is up, in place of the IPL's own
+// disc machine. Advances the banner read and returns the state the screen should draw.
+__attribute_used__ u32 stock_disc_tick(void) {
+    if (stock_disc_reading) {
+        int result = disc_banner_poll();
+        if (result > 0) {
+            *banner_pointer = (u32)&disc_banner;
+            *banner_ready = 1;
+            stock_banner_cached_ready = 1;
+            stock_disc_state = STOCK_DVD_STATE_READY;
+            stock_disc_reading = false;
+            gm_start_thread(game_enum_path[0] ? game_enum_path : NULL);
+        } else if (result < 0) {
+            stock_disc_state = STOCK_DVD_STATE_NO_DISC;
+            stock_disc_reading = false;
+            gm_start_thread(game_enum_path[0] ? game_enum_path : NULL);
+        }
+    }
+
+    return stock_disc_state;
+}
 
 typedef struct {
     f32 scale;
@@ -208,6 +251,10 @@ void set_textured_icon_unselected() {
 }
 
 __attribute_used__ void custom_gameselect_init() {
+    if (stock_banner_pointer == 0) {
+        stock_banner_pointer = *banner_pointer;
+    }
+
     // default banner
     *banner_pointer = (u32)&default_opening_bin[0];
     *banner_ready = 1;
@@ -612,6 +659,10 @@ static const char *device_header_text(void) {
 }
 
 __attribute_data__ u32 current_gameselect_state = SUBMENU_GAMESELECT_LOADER;
+// While this is set, the IPL owns the Game Play screen and its asynchronous disc state
+// machine. The assembly draw dispatcher uses the same flag to restore the stock portion
+// of the renderer which Cubiboot normally skips for its custom browser.
+__attribute_data__ u32 stock_disc_mode = 0;
 __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8 broken_alpha_2) {
     // color
     u8 ui_alpha = alpha_1;
@@ -823,6 +874,11 @@ __attribute_used__ void pre_menu_alpha_setup() {
 }
 
 __attribute_used__ void mod_gameselect_draw(u8 alpha_0, u8 alpha_1, u8 alpha_2) {
+    if (stock_disc_mode) {
+        setup_gameselect_menu(alpha_0, alpha_1, alpha_2);
+        return;
+    }
+
     // this is for the camera
     setup_gameselect_menu(0, 0, 0);
     draw_grid(global_gameselect_matrix, alpha_1);
@@ -842,6 +898,52 @@ __attribute_used__ void mod_gameselect_draw(u8 alpha_0, u8 alpha_1, u8 alpha_2) 
 }
 
 __attribute_used__ s32 handle_gameselect_inputs() {
+    extern u32 start_passthrough_game;
+
+    // B leaves the stock Game Play screen without handing control back to the IPL's
+    // top-level menu. Its normal input routine returns menu id 1 here, which is useful
+    // to the unmodified menu but would move Cubiboot through the wrong transition.
+    if (stock_disc_mode) {
+        // START boots the disc through the passthrough path the loader has always used for
+        // physical discs -- the same one 1.9.0 reaches from this button, which reads
+        // out-of-region discs because nothing on it consults the console's region.
+        if (pad_status->buttons_down & PAD_BUTTON_START) {
+            Jac_StopSoundAll();
+            Jac_PlaySe(SOUND_MENU_FINAL);
+            start_passthrough_game = 1;
+            *bs2start_ready = 1;
+            return MENU_GAMESELECT_ID;
+        }
+
+        if (pad_status->buttons_down & PAD_BUTTON_B) {
+            // Cancelling mid-read leaves the drive in bypass with a transfer possibly still
+            // in flight, so let the read finish its current step before leaving.
+            if (stock_disc_reading) return MENU_GAMESELECT_ID;
+
+            stock_banner_cached_ready = *banner_ready;
+            stock_disc_mode = 0;
+            start_passthrough_game = 0;
+            *banner_pointer = (u32)&default_opening_bin[0];
+            *banner_ready = 1;
+            stock_gameselect_init(0);
+
+            // Nothing was loaded over the browser's memory on this path, so the grid it
+            // had is still valid -- the rescan happens back on the Z press, while the disc
+            // read owns the device layer.
+            return MENU_GAMESELECT_TRANSITION_ID;
+        }
+
+        return stock_gameselect_input();
+    }
+
+    // Reading the cover register does not issue a drive command or stall the frame. Keep
+    // sampling it while the browser is visible so a disc swap cannot reuse the preceding
+    // disc's banner when the user returns to Game Play.
+    if (dvd_cover_status()) {
+        stock_banner_cached_ready = 0;
+        stock_disc_lid_opened = true;
+    }
+
     update_icon_positions();
     grid_update_icon_positions();
 
@@ -879,15 +981,24 @@ __attribute_used__ s32 handle_gameselect_inputs() {
     }
 
     if (pad_status->buttons_down & PAD_TRIGGER_Z) {
-        if (emu_has_dvd()) {
-            Jac_StopSoundAll();
-            Jac_PlaySe(SOUND_MENU_FINAL);
+        // Switch to the disc screen on this frame and read the disc underneath it. The read
+        // is stepped a frame at a time (see disc_banner_poll), so the spin-up of an idle
+        // drive plays out under the stock "Reading disc..." animation instead of freezing
+        // the menu on the button press.
+        //
+        // The enumeration thread stands down for the duration: it and the disc read would
+        // be driving the same device layer at once, and bypass points that layer at the
+        // drive rather than the card.
+        gm_deinit_thread();
+        disc_banner_start(&disc_banner);
 
-            extern u32 start_passthrough_game;
-            start_passthrough_game = 1;
-            *bs2start_ready = 1;
-        }
-        
+        *banner_ready = 0;
+        stock_disc_state = STOCK_DVD_STATE_READING;
+        stock_disc_reading = true;
+        stock_disc_lid_opened = false;
+        stock_gameselect_init(0);
+        stock_disc_mode = 1;
+
         // add test code here
         /*load_stub(); // exit to loader again
         u32 *sig = (u32*)0x80001804;

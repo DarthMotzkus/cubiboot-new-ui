@@ -14,9 +14,22 @@ menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
 preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
 postboot_delay_ms = 2000        # hold the last frame before the game boots
-force_widescreen = 1            # render the menu anamorphic for a 16:9 TV
+force_widescreen = on           # render the menu anamorphic for a 16:9 TV
+swiss_on_dvd_boot = off         # boot physical discs with the console instead of Swiss
+remember_last_game = on         # open on the last game you booted, already highlighted
 device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
 ```
+
+## On/off switches
+
+Every switch below -- `swiss_on_dvd_boot`, `remember_last_game`, `force_widescreen`,
+`force_progressive`, `show_watermark`, `disable_mcp_select` -- reads `on` or `off`. `1`/`0`,
+`yes`/`no` and `true`/`false` are accepted as well, so a config carried over from another
+tool still reads. A value that is none of those is ignored and the default stays, rather
+than a typo silently flipping the switch; the loader prints what it decided either way.
+
+Parsed by `ini_get_bool()` in
+[`cubeboot/source/settings.c`](../cubeboot/source/settings.c).
 
 ## Colors
 
@@ -97,6 +110,22 @@ boot animation, grid, banners — goes through the same projection, so everythin
 together. The trade-off is inherent to anamorphic output: the same 640 pixels now cover a
 wider image, so effective horizontal resolution drops. Off by default. Ported from
 [OffBroadway/cubeboot#57](https://github.com/OffBroadway/cubeboot/pull/57).
+
+## `swiss_on_dvd_boot`
+
+What boots a **physical disc** when you press START on the disc screen. **On by default**,
+which chainloads Swiss with `Autoload=dvd:/*.gcm`. Two things come with that:
+
+- **IGR** — the in-game reset combo returns to cubiboot instead of the stock IPL. This needs
+  `apploader.img` (built alongside `IPL.dol`) copied to `/swiss/patches/apploader.img` on the
+  card; without it Swiss still boots the disc, but the reset combo does not come back.
+- **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region.
+
+Set it to `off` and the disc is handed to the console's own apploader instead -- the stock
+boot, without IGR and without the region bypass. Games on the card are unaffected either
+way: they always go through Swiss.
+
+Either way `swiss-gc.dol` must be at the card root.
 
 ## `device_order`
 

@@ -4,6 +4,8 @@
 #include <gctypes.h>
 #include <ogc/dvd.h>
 
+#include "bnr.h"
+
 #define T_FILE 0
 #define T_DIR 1
 
@@ -123,5 +125,12 @@ typedef struct {
 _Static_assert(sizeof(dolphin_game_into_t) == 32);
 
 dolphin_game_into_t get_game_info(char *game_path);
+
+// Reads opening.bnr off a physical disc with the drive in bypass, skipping the stock disc
+// machine (and with it the apploader load that overwrites Cubiboot, and the region check).
+// Stepped one frame at a time so the menu keeps animating through the drive's spin-up:
+// start it once, then poll every frame until it answers 1 (read) or -1 (no readable disc).
+void disc_banner_start(BNR *out);
+int disc_banner_poll(void);
 
 #endif

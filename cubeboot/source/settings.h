@@ -13,7 +13,7 @@ typedef struct settings {
     u32 menu_start_color;
     char *cube_logo;
     char *default_folder;
-    u32 force_swiss_default;
+    u32 swiss_on_dvd_boot;
     u32 show_watermark;
     u32 disable_mcp_select;
     u32 remember_last_game;

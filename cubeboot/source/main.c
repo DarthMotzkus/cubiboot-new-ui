@@ -315,7 +315,7 @@ int main(int argc, char **argv) {
     set_patch_value(symshdr, syment, symstringdata, "menu_box_color", settings.menu_box_color);
     set_patch_value(symshdr, syment, symstringdata, "menu_start_color", settings.menu_start_color);
 
-    set_patch_value(symshdr, syment, symstringdata, "force_swiss_boot", settings.force_swiss_default);
+    set_patch_value(symshdr, syment, symstringdata, "swiss_on_dvd_boot", settings.swiss_on_dvd_boot);
 
     set_patch_value(symshdr, syment, symstringdata, "disable_mcp_select", settings.disable_mcp_select);
     set_patch_value(symshdr, syment, symstringdata, "remember_last_game", settings.remember_last_game);
