@@ -36,6 +36,7 @@ with support for SD2SP2, SD Gecko, GC Loader/CUBE ODE, FlippyDrive and similar S
   - [Launching Swiss from the menu](#launching-swiss-from-the-menu)
   - [Colors](#colors)
   - [Widescreen (16:9)](#widescreen-169)
+  - [Booting a physical disc](#booting-a-physical-disc)
 - [Large folders and the banner pool](#large-folders-and-the-banner-pool)
 - [Known limitations](#known-limitations)
 - [Building](#building)
@@ -52,9 +53,9 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Grid / banner menu UI** | Ported from cubeboot. Three layouts, selectable with [`menu_grid_type`](#menu-layout); defaults to `small_banners` even without a `config.ini`. |
 | **Real filenames** | The list shows the `.iso` **filename** instead of the internal game name, and loads the correct banner for each disc of a multi-disc game (e.g. Resident Evil 0 Disc 1 / Disc 2). |
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
-| **Remember last played** | [`remember_last_game = 1`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
+| **Remember last played** | [`remember_last_game = on`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
 | **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
-| **16:9 widescreen menu** | [`force_widescreen = 1`](#widescreen-169) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
+| **16:9 widescreen menu** | [`force_widescreen = on`](#widescreen-169) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
@@ -338,8 +339,8 @@ menu_grid_type = small_banners
 ; Folder the menu opens in at startup. Leave commented for the card root.
 ; default_folder = /games
 
-; Pre-select the last game you booted when the menu opens (1 = on, 0 = off).
-remember_last_game = 0
+; Pre-select the last game you booted when the menu opens.
+remember_last_game = off
 
 ; Which storage to read games from, most wanted first: sd2sp2, slot_b, slot_a, ode.
 ; The FatFs volume names (sdc, sdb, sda, gcldr) also work.
@@ -347,8 +348,15 @@ remember_last_game = 0
 ; device_order = sd2sp2, slot_b, slot_a, ode
 
 ; Render the menu anamorphic for a 16:9 TV (set the TV or GCVideo to Full/16:9):
-; force_widescreen = 1
+; force_widescreen = on
+
+; Boot physical discs with the console's own apploader instead of Swiss. Leaving this on
+; (the default) is what gives disc games IGR and lets out-of-region discs boot.
+; swiss_on_dvd_boot = off
 ```
+
+On/off switches take `on` or `off`; `1`/`0`, `yes`/`no` and `true`/`false` also work. A
+value that is neither leaves the default alone instead of flipping the switch.
 
 ### All options
 
@@ -356,7 +364,7 @@ remember_last_game = 0
 |-----|--------|---------|--------------|
 | [`menu_grid_type`](#menu-layout) | `small_banners` · `banners` · `square_icons` | `small_banners` | Menu grid layout |
 | [`default_folder`](#starting-folder) | path | card root | Folder the menu opens in |
-| [`remember_last_game`](#remember-last-played) | `1` · `0` | `0` | Pre-select the last game you booted |
+| [`remember_last_game`](#remember-last-played) | `on` · `off` | `off` | Pre-select the last game you booted |
 | [`device_order`](#where-games-are-read-from) | device names | `sd2sp2, slot_b, slot_a, ode` | Which storage to read games from |
 | [`theme_color`](#colors) | hex RGB · `random` | stock | One color for the whole UI |
 | [`cube_color`](#colors) | hex RGB · `random` | `theme_color` | Boot logo color |
@@ -365,7 +373,8 @@ remember_last_game = 0
 | [`menu_start_color`](#colors) | hex RGB · `random` | `theme_color` | The big block "PRESS START" |
 | `preboot_delay_ms` | milliseconds | `0` | Wait before the boot animation, for a TV to lock on |
 | `postboot_delay_ms` | milliseconds | `0` | Hold the last frame after picking a game, before it boots |
-| [`force_widescreen`](#widescreen-169) | `1` · `0` | `0` | Render the menu anamorphic for a 16:9 TV |
+| [`force_widescreen`](#widescreen-169) | `on` · `off` | `off` | Render the menu anamorphic for a 16:9 TV |
+| [`swiss_on_dvd_boot`](#booting-a-physical-disc) | `on` · `off` | `on` | Boot physical discs through Swiss, which is what carries IGR and the region bypass |
 
 That is the whole list. Full reference: [docs/settings.md](docs/settings.md).
 
@@ -393,7 +402,7 @@ be opened cubiboot falls back to the root.
 
 ### Remember last played
 
-`remember_last_game = 1` makes the menu open **in the folder of the last game you booted**,
+`remember_last_game = on` makes the menu open **in the folder of the last game you booted**,
 with that game already highlighted — so on the next boot you just press **A**. Off by default.
 
 > [!IMPORTANT]
@@ -599,7 +608,7 @@ small `Press START to begin!` line above it is a separate draw and always stays 
 
 ### Widescreen (16:9)
 
-`force_widescreen = 1` renders the menu **anamorphic**: the picture is squeezed horizontally
+`force_widescreen = on` renders the menu **anamorphic**: the picture is squeezed horizontally
 in the signal, and a TV set to **Full/16:9** stretches it back into correct proportions —
 the same trick GameCube games with a 16:9 option use. Everything scales together: boot
 animation, grid, banners, info panel.
@@ -614,6 +623,27 @@ Two things to know:
 Off by default. This only affects cubiboot's own menu — what a game does with the screen is
 between the game and Swiss. Ported from
 [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57) by BenHetherington.
+
+### Booting a physical disc
+
+Press **Z** in the menu to open the console's own disc screen. Cubiboot reads the disc's
+banner itself and hands it to that screen, so the game's cover art and **PRESS START**
+appear exactly as they do on a stock console — including for **out-of-region discs**, which
+the stock screen refuses to read. **B** goes back to the menu.
+
+**START** boots the disc through Swiss (`swiss_on_dvd_boot`, on by default). Two things
+come with that:
+
+- **[In-Game Reset](#in-game-reset) works for disc games**, so the reset combo returns to
+  the cubiboot menu instead of the stock IPL. This needs `apploader.img` in
+  `swiss/patches/` on the card, same as for games on the card.
+- **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region, so
+  a USA disc runs on a Japanese console and so on.
+
+Setting `swiss_on_dvd_boot = off` hands the disc to the console's own apploader instead:
+the stock boot, without IGR and without the region bypass. Games on the card are unaffected
+either way — they always go through Swiss. `swiss-gc.dol` has to be at the card root for
+either path.
 
 ## Large folders and the banner pool
 

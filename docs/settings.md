@@ -14,10 +14,22 @@ menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
 preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
 postboot_delay_ms = 2000        # hold the last frame before the game boots
-force_widescreen = 1            # render the menu anamorphic for a 16:9 TV
+force_widescreen = on           # render the menu anamorphic for a 16:9 TV
 swiss_on_dvd_boot = off         # boot physical discs with the console instead of Swiss
+remember_last_game = on         # open on the last game you booted, already highlighted
 device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
 ```
+
+## On/off switches
+
+Every switch below -- `swiss_on_dvd_boot`, `remember_last_game`, `force_widescreen`,
+`force_progressive`, `show_watermark`, `disable_mcp_select` -- reads `on` or `off`. `1`/`0`,
+`yes`/`no` and `true`/`false` are accepted as well, so a config carried over from another
+tool still reads. A value that is none of those is ignored and the default stays, rather
+than a typo silently flipping the switch; the loader prints what it decided either way.
+
+Parsed by `ini_get_bool()` in
+[`cubeboot/source/settings.c`](../cubeboot/source/settings.c).
 
 ## Colors
 
@@ -113,9 +125,7 @@ Set it to `off` and the disc is handed to the console's own apploader instead --
 boot, without IGR and without the region bypass. Games on the card are unaffected either
 way: they always go through Swiss.
 
-`on`/`off` are the spellings to use; `1`/`0`, `yes`/`no` and `true`/`false` are accepted
-too. Anything else is ignored and leaves the default in place. Either way `swiss-gc.dol`
-must be at the card root.
+Either way `swiss-gc.dol` must be at the card root.
 
 ## `device_order`
 

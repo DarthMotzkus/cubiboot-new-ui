@@ -164,23 +164,8 @@ void load_settings() {
     // is the stock experience minus both of those.
     settings.swiss_on_dvd_boot = ini_get_bool(conf, "swiss_on_dvd_boot", 1);
 
-    // progressive enable
-    int progressive_enabled = 0;
-    if (!ini_sget(conf, "cubeboot", "force_progressive", "%d", &progressive_enabled)) {
-        settings.progressive_enabled = 0;
-    } else {
-        iprintf("Found progressive_enabled = %d\n", progressive_enabled);
-        settings.progressive_enabled = progressive_enabled;
-    }
-
-    // widescreen enable
-    int force_widescreen = 0;
-    if (!ini_sget(conf, "cubeboot", "force_widescreen", "%d", &force_widescreen)) {
-        settings.force_widescreen = 0;
-    } else {
-        iprintf("Found force_widescreen = %d\n", force_widescreen);
-        settings.force_widescreen = force_widescreen;
-    }
+    settings.progressive_enabled = ini_get_bool(conf, "force_progressive", 0);
+    settings.force_widescreen = ini_get_bool(conf, "force_widescreen", 0);
 
     // preboot delay
     u32 preboot_delay_ms = 0;
@@ -200,32 +185,9 @@ void load_settings() {
         settings.postboot_delay_ms = postboot_delay_ms;
     }
 
-    // show_watermark
-    int show_watermark = 0;
-    if (!ini_sget(conf, "cubeboot", "show_watermark", "%d", &show_watermark)) {
-        settings.show_watermark = 0;
-    } else {
-        iprintf("Found show_watermark = %d\n", show_watermark);
-        settings.show_watermark = show_watermark;
-    }
-
-    // disable_mcp_select
-    int disable_mcp_select = 0;
-    if (!ini_sget(conf, "cubeboot", "disable_mcp_select", "%d", &disable_mcp_select)) {
-        settings.disable_mcp_select = 0;
-    } else {
-        iprintf("Found disable_mcp_select = %d\n", disable_mcp_select);
-        settings.disable_mcp_select = disable_mcp_select;
-    }
-
-    // remember last played game
-    int remember_last_game = 0;
-    if (!ini_sget(conf, "cubeboot", "remember_last_game", "%d", &remember_last_game)) {
-        settings.remember_last_game = 0;
-    } else {
-        iprintf("Found remember_last_game = %d\n", remember_last_game);
-        settings.remember_last_game = remember_last_game;
-    }
+    settings.show_watermark = ini_get_bool(conf, "show_watermark", 0);
+    settings.disable_mcp_select = ini_get_bool(conf, "disable_mcp_select", 0);
+    settings.remember_last_game = ini_get_bool(conf, "remember_last_game", 0);
 
     // which storage the loader and the menu read from, most wanted first
     const char *device_order = ini_get(conf, "cubeboot", "device_order");
