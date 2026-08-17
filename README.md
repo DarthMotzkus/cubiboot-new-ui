@@ -185,7 +185,7 @@ modchip needed.
 ### Method 4: FlippyDrive
 
 A FlippyDrive boots its own loader from its **internal flash**, so cubiboot replaces the
-`cubeboot` entry in there. Games, `config.ini` and Swiss stay on the SD card as usual.
+`cubeboot` entry in there. Games, `config.ini` and Swiss stay on the Flippydrive SD card as usual.
 
 The drive loads it **by name**, so it has to end up called `cubeboot.dol`. Under any other
 name it is just another file sitting in flash.
@@ -224,11 +224,11 @@ name it is just another file sitting in flash.
 > erased during the firmware update process."* Nothing is lost from the SD card — only the
 > copy inside the drive.
 
-**Swiss and In-Game Reset on a FlippyDrive** work the same as anywhere else, from the SD
+**Swiss and In-Game Reset on a FlippyDrive** work the same as anywhere else, from the Flippydrive SD
 card: `swiss-gc.dol` in the card root, `apploader.img` in `swiss/patches/`. The drive's flash
 also carries a Swiss of its own, and cubiboot will accept that one if the card has none — but
 the `apploader.img` has to be ours, from the same release as the loader, so that one belongs
-on the card.
+on the Flippydrive drive sd card.
 
 > [!NOTE]
 > The drive's bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB.
