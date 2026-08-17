@@ -432,9 +432,23 @@ side owns the current device.
 
 The name is Swiss's, not a choice: `emu/loader.c` builds `Autoload=<dev>:<path>` and hands
 that string to Swiss, so an invented spelling would need translating there. `flippy` and
-`flippydrive` are config spellings for it, and `ode` stopped being a static alias for
-`gcldr` -- it now resolves against what the drive says it is, so a user does not have to
-know which command set their ODE speaks.
+`flippydrive` are config spellings for it. `ode` is a static alias for `gcldr` and covers
+the GC Loader and the CUBE-ODE, which speak the same commands; a FlippyDrive is deliberately
+not under it, because it is not an ODE -- it rides the drive ribbon beside the optical drive
+instead of replacing it, which is also why it keeps the disc screen (Z) that a real ODE
+refuses, and why cubiboot brackets that screen's disc read with the drive's bypass
+entry/exit commands (`fldrv_bypass_enter/exit`).
+
+Three more consequences of the drive not being an ODE, all deliberate:
+
+- **Swiss comes from the drive's flash first.** `dvd_custom_open_flash()` asks the drive's
+  internal flash -- which ships with Swiss -- before falling back to the card root, so a
+  `swiss-gc.dol` on the FlippyDrive's SD card is a precaution, not a requirement.
+- **IGR is `IGRType=Reboot`, not `Apploader`.** The drive autoloads cubiboot from flash on
+  every reboot, so a plain reboot already returns to the menu; `apploader.img` is never
+  read on this hardware and does not work there. `chainload_swiss_game()` picks the type
+  from the active device.
+- **The menu header names it `FLIPPY SD`** instead of lumping it under `ODE SD`.
 
 **What the protocol actually needed.** Almost none of it was new. The file read is the
 ordinary drive read command with the handle in bits 16-23 -- the same transfer passthrough

@@ -129,10 +129,19 @@ void chainload_swiss_game(char* game_path, bool passthrough) {
     }
 
     char* igr_type = NULL;
-    dvd_custom_open_flash("/swiss/patches/apploader.img", FILE_ENTRY_TYPE_FILE, 0);
-    file_status_t* status = dvd_custom_status();
-    if (status != NULL && status->result == 0) {
-        igr_type = "IGRType=Apploader";
+    const char* igr_dev = emu_get_device();
+    if (igr_dev != NULL && strcmp(igr_dev, "fldrv") == 0) {
+        // A FlippyDrive comes back to cubiboot on its own: the drive autoloads our DOL
+        // from its flash on every reboot, so Swiss's plain Reboot IGR already lands on
+        // the menu. The Apploader IGR every other device needs does not work here --
+        // no apploader.img on the card is involved, or required.
+        igr_type = "IGRType=Reboot";
+    } else {
+        dvd_custom_open_flash("/swiss/patches/apploader.img", FILE_ENTRY_TYPE_FILE, 0);
+        file_status_t* status = dvd_custom_status();
+        if (status != NULL && status->result == 0) {
+            igr_type = "IGRType=Apploader";
+        }
     }
 
     const char* arg_list[] = {

@@ -15,6 +15,11 @@
 // calls that address an open file, the handle goes in bits 16-23.
 #define DVD_FLIPPY_FILEAPI_BASE 0xB5000000
 
+// Bypass toggle. One command both ways: entry is the bare command, exit carries two
+// magic words in the argument buffers -- while bypassed the drive is only snooping the
+// bus, so the way back has to be something ordinary drive traffic can never spell.
+#define DVD_FLIPPY_BYPASS 0xDC000000
+
 // Handle numbers, matching what the drive hands out. 1..31 are ordinary files; the
 // flash is a fixed handle of its own.
 #define FLDRV_MAX_HANDLES  31
@@ -139,4 +144,18 @@ void fldrv_set_default_fd(uint32_t current_fd, uint32_t second_fd) {
 	fldrv_xfer(DVD_FLIPPY_FILEAPI_BASE | IPC_SET_DEFAULT_FD
 	               | ((current_fd & 0xFF) << 16) | ((second_fd & 0xFF) << 8),
 	           0, 0, NULL, 0, false);
+}
+
+// The drive goes transparent and the optical drive behind it answers the bus, which is
+// what lets the disc screen and a passthrough boot read a real disc on a console that
+// still has its drive. The file API is unreachable until the exit magic is sent; open
+// handles survive in the drive across the round trip. Swiss brackets its own disc
+// passthrough with the same pair (flippy_bypass()).
+void fldrv_bypass_enter(void) {
+	fldrv_xfer(DVD_FLIPPY_BYPASS, 0, 0, NULL, 0, false);
+}
+
+void fldrv_bypass_exit(void) {
+	fldrv_xfer(DVD_FLIPPY_BYPASS, FD_BYPASS_EXIT_MAGIC0, FD_BYPASS_EXIT_MAGIC1,
+	           NULL, 0, false);
 }

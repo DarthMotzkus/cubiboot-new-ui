@@ -3,7 +3,6 @@
 #include <string.h>
 #include "ffs/ff.h"
 #include "tweaks.h"
-#include "drive_probe.h"
 #include "fldrv.h"
 
 #ifdef IPL_CODE
@@ -67,11 +66,12 @@ const char* emu_get_device() {
 
 // One order for the whole loader: it is where the bootstrap looks for config.ini, and it is
 // what device_order falls back to when config.ini does not set it. Card readers first, the
-// ODE last, so a console without one only reaches the drive-interface inquiry once
-// everything else has been ruled out.
+// drive-interface devices last, so a console without one only reaches the drive-interface
+// inquiry once everything else has been ruled out.
 // fldrv sits beside gcldr rather than after the readers for a reason of its own: the
-// two are the same physical connector, so only one of them can ever answer, and their
-// relative order never decides anything on a real console.
+// two want the same attachment point (an ODE replaces the drive, a FlippyDrive rides its
+// ribbon), so only one of them can ever answer, and their relative order never decides
+// anything on a real console.
 #define EMU_DEFAULT_DEVICE_ORDER "sdc, sdb, sda, gcldr, fldrv"
 
 static void emu_mount_path(int device, char* path) {
@@ -88,10 +88,13 @@ static const struct { const char* alias; const char* volume; } emu_device_aliase
 	{ "slot_b",      "sdb"   },
 	{ "slot_a",      "sda"   },
 	{ "gcloader",    "gcldr" },
+	// "ode" covers the drive replacements -- GC Loader and CUBE-ODE speak the same
+	// commands, so one volume serves both. A FlippyDrive is NOT one of them: it rides
+	// the drive ribbon beside a possible real drive instead of replacing it, and it
+	// has its own names below.
+	{ "ode",         "gcldr" },
 	{ "flippy",      "fldrv" },
 	{ "flippydrive", "fldrv" },
-	// "ode" is deliberately absent: it names a category, not one device, and is
-	// resolved against what is actually on the bus. See emu_find_device().
 };
 
 static int emu_match_volume(const char* name, int len) {
@@ -112,19 +115,6 @@ static int emu_find_device(const char* name, int len) {
 	int device = emu_match_volume(name, len);
 	if (device >= 0)
 		return device;
-
-	// "ode" means "whichever ODE is installed", not one particular protocol. There is
-	// a single drive connector, so a GC Loader and a FlippyDrive can never both be
-	// present -- which makes this answerable rather than ambiguous: ask the drive.
-	//
-	// Resolving it here rather than expanding it into two entries keeps the list a
-	// plain sequence of devices, and costs nothing: drive_probe() caches its inquiry,
-	// and by the time a device_order line is parsed the bootstrap has already probed.
-	// A console with neither falls through to gcldr, which then fails to mount exactly
-	// as it does today.
-	if (emu_name_is(name, len, "ode")) {
-		return drive_probe() == DRIVE_ID_FLIPPY ? EMU_DEV_FLDRV : EMU_DEV_GCLDR;
-	}
 
 	int aliases = sizeof(emu_device_aliases) / sizeof(emu_device_aliases[0]);
 	for (int i = 0; i < aliases; i++) {
@@ -261,9 +251,10 @@ static void emu_unmount_current() {
 
 // Called once config.ini has been parsed, with the raw [cubeboot] device_order value.
 //
-// The list names FatFs volumes -- sdc (SD2SP2), sdb (memory card slot B), sda (slot A) and
-// gcldr (the card inside a GC Loader style ODE) -- and the first one that mounts becomes the
-// volume everything after this point is read from: the IPL dump, swiss-gc.dol, banners and
+// The list names FatFs volumes -- sdc (SD2SP2), sdb (memory card slot B), sda (slot A),
+// gcldr (the card inside a GC Loader style ODE) -- plus fldrv, the FlippyDrive, which is
+// not a volume at all (see emu_dev_is_native). The first one that mounts becomes the
+// device everything after this point is read from: the IPL dump, swiss-gc.dol, banners and
 // the games the menu lists. Leaving a device out of the list is how you keep cubiboot off
 // it; there is no separate on/off switch.
 //
@@ -426,12 +417,12 @@ int dvd_custom_open_flash(const char *path, uint8_t type, uint8_t flags) {
 		if (fldrv_open_flash(path, type, flags) == 0)
 			return 0;
 
-		// Then the SD card, because the two callers of this want different things. The
-		// drive's flash is right for what the drive shipped -- stub.bin, its own Swiss --
-		// but apploader.img has to be OUR build's, and the card root is where the docs
-		// tell people to put it. Flash-only here would silently cost FlippyDrive owners
-		// In-Game Reset, since a drive whose flash has no /swiss/patches would simply
-		// report no file and the option would switch itself off.
+		// Then the SD card, as a precaution rather than a requirement. The drive's flash
+		// ships with everything this call is used for -- stub.bin and its own Swiss, which
+		// is why a FlippyDrive needs no swiss-gc.dol on its card -- but a drive whose
+		// flash lost a file (a failed copy, a trimmed firmware) would otherwise turn the
+		// whole boot path off. The card root is where the docs tell people to put the
+		// fallback copy.
 		return fldrv_open(path, type, flags);
 	}
 
@@ -567,6 +558,14 @@ void dvd_custom_close(uint32_t fd) {
 }
 
 void dvd_custom_bypass_enter() {
+	// On a FlippyDrive the reset below is not enough: the drive sits in-line on the
+	// ribbon, intercepting the bus, and keeps doing so across a reset. It has to be
+	// told to go transparent first -- then the reset that follows reaches the real
+	// optical drive behind it, exactly as it does on an unmodified console. The drive
+	// stays bypassed across the reset pulse; Swiss relies on the same ordering.
+	if (emu_is_native())
+		fldrv_bypass_enter();
+
 	passthrough = true;
 	#ifdef IPL_CODE
 	dvd_reset();
@@ -580,11 +579,19 @@ void dvd_custom_bypass() {
 }
 
 void dvd_custom_bypass_exit() {
+	// Motor first, magic second: while bypassed the drive interface belongs to the real
+	// optical drive, so the stop-motor command still reaches it. The exit magic is the
+	// one thing the FlippyDrive keeps listening for, and it brings the file API back --
+	// with the handles that were open before the round trip intact.
 	#ifdef IPL_CODE
 	dvd_stop_motor();
 	#else
 	DI_StopMotor();
 	#endif
+
+	if (emu_is_native())
+		fldrv_bypass_exit();
+
 	passthrough = false;
 }
 

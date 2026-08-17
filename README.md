@@ -54,7 +54,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Real filenames** | The list shows the `.iso` **filename** instead of the internal game name, and loads the correct banner for each disc of a multi-disc game (e.g. Resident Evil 0 Disc 1 / Disc 2). |
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = on`](#remember-last-played) opens the menu in the folder of your last game with it already highlighted — press **A** and go. |
-| **Games from the ODE SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE and FlippyDrive, so the menu lists what is already on it with no second card reader. |
+| **Games from the ODE / FlippyDrive SD** | [`device_order`](#where-games-are-read-from) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE or a FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **16:9 widescreen menu** | [`force_widescreen = on`](#widescreen-169) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
@@ -86,6 +86,13 @@ These files always live at the **root** of that card:
 
 Your games can live anywhere, including subfolders — see [`default_folder`](#starting-folder).
 
+> [!NOTE]
+> **On a FlippyDrive** the last two lines work differently. The drive carries a Swiss of its
+> own in its **internal flash**, and cubiboot uses that copy **first** — `swiss-gc.dol` on the
+> card is only a precaution for a flash that lost its own. And `apploader.img` is not used at
+> all: In-Game Reset on a FlippyDrive goes through Swiss's **Reboot** option instead
+> ([details](#in-game-reset)).
+
 ## Downloads
 
 Every tagged release (`v*`) publishes:
@@ -98,7 +105,7 @@ Every tagged release (`v*`) publishes:
 | `cubiboot_picoloader_payload.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
 | `cubiboot_picoboot_payload.uf2` | The cubiboot payload for **PicoBoot** — flash it on top of the official [PicoBoot](https://github.com/webhdx/PicoBoot/releases) firmware (≥ v0.4; Pico 2 needs v0.5.0) and it replaces the stock gekkoboot in place; no `ipl.dol` or gekkoboot needed on the card. One file for both boards. |
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and **CUBE-ODE**, branded with the Cubiboot banner. |
-| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](#in-game-reset)). |
+| `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](#in-game-reset)). Not used on a **FlippyDrive**, which gets IGR through Swiss's **Reboot** option instead. |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
 
 [**→ Latest release**](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest)
@@ -209,8 +216,10 @@ name it is just another file sitting in flash.
 8. Choose **FlippyDrive Flash** as the destination device, then its root as the destination
    folder. Confirm overwriting the `cubeboot.dol` already there.
 9. Reboot. The drive autoloads it and you land on the cubiboot menu.
-10. Put Swiss on the SD card as `swiss-gc.dol`, plus a [`config.ini`](#configuration) and your
-    games.
+10. Put a [`config.ini`](#configuration) and your games on the SD card. `swiss-gc.dol` on the
+    card is **optional** here: cubiboot boots games with the Swiss already in the drive's
+    **flash**, and only falls back to a `swiss-gc.dol` at the card root if the flash copy is
+    missing. Keeping one there anyway is a cheap precaution.
 
 > [!IMPORTANT]
 > Step 3 is what makes step 8 possible, and it is the step people skip. Booting normally
@@ -224,11 +233,13 @@ name it is just another file sitting in flash.
 > erased during the firmware update process."* Nothing is lost from the SD card — only the
 > copy inside the drive.
 
-**Swiss and In-Game Reset on a FlippyDrive** work the same as anywhere else, from the Flippydrive SD
-card: `swiss-gc.dol` in the card root, `apploader.img` in `swiss/patches/`. The drive's flash
-also carries a Swiss of its own, and cubiboot will accept that one if the card has none — but
-the `apploader.img` has to be ours, from the same release as the loader, so that one belongs
-on the Flippydrive drive sd card.
+**Swiss and In-Game Reset on a FlippyDrive** are simpler than anywhere else. Swiss comes from
+the drive's **flash** — cubiboot prefers that copy, and a `swiss-gc.dol` at the root of the
+FlippyDrive's SD card is only the fallback. And In-Game Reset needs **no `apploader.img`**:
+the drive autoloads cubiboot from flash on every reboot, so a plain reboot already lands back
+on the menu. Set Swiss's **In-Game Reset** to **`Reboot`** (Settings → Global Game Settings) —
+cubiboot passes that automatically for games it boots, so the setting only matters for games
+you start from inside Swiss yourself.
 
 > [!NOTE]
 > The drive's bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB.
@@ -237,7 +248,17 @@ on the Flippydrive drive sd card.
 
 ### In-Game Reset
 
-Optional, works with every method above.
+Optional, works with every method above. The reset combo is **Z + A + START** in a game, and
+it returns to the cubiboot menu. How it gets there depends on the hardware:
+
+**FlippyDrive ([Method 4](#method-4-flippydrive)): nothing to install.** The drive autoloads
+cubiboot from its flash on every reboot, so a plain reboot already lands on the menu —
+cubiboot tells Swiss to use its **Reboot** IGR automatically for every game it boots. No
+`apploader.img` anywhere. (If you also start games from inside Swiss itself, set Swiss's
+**In-Game Reset** to **`Reboot`** in **Settings → Global Game Settings (4/6)** so those get
+it too. The `Apploader` option does **not** work on a FlippyDrive.)
+
+**Everything else (Methods 1–3):**
 
 1. Download [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip).
 2. Extract it to the **root** of the SD card — this drops `apploader.img` into
@@ -261,7 +282,8 @@ lands on the new menu, In-Game Reset lands on the old one. The symptom is a fix 
 setting that works fine until you reset out of a game, and then doesn't.
 
 If you never installed `apploader.img`, there is nothing to keep in sync — replace the loader
-and you are done.
+and you are done. A **FlippyDrive** never has one: its In-Game Reset goes through a plain
+reboot, so on that hardware the loader in the drive's flash is the only thing to replace.
 
 | Installed with | Replace |
 |---|---|
@@ -269,7 +291,7 @@ and you are done.
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoBoot) | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 3](#method-3-gc-loader-and-cube-ode) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
-| [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below), **and** replace `swiss/patches/apploader.img` on the card |
+| [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below) — no `apploader.img` involved |
 
 Both files come from the same release — mixing an `apploader.img` from one release with a
 loader from another is the situation this section is about.
@@ -342,10 +364,10 @@ menu_grid_type = small_banners
 ; Pre-select the last game you booted when the menu opens.
 remember_last_game = off
 
-; Which storage to read games from, most wanted first: sd2sp2, slot_b, slot_a, ode.
-; The FatFs volume names (sdc, sdb, sda, gcldr) also work.
-; Leave commented for the default below.
-; device_order = sd2sp2, slot_b, slot_a, ode
+; Which storage to read games from, most wanted first: sd2sp2, slot_b, slot_a, ode
+; (GC Loader / CUBE-ODE) and flippy (FlippyDrive). The FatFs volume names (sdc, sdb,
+; sda, gcldr, fldrv) also work. Leave commented for the default below.
+; device_order = sd2sp2, slot_b, slot_a, ode, flippy
 
 ; Render the menu anamorphic for a 16:9 TV (set the TV or GCVideo to Full/16:9):
 ; force_widescreen = on
@@ -365,7 +387,7 @@ value that is neither leaves the default alone instead of flipping the switch.
 | [`menu_grid_type`](#menu-layout) | `small_banners` · `banners` · `square_icons` | `small_banners` | Menu grid layout |
 | [`default_folder`](#starting-folder) | path | card root | Folder the menu opens in |
 | [`remember_last_game`](#remember-last-played) | `on` · `off` | `off` | Pre-select the last game you booted |
-| [`device_order`](#where-games-are-read-from) | device names | `sd2sp2, slot_b, slot_a, ode` | Which storage to read games from |
+| [`device_order`](#where-games-are-read-from) | device names | `sd2sp2, slot_b, slot_a, ode, flippy` | Which storage to read games from |
 | [`theme_color`](#colors) | hex RGB · `random` | stock | One color for the whole UI |
 | [`cube_color`](#colors) | hex RGB · `random` | `theme_color` | Boot logo color |
 | [`menu_cube_color`](#colors) | hex RGB · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
@@ -451,14 +473,13 @@ banners and the games the menu lists.
 | `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
 | `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
 | `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
-| `ode` | **Whichever ODE is installed** — resolved by asking the drive, so it covers both of the two below |
-| `gcloader` (or `gcldr`) | The SD card **inside a [GC Loader](https://gcloaderhq.com/)**, or anything answering the same drive commands |
-| `flippy`, `flippydrive` (or `fldrv`) | The SD card **inside a FlippyDrive** |
+| `ode` (or `gcloader`, `gcldr`) | The SD card **inside an ODE** — a [GC Loader](https://gcloaderhq.com/), a CUBE-ODE, or anything answering the same drive commands |
+| `flippy`, `flippydrive` (or `fldrv`) | The SD card **inside a FlippyDrive** — not an ODE: it rides the drive ribbon next to the optical drive instead of replacing it |
 
 The default, used when the key is absent:
 
 ```ini
-device_order = sd2sp2, slot_b, slot_a, ode
+device_order = sd2sp2, slot_b, slot_a, ode, flippy
 ```
 
 Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
@@ -477,8 +498,9 @@ Two things to know:
   it has to, since `device_order` lives *inside* that file. If two cards both carry a
   `config.ini`, the default order breaks the tie.
 
-The ODE's card is mounted read-only. A console without an ODE pays one drive inquiry per
-boot for the `gcldr` entry, which gives up as soon as a real optical drive answers.
+The ODE's and the FlippyDrive's cards are read-only to cubiboot. A console with neither pays
+one drive inquiry per boot for those entries, which gives up as soon as a real optical drive
+answers.
 
 ### Homebrew apps
 
@@ -636,15 +658,21 @@ come with that:
 
 - **[In-Game Reset](#in-game-reset) works for disc games**, so the reset combo returns to
   the cubiboot menu instead of the stock IPL. This needs `apploader.img` in
-  `swiss/patches/` on the card, same as for games on the card.
+  `swiss/patches/` on the card, same as for games on the card — except on a **FlippyDrive**,
+  where IGR is a plain reboot and needs nothing installed.
 - **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region, so
   a USA disc runs on a Japanese console and so on.
 
 > [!NOTE]
-> **On a console with an ODE** — a GC Loader, CUBE-ODE or FlippyDrive — the disc screen does
-> not open. The ODE occupies the drive connector, so there is no optical drive behind it and
-> no disc to read; **Z** answers with the menu's error tone and nothing else. Mount what you
-> want to play in the ODE and boot it from the list as usual.
+> **On a console with an ODE** — a GC Loader or CUBE-ODE — the disc screen does not open.
+> The ODE occupies the drive connector, so there is no optical drive behind it and no disc
+> to read; **Z** answers with the menu's error tone and nothing else. Mount what you want to
+> play in the ODE and boot it from the list as usual.
+>
+> A **FlippyDrive is not an ODE**: it sits in-line on the drive ribbon, so the optical drive
+> is still there. The disc screen works — cubiboot switches the FlippyDrive into bypass for
+> the read, and back afterwards. If the optical drive was physically removed, the screen just
+> plays out the stock no-disc sequence.
 
 Setting `swiss_on_dvd_boot = off` hands the disc to the console's own apploader instead:
 the stock boot, without IGR and without the region bypass. Games on the card are unaffected
