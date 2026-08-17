@@ -19,6 +19,7 @@
 #include "flippy_sync.h"
 #include "gc_dvd.h"
 #include "games.h"
+#include "emu/drive_probe.h"
 
 #include "video.h"
 #include "dol.h"
@@ -401,6 +402,14 @@ __attribute_used__ void pre_thread_init() {
 
     gm_init_heap();
     gm_init_thread();
+
+    // Ask once, here, who is on the drive connector: the disc screen needs the answer, and
+    // this is the last moment the drive interface is idle. On an ODE the enumeration thread
+    // below reads files over that same interface, so an inquiry raised later could land in
+    // the middle of one of its transfers. The result is cached, so the disc screen's check
+    // costs nothing and never touches the bus.
+    drive_probe();
+
     if (!start_passthrough_game) {
         // NULL = cold boot. The starting folder (last-played when remember_last_game is
         // on, else default_folder) is resolved on the enum thread, NOT here: this hook

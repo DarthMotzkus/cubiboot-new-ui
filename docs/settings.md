@@ -127,6 +127,11 @@ way: they always go through Swiss.
 
 Either way `swiss-gc.dol` must be at the card root.
 
+None of this applies on a console with an ODE (GC Loader, CUBE-ODE, FlippyDrive): the ODE is
+what sits on the drive connector, so there is no optical drive to read and the disc screen
+does not open at all -- **Z** answers with the menu's error tone. The check is a single
+inquiry made once at startup, so it costs nothing per press.
+
 ## `device_order`
 
 Which storage cubiboot reads from, most wanted first. The first entry that mounts becomes

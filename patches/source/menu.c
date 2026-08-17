@@ -34,6 +34,7 @@
 #include "bnr.h"
 
 #include "emu/tweaks.h"
+#include "emu/drive_probe.h"
 
 // for setup
 __attribute_reloc__ void (*menu_alpha_setup)();
@@ -986,6 +987,21 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         // drive plays out under the stock "Reading disc..." animation instead of freezing
         // the menu on the button press.
         //
+        // An ODE occupies the drive connector, so there is no disc for this screen to read,
+        // and taking it into bypass would point the file layer -- which is how the game
+        // list is being read on a GC Loader or a FlippyDrive -- at raw sectors mid-session.
+        //
+        // Only a positive identification refuses. DRIVE_ID_NONE has to open the screen:
+        // it means the drive did not answer the inquiry, which an optical drive that has
+        // not been reset does routinely, so treating it as "no drive" would take the disc
+        // screen away from the consoles it is for. drive_probe() is cached from startup,
+        // so this asks nothing of the bus.
+        drive_id_t drive = drive_probe();
+        if (drive == DRIVE_ID_GCODE || drive == DRIVE_ID_FLIPPY) {
+            Jac_PlaySe(SOUND_CARD_ERROR);
+            return MENU_GAMESELECT_TRANSITION_ID;
+        }
+
         // The enumeration thread stands down for the duration: it and the disc read would
         // be driving the same device layer at once, and bypass points that layer at the
         // drive rather than the card.

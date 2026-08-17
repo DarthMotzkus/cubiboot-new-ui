@@ -640,6 +640,12 @@ come with that:
 - **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region, so
   a USA disc runs on a Japanese console and so on.
 
+> [!NOTE]
+> **On a console with an ODE** — a GC Loader, CUBE-ODE or FlippyDrive — the disc screen does
+> not open. The ODE occupies the drive connector, so there is no optical drive behind it and
+> no disc to read; **Z** answers with the menu's error tone and nothing else. Mount what you
+> want to play in the ODE and boot it from the list as usual.
+
 Setting `swiss_on_dvd_boot = off` hands the disc to the console's own apploader instead:
 the stock boot, without IGR and without the region bypass. Games on the card are unaffected
 either way — they always go through Swiss. `swiss-gc.dol` has to be at the card root for
