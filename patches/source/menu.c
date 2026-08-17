@@ -42,10 +42,8 @@ __attribute_reloc__ void (*menu_alpha_setup)();
 __attribute_reloc__ void (*prep_text_mode)();
 __attribute_reloc__ void (*gx_draw_text)(u16 index, text_group* text, text_draw_group* text_draw, GXColor* color);
 __attribute_reloc__ void (*setup_gameselect_menu)(u8 alpha_0, u8 alpha_1, u8 alpha_2);
-__attribute_reloc__ u32 *dvd_state;
 __attribute_reloc__ void (*stock_gameselect_init)(u32 initialize_assets);
 __attribute_reloc__ s32 (*stock_gameselect_input)();
-__attribute_reloc__ void (*stock_bs2_reset)();
 __attribute_reloc__ GXColorS10 *(*get_save_color)(u32 color_index, s32 save_type);
 __attribute_reloc__ void (*setup_gameselect_anim)();
 __attribute_reloc__ void (*setup_cube_anim)();
@@ -98,17 +96,6 @@ __attribute_reloc__ void (*apply_save_rot)(s32 x, s32 y, s32 z, Mtx matrix);
 __attribute_reloc__ u32 *bs2start_ready;
 __attribute_reloc__ u32 *banner_pointer;
 __attribute_reloc__ u32 *banner_ready;
-
-// menu_init allocates the IPL's 8 KiB disc-banner buffer before Cubiboot installs its
-// default banner. Keep that allocation so the stock Game Play reader can DMA opening.bnr
-// into the buffer it expects when Z hands the screen back to it.
-__attribute_data__ static u32 diag_dvd_seen = 0;
-__attribute_data__ static u32 diag_dvd_last = 0;
-__attribute_data__ static u32 diag_has_dvd = 0xFF;
-__attribute_data__ static u32 diag_dvd_err = 0;
-__attribute_data__ static u32 diag_fail_err = 0;
-__attribute_data__ static u32 diag_id_after = 0;
-__attribute_data__ static u32 diag_warm_tries = 0;
 
 // The disc's own banner, read by Cubiboot and handed to the stock renderer. In lowmem
 // because it is 8 KiB and nothing loads a game over it any more on this path.
@@ -1162,69 +1149,10 @@ __attribute_used__ s32 handle_gameselect_inputs() {
 
 __attribute_data__ u8 show_watermark = 1;
 void alpha_watermark(void) {
-    // DIAGNOSTIC (temporary): sample the stock disc state machine every frame. This hook is
-    // called by the IPL's own draw code, so it also runs while the stock Game Play screen
-    // owns the display -- the one place a print can be read back off a real console.
-    // `seen` is a bitmask of every DvdState visited, which is what identifies where the
-    // machine stops: 4->20 is the disc-magic reject, 12->20 the region reject, 14/15/16 a
-    // successful read.
-    u32 disc_state = *dvd_state;
-    diag_dvd_last = disc_state;
-    if (disc_state < 32) diag_dvd_seen |= (1u << disc_state);
-    bool show_diag = (diag_dvd_seen & ~1u) != 0;
-
-    if (!show_watermark && !is_running_dolphin && !show_diag) return;
+    if (!show_watermark && !is_running_dolphin) return;
     prep_text_mode();
 
     GXColor yellow_alpha = {0xFF, 0xFF, 0x00, 0x80};
-    if (show_watermark || is_running_dolphin) {
-        draw_text("BETA TEST", 24, 330, 0, &yellow_alpha);
-        draw_text("cubeboot rc" CONFIG_BETA_RC, 22, 330, 28, &yellow_alpha);
-    }
-
-    if (show_diag) {
-        GXColor diag_color = {0x00, 0xFF, 0x00, 0xFF};
-        char line[64];
-
-        u32 bi2 = *(volatile u32*)0x800000F4;
-        u32 country = 0xFFFFFFFF;
-        if (bi2 >= 0x80000000 && bi2 < 0x81700000) country = *(volatile u32*)(bi2 + 0x18);
-
-        // Which IPL the loader actually matched: every revision resolves dvd_state to its
-        // own address, so the pointer doubles as the revision the stock addresses came from.
-        const char *rev = "?";
-        switch ((u32)dvd_state) {
-            case 0x8145d548: rev = "NTSC10";  break;
-            case 0x814813c8: rev = "NTSC11";  break;
-            case 0x814834a0: rev = "N12-001"; break;
-            case 0x81483920: rev = "N12-101"; break;
-            case 0x814ad268: rev = "PAL10";   break;
-            case 0x8147c088: rev = "PAL11";   break;
-            case 0x814af560: rev = "PAL12";   break;
-        }
-
-        sprintf(line, "%s st=%d seen=%08x", rev, (int)diag_dvd_last, (unsigned int)diag_dvd_seen);
-        draw_text(line, 18, 20, 60, &diag_color);
-        sprintf(line, "id=%08x mg=%08x", (unsigned int)*(volatile u32*)0x80000000,
-                                         (unsigned int)*(volatile u32*)0x8000001C);
-        draw_text(line, 18, 20, 85, &diag_color);
-        sprintf(line, "ctry=%d vi=%d", (int)country, (int)(*(volatile u16*)0xCC00206E & 2));
-        draw_text(line, 18, 20, 110, &diag_color);
-
-        // Latch the drive's own error code the first time the stock machine gives up, so a
-        // failed handover can be told apart from a genuinely unreadable disc.
-        if (diag_dvd_last >= 18 && diag_fail_err == 0) {
-            diag_fail_err = dvd_get_error();
-            if (diag_fail_err == 0) diag_fail_err = 0xFFFFFFFF;
-        }
-
-        sprintf(line, "warm=%d/%d e1=%06x", (int)diag_has_dvd, (int)diag_warm_tries, (unsigned int)diag_dvd_err);
-        draw_text(line, 18, 20, 135, &diag_color);
-        sprintf(line, "wmg=%08x e2=%06x", (unsigned int)diag_id_after, (unsigned int)diag_fail_err);
-        draw_text(line, 18, 20, 160, &diag_color);
-
-        extern u32 diag_banner_stage;
-        sprintf(line, "bnr stage=%d", (int)diag_banner_stage);
-        draw_text(line, 18, 20, 185, &diag_color);
-    }
+    draw_text("BETA TEST", 24, 330, 0, &yellow_alpha);
+    draw_text("cubeboot rc" CONFIG_BETA_RC, 22, 330, 28, &yellow_alpha);
 }

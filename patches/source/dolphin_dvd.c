@@ -206,8 +206,6 @@ static volatile u32 *const di = (volatile u32*)0xCC006000;
 #define DI_I_LEN  6
 #define DI_I_CR   7
 
-u32 diag_banner_stage = 0; // 1 spin-up, 2 header, 3 locate, 4 banner, 5 done, 6+ failed
-
 static int  dbr_step;
 static int  dbr_errors;
 static int  dbr_frames;
@@ -231,8 +229,7 @@ static void di_start_read(void *dst, u32 len, u32 offset) {
 static inline bool di_busy(void)  { return (di[DI_I_CR] & 1) != 0; }
 static inline bool di_failed(void) { return (di[DI_I_SR] & 0x4) != 0; }
 
-static int dbr_fail(u32 stage) {
-    diag_banner_stage = stage;
+static int dbr_fail(void) {
     dvd_custom_bypass_exit();
     dbr_step = -1;
     return -1;
@@ -244,7 +241,6 @@ void disc_banner_start(BNR *out) {
     dbr_errors = 0;
     dbr_frames = 0;
     dbr_offset = 0;
-    diag_banner_stage = 1;
 
     // Takes the drive off the file protocol and resets it, so the spin-up wait below has to
     // come after this, not before.
@@ -253,7 +249,7 @@ void disc_banner_start(BNR *out) {
 
 // 0 = still working, 1 = banner read, -1 = no readable disc.
 int disc_banner_poll(void) {
-    if (++dbr_frames > 900) return dbr_fail(6); // ~15s, well past any spin-up
+    if (++dbr_frames > 900) return dbr_fail(); // ~15s, well past any spin-up
 
     switch (dbr_step) {
     case 0: // ask the drive for the disc ID; it answers once the disc is up to speed
@@ -264,29 +260,27 @@ int disc_banner_poll(void) {
     case 1:
         if (di_busy()) return 0;
         if (di_failed()) {
-            if (++dbr_errors > 40) return dbr_fail(6);
+            if (++dbr_errors > 40) return dbr_fail();
             dbr_step = 0; // not ready yet -- ask again next frame
             return 0;
         }
-        diag_banner_stage = 2;
         di_start_read(&dbr_header, sizeof(DiskHeader), 0);
         dbr_step = 2;
         return 0;
 
     case 2:
         if (di_busy()) return 0;
-        if (di_failed()) return dbr_fail(7);
+        if (di_failed()) return dbr_fail();
         DCInvalidateRange(&dbr_header, sizeof(DiskHeader));
-        if (dbr_header.DVDMagicWord != 0xC2339F3D) return dbr_fail(8);
+        if (dbr_header.DVDMagicWord != 0xC2339F3D) return dbr_fail();
 
-        diag_banner_stage = 3;
         dbr_offset = get_banner_offset_fast(&dbr_header);
         if (dbr_offset == 0) {
             // Rare layout: walk the FST instead. Blocking, but the drive is spinning by now
             // so it costs a few milliseconds rather than a spin-up.
             if (dbr_header.FSTSize <= 0x100000)
                 dbr_offset = get_banner_offset_slow(&dbr_header, 0).offset;
-            if (dbr_offset == 0) return dbr_fail(9);
+            if (dbr_offset == 0) return dbr_fail();
         }
         di_start_read(dbr_scratch, 32, dbr_offset);
         dbr_step = 3;
@@ -294,22 +288,20 @@ int disc_banner_poll(void) {
 
     case 3:
         if (di_busy()) return 0;
-        if (di_failed()) return dbr_fail(10);
+        if (di_failed()) return dbr_fail();
         DCInvalidateRange(dbr_scratch, 32);
         if (dbr_scratch[0] != BANNER_MAGIC_1 && dbr_scratch[0] != BANNER_MAGIC_2)
-            return dbr_fail(11);
+            return dbr_fail();
 
-        diag_banner_stage = 4;
         di_start_read(dbr_out, sizeof(BNR), dbr_offset);
         dbr_step = 4;
         return 0;
 
     case 4:
         if (di_busy()) return 0;
-        if (di_failed()) return dbr_fail(12);
+        if (di_failed()) return dbr_fail();
         DCInvalidateRange(dbr_out, sizeof(BNR));
 
-        diag_banner_stage = 5;
         dvd_custom_bypass_exit();
         dbr_step = 5;
         return 1;

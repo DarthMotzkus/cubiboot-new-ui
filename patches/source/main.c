@@ -500,7 +500,6 @@ __attribute_used__ u32 get_tvmode() {
 __attribute_data__ int frame_count = 0;
 __attribute_used__ u32 bs2tick() {
     extern u32 stock_disc_mode;
-    extern u32 original_bs2tick();
 
     frame_count++;
     if (!completed_time && cube_state->cube_anim_done) {

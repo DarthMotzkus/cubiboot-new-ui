@@ -48,7 +48,6 @@ pal11_stock_gameselect_init = 0x81326b4c;
 pal11_stock_gameselect_input = 0x81326c04;
 pal11_stock_bs2tick_resume = 0x8130096c;
 pal11_stock_bs2_reset = 0x81300668;
-pal11_dvd_state = 0x8147c088;
 pal11_stock_gameselect_draw_resume = 0x81327360;
 pal11_stock_gameselect_draw_skip = 0x81327418;
 pal11_setup_cube_anim = 0x81328b4c;
