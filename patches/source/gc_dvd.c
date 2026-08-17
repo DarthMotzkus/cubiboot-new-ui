@@ -1,4 +1,5 @@
 #include "time.h"
+#include "emu/drive_probe.h" // di_wait: the bounded TSTART spin every DI user shares
 
 volatile unsigned long* dvd = (volatile unsigned long*)0xCC006000;
 
@@ -52,6 +53,12 @@ void dvd_stop_motor()
 	dvd[5] = 0;
 	dvd[6] = 0;
 	dvd[7] = 1;  // Execute command
-	while (dvd[7] & 1)  // Wait for completion
-		;
+
+	// Bounded, unlike the plain TSTART spin this was: dvd_custom_bypass_exit() runs this
+	// on the way OUT of the disc screen, and on a bus where nothing answers -- a console
+	// with no optical drive, or a FlippyDrive in bypass with no drive behind it -- the
+	// command never completes. Spinning forever there hangs the console on the one path
+	// whose whole job is returning to the menu. A motor that never got the stop command
+	// spins itself down; a console that never got the menu back is a power cycle.
+	di_wait();
 }
