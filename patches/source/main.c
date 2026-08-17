@@ -50,7 +50,8 @@ __attribute_data__ char default_folder[MAX_FILE_NAME] = {0};
 __attribute_data__ u32 remember_last_game = 0;
 __attribute_data__ u32 force_progressive = 0;
 __attribute_data__ u32 force_widescreen = 0;
-__attribute_data__ u32 force_swiss_boot = 0;
+// On by default: a physical disc boots through Swiss unless config.ini turns it off.
+__attribute_data__ u32 swiss_on_dvd_boot = 1;
 
 // used if we are switching to 60Hz on a PAL IPL
 __attribute_data__ static int fix_pal_ntsc = 0;
@@ -552,7 +553,7 @@ __attribute_used__ void bs2start() {
     // read boot info into lowmem
     struct dolphin_lowmem *lowmem = (struct dolphin_lowmem*)0x80000000;
 
-    if (!start_passthrough_game || force_swiss_boot) {
+    if (!start_passthrough_game || swiss_on_dvd_boot) {
         gm_deinit_thread();
     } else {
         dvd_custom_bypass_enter();
@@ -636,9 +637,9 @@ __attribute_used__ void bs2start() {
     } else {
         custom_OSReport("Booting ISO\n");
 
-        if (!force_swiss_boot || is_swiss_image(boot_path)) {
+        if (!swiss_on_dvd_boot || is_swiss_image(boot_path)) {
             // Swiss disc images always take the native apploader path (see chainload_boot_game),
-            // even when force_swiss_boot is on -- routing them through Swiss resets to the IPL.
+            // even when swiss_on_dvd_boot is on -- routing them through Swiss resets to the IPL.
             custom_OSReport("Booting ISO (custom apploader)\n");
             chainload_boot_game(&boot_entry, false);
         } else {
