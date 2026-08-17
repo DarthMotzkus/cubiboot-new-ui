@@ -735,4 +735,5 @@ This project stands on the work of others — the items below are **not** origin
 - [packer](https://github.com/emukidid/swiss-gc/tree/master/cube/packer) (from Swiss) — used to build `apploader.img`. (GPL-2.0)
 - The **`default_folder`** config option by [wins1ey](https://github.com/wins1ey), via the [Hazado/cubiboot](https://github.com/Hazado/cubiboot) fork ([merge](https://github.com/Hazado/cubiboot/commit/c91066b4889346fec288393f6a9fe41304652e49)) — ported into this fork. (GPL-2.0)
 - The **GC Loader ODE SD** block driver, reverse-engineered from a `cubiboot-gcldr.iso` build and cross-checked against libogc2's `DVD_LowGcodeRead`. (GPL-2.0)
+- The **stock disc screen** infrastructure by [Jpe230](https://github.com/Jpe230), from [PR #8](https://github.com/DarthMotzkus/cubiboot-new-ui/pull/8) — the renderer dispatcher and the stock-screen addresses across all seven IPL revisions, which this fork's disc screen is built on. (GPL-2.0)
 - For the full breakdown, see upstream [CREDIT.md](https://github.com/makeo/cubiboot/blob/main/CREDIT.md) and this fork's [CREDIT.md](CREDIT.md).
