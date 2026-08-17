@@ -86,6 +86,13 @@ Estos archivos siempre van en la **raíz** de esa tarjeta:
 Tus juegos pueden estar donde quieras, incluso en subcarpetas — mira
 [`default_folder`](#carpeta-de-inicio).
 
+> [!NOTE]
+> **En una FlippyDrive** las dos últimas líneas funcionan distinto. La unidad trae su propio
+> Swiss en su **flash interna**, y cubiboot usa esa copia **primero** — el `swiss-gc.dol` de
+> la tarjeta es solo una precaución por si la copia de la flash falta. Y `apploader.img` no
+> se usa en absoluto: el reinicio en el juego en una FlippyDrive va por la opción **Reboot**
+> de Swiss ([detalles](#reinicio-en-el-juego)).
+
 ## Descargas
 
 Cada release etiquetada (`v*`) publica:
@@ -97,7 +104,7 @@ Cada release etiquetada (`v*`) publica:
 | `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). |
 | `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
-| `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. |
+| `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. No se usa en una **FlippyDrive**, que consigue el reinicio con la opción **Reboot** de Swiss. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
 
 [**→ Última release**](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest)
@@ -186,8 +193,10 @@ cualquier otro nombre es solo un archivo más dentro de la flash.
 8. Elige **FlippyDrive Flash** como dispositivo de destino, y su raíz como carpeta de destino.
    Confirma sobrescribir el `cubeboot.dol` que ya está ahí.
 9. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
-10. Pon Swiss en la tarjeta SD como `swiss-gc.dol`, más un [`config.ini`](#configuración) y tus
-    juegos.
+10. Pon un [`config.ini`](#configuración) y tus juegos en la tarjeta SD. El `swiss-gc.dol` en
+    la tarjeta es **opcional** aquí: cubiboot arranca los juegos con el Swiss que ya está en
+    la **flash** de la unidad, y solo recurre a un `swiss-gc.dol` en la raíz de la tarjeta si
+    la copia de la flash falta. Dejar uno de todas formas es una precaución barata.
 
 > [!IMPORTANT]
 > El paso 3 es lo que hace posible el paso 8, y es el que la gente se salta. Arrancar
@@ -201,11 +210,14 @@ cualquier otro nombre es solo un archivo más dentro de la flash.
 > claro: *"any custom DOL files might get erased during the firmware update process."* No se
 > pierde nada de la tarjeta SD — solo la copia que está dentro de la unidad.
 
-**Swiss y el reinicio en el juego** funcionan en una FlippyDrive igual que en cualquier otro
-sitio, desde la tarjeta SD: `swiss-gc.dol` en la raíz de la tarjeta y `apploader.img` en
-`swiss/patches/`. La flash de la unidad también trae su propio Swiss, y cubiboot lo acepta si
-la tarjeta no tiene ninguno — pero el `apploader.img` tiene que ser el nuestro, de la misma
-release que el loader, así que ese va en la tarjeta.
+**Swiss y el reinicio en el juego** son más simples en una FlippyDrive que en cualquier otro
+sitio. Swiss sale de la **flash** de la unidad — cubiboot prefiere esa copia, y un
+`swiss-gc.dol` en la raíz de la tarjeta es solo el respaldo. Y el reinicio en el juego no
+necesita **ningún `apploader.img`**: la unidad carga cubiboot desde su flash en cada
+reinicio, así que un reinicio normal ya vuelve al menú. Pon el **In-Game Reset** de Swiss en
+**`Reboot`** (Settings → Global Game Settings) — cubiboot lo pasa automáticamente para los
+juegos que arranca él, así que ese ajuste solo importa para juegos que inicies desde el
+propio Swiss.
 
 > [!NOTE]
 > El menú del bootloader de la unidad también tiene una entrada **`remote`** que la sirve por
@@ -214,12 +226,24 @@ release que el loader, así que ese va en la tarjeta.
 
 ### Reinicio en el juego
 
-Opcional, funciona con todos los métodos anteriores.
+Opcional, funciona con todos los métodos anteriores. La combinación es **Z + A + START**
+dentro de un juego, y vuelve al menú de cubiboot. Cómo llega ahí depende del hardware:
+
+**FlippyDrive ([Método 4](#método-4-flippydrive)): nada que instalar.** La unidad carga
+cubiboot desde su flash en cada reinicio, así que un reinicio normal ya cae en el menú —
+cubiboot le indica a Swiss el reinicio tipo **Reboot** automáticamente para cada juego que
+arranca. Sin `apploader.img` en ningún sitio. (Si además inicias juegos desde el propio
+Swiss, pon su **In-Game Reset** en **`Reboot`** en **Settings → Global Game Settings** para
+que esos también lo tengan. La opción `Apploader` **no** funciona en una FlippyDrive.)
+
+**Todo lo demás (Métodos 1–3):**
 
 1. Descarga [`EXTRACT_TO_ROOT.zip`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/EXTRACT_TO_ROOT.zip).
 2. Extráelo en la **raíz** de la tarjeta SD — esto deja `apploader.img` dentro de
    `swiss/patches/`.
-3. Pulsa **Z + A + START** dentro de un juego para volver al menú de cubiboot.
+3. En Swiss, entra a **Settings → Global Game Settings (4/6)** y pon **In-Game Reset** en
+   **`Apploader`**, luego *Save & Exit*.
+4. Pulsa **Z + A + START** dentro de un juego para volver al menú de cubiboot.
 
 ## Actualizar
 
@@ -235,14 +259,16 @@ arranque en frío entra al menú nuevo y el reinicio en el juego entra al viejo.
 un arreglo o una opción nueva que funciona bien hasta que reinicias desde un juego.
 
 Si nunca instalaste `apploader.img`, no hay nada que mantener sincronizado — reemplaza el
-loader y listo.
+loader y listo. Una **FlippyDrive** nunca tiene uno: su reinicio en el juego es un reinicio
+normal, así que en ese hardware lo único que se reemplaza es el loader en la flash de la
+unidad.
 
 | Instalado con | Reemplaza |
 |---|---|
 | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
 | [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader_payload.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
 | [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
-| [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo), **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
+| [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo) — sin `apploader.img` |
 
 Los dos archivos salen de la misma release — mezclar un `apploader.img` de una release con un
 loader de otra es exactamente la situación de la que habla esta sección.
@@ -314,9 +340,10 @@ menu_grid_type = small_banners
 remember_last_game = 0
 
 ; De qué almacenamiento leer los juegos, el preferido primero: sd2sp2, slot_b, slot_a,
-; ode. Los nombres de volumen de FatFs (sdc, sdb, sda, gcldr) también funcionan.
+; ode (GC Loader / CUBE-ODE) y flippy (FlippyDrive). Los nombres de volumen de FatFs
+; (sdc, sdb, sda, gcldr, fldrv) también funcionan.
 ; Deja comentado para usar el valor por defecto.
-; device_order = sd2sp2, slot_b, slot_a, ode
+; device_order = sd2sp2, slot_b, slot_a, ode, flippy
 ```
 
 ### Todas las opciones
@@ -326,7 +353,7 @@ remember_last_game = 0
 | [`menu_grid_type`](#diseño-del-menú) | `small_banners` · `banners` · `square_icons` | `small_banners` | Diseño de la cuadrícula |
 | [`default_folder`](#carpeta-de-inicio) | ruta | raíz de la tarjeta | Carpeta en la que abre el menú |
 | [`remember_last_game`](#recordar-el-último-jugado) | `1` · `0` | `0` | Preselecciona el último juego arrancado |
-| [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de dispositivo | `sd2sp2, slot_b, slot_a, ode` | De qué almacenamiento leer los juegos |
+| [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de dispositivo | `sd2sp2, slot_b, slot_a, ode, flippy` | De qué almacenamiento leer los juegos |
 | [`theme_color`](#colores) | RGB hex · `random` | original | Un color para toda la interfaz |
 | [`cube_color`](#colores) | RGB hex · `random` | `theme_color` | Color del logo de arranque |
 | [`menu_cube_color`](#colores) | RGB hex · `random` · nombre de paleta | `theme_color` | Cubos / banners de la cuadrícula |
@@ -412,14 +439,13 @@ primera entrada que monte se convierte en el volumen del que sale todo: el volca
 | `sd2sp2` (o `sdc`) | Puerto serie 2 — un **SD2SP2** |
 | `slot_b` (o `sdb`) | **Ranura B** de memory card — un SD Gecko |
 | `slot_a` (o `sda`) | **Ranura A** de memory card — un SD Gecko |
-| `ode` | **El ODE que tengas instalado** — se resuelve preguntando a la unidad, así que cubre los dos de abajo |
-| `gcloader` (o `gcldr`) | La tarjeta SD **dentro de un [GC Loader](https://gcloaderhq.com/)**, o cualquiera que responda a los mismos comandos de unidad |
-| `flippy`, `flippydrive` (o `fldrv`) | La tarjeta SD **dentro de una FlippyDrive** |
+| `ode` (o `gcloader`, `gcldr`) | La tarjeta SD **dentro de un ODE** — un [GC Loader](https://gcloaderhq.com/), un CUBE-ODE, o cualquiera que responda a los mismos comandos de unidad |
+| `flippy`, `flippydrive` (o `fldrv`) | La tarjeta SD **dentro de una FlippyDrive** — no es un ODE: va en el cable de la unidad óptica, al lado de ella, en vez de reemplazarla |
 
 El valor por defecto, cuando la clave no está:
 
 ```ini
-device_order = sd2sp2, slot_b, slot_a, ode
+device_order = sd2sp2, slot_b, slot_a, ode, flippy
 ```
 
 Dejar un dispositivo fuera de la lista es como mantienes a cubiboot lejos de él — no hay un
@@ -439,8 +465,9 @@ Dos cosas a tener en cuenta:
   realmente tenga el archivo — tiene que hacerlo así, porque `device_order` vive *dentro* de
   ese archivo. Si dos tarjetas llevan un `config.ini`, el orden por defecto desempata.
 
-La tarjeta del ODE se monta en solo lectura. Una consola sin ODE paga una consulta a la unidad
-por arranque por la entrada `gcldr`, que se rinde en cuanto responde una unidad óptica real.
+Las tarjetas del ODE y de la FlippyDrive son de solo lectura para cubiboot. Una consola sin
+ninguno de los dos paga una consulta a la unidad por arranque por esas entradas, que se rinde
+en cuanto responde una unidad óptica real.
 
 ### Apps homebrew
 

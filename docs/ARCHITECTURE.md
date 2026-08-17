@@ -268,15 +268,20 @@ exception to the whole stack: it answers the file API directly over its own prot
 
 The array leads with the ODE because the IPL patches index straight into it, but the loader
 works from `EMU_DEFAULT_DEVICE_ORDER` — `"sdc, sdb, sda, gcldr, fldrv"` — so a console without
-an ODE only reaches the drive-interface inquiry after everything else has been ruled out. That
-one string is both the bootstrap's search order and the default for `device_order`. config.ini
-also accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`, `flippy`,
-`flippydrive`) which resolve onto the same volumes.
+a drive-interface device only reaches the drive inquiry after everything else has been ruled
+out. That one string is both the bootstrap's search order and the default for `device_order`.
+config.ini also accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`,
+`flippy`, `flippydrive`) which resolve onto the same volumes — `ode` is a plain alias for
+`gcldr`, covering the GC Loader and the CUBE-ODE, which speak the same commands. A FlippyDrive
+is deliberately **not** an ODE spelling: it does not replace the drive (it rides the drive
+ribbon beside it), it speaks its own protocol, and it answers to its own names.
 
-There is one drive connector, so at most one ODE is installed — which ODE it is gets decided
-once: `drive_probe()` (`emu/drive_probe.c`) sends a single OEM inquiry, caches the answer, and
-both `gcode.c` and `fldrv.c` compare against it. `ode` in `device_order` resolves against that
-answer too.
+There is one attachment point on the drive interface, so at most one of these devices is
+installed — which one it is gets decided once: `drive_probe()` (`emu/drive_probe.c`) sends a
+single OEM inquiry, caches the answer, and both `gcode.c` and `fldrv.c` compare against it.
+The disc screen reads the same cached answer to refuse **Z** on an ODE; a FlippyDrive keeps
+the screen, since the optical drive is still behind it (`fldrv_bypass_enter/exit` in
+`fldrv.c` make the drive transparent for the read).
 
 The bootstrap runs that order **twice**. The first pass takes the device that actually holds a
 `/config.ini`; only if none does, a second pass settles for the first device that merely
@@ -362,7 +367,11 @@ rebuild them together.
 ## Booting a game
 
 The menu does not boot games itself. `chainload_swiss_game()` in
-[loader.c](../cubeboot/source/emu/loader.c) loads `/swiss-gc.dol` and hands it an argv:
+[loader.c](../cubeboot/source/emu/loader.c) loads `/swiss-gc.dol` and hands it an argv.
+The load goes through `dvd_custom_open_flash()`: on a FlippyDrive that is the drive's own
+internal flash first — which ships with Swiss, so the card needs no `swiss-gc.dol` — and the
+card root only as fallback; on every other device it is `/cubiboot/swiss-gc.dol` then
+`/swiss-gc.dol` on the card.
 
 ```
 Autoload=<device>:/path/to/game.iso
@@ -370,6 +379,8 @@ AutoBoot=Yes
 BS2Boot=No
 Prefer Clean Boot=No
 IGRType=Apploader          (only if swiss/patches/apploader.img exists)
+IGRType=Reboot             (instead, when the device is a FlippyDrive -- the drive
+                            autoloads cubiboot from flash on reboot, so no apploader.img)
 ```
 
 plus `CUBEBOOT=1` in the environment. Swiss then does the real work — and, as a side effect,

@@ -649,7 +649,7 @@ static const char *device_header_names[] = {
     "SD2SP2",    // sdc
     "SLOT B SD", // sdb
     "SLOT A SD", // sda
-    "ODE SD",    // fldrv
+    "FLIPPY SD", // fldrv
 };
 
 static const char *device_header_text(void) {
@@ -909,6 +909,13 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         // physical discs -- the same one 1.9.0 reaches from this button, which reads
         // out-of-region discs because nothing on it consults the console's region.
         if (pad_status->buttons_down & PAD_BUTTON_START) {
+            // Booting reads swiss-gc.dol through the file layer next, and on a
+            // FlippyDrive the banner read is holding the drive in bypass, where that
+            // layer is unreachable. Let the read finish first -- same reason B waits
+            // below. The stock screen is still on "Reading disc...", so START doing
+            // nothing here matches what the screen is saying.
+            if (stock_disc_reading) return MENU_GAMESELECT_ID;
+
             Jac_StopSoundAll();
             Jac_PlaySe(SOUND_MENU_FINAL);
             start_passthrough_game = 1;
@@ -989,15 +996,20 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         //
         // An ODE occupies the drive connector, so there is no disc for this screen to read,
         // and taking it into bypass would point the file layer -- which is how the game
-        // list is being read on a GC Loader or a FlippyDrive -- at raw sectors mid-session.
+        // list is being read on a GC Loader -- at raw sectors mid-session.
+        //
+        // A FlippyDrive is not refused: it rides the drive ribbon beside the optical
+        // drive instead of replacing it, and bypass makes it transparent so that drive
+        // answers -- dvd_custom_bypass_enter() sends its bypass command when the flippy
+        // is the active device. A flippy console whose drive was removed just plays out
+        // the stock no-disc screen after the read times out.
         //
         // Only a positive identification refuses. DRIVE_ID_NONE has to open the screen:
         // it means the drive did not answer the inquiry, which an optical drive that has
         // not been reset does routinely, so treating it as "no drive" would take the disc
         // screen away from the consoles it is for. drive_probe() is cached from startup,
         // so this asks nothing of the bus.
-        drive_id_t drive = drive_probe();
-        if (drive == DRIVE_ID_GCODE || drive == DRIVE_ID_FLIPPY) {
+        if (drive_probe() == DRIVE_ID_GCODE) {
             Jac_PlaySe(SOUND_CARD_ERROR);
             return MENU_GAMESELECT_TRANSITION_ID;
         }

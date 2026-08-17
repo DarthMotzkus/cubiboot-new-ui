@@ -17,7 +17,7 @@ postboot_delay_ms = 2000        # hold the last frame before the game boots
 force_widescreen = on           # render the menu anamorphic for a 16:9 TV
 swiss_on_dvd_boot = off         # boot physical discs with the console instead of Swiss
 remember_last_game = on         # open on the last game you booted, already highlighted
-device_order = sd2sp2, slot_b, slot_a, ode   # storage to read games from, most wanted first
+device_order = sd2sp2, slot_b, slot_a, ode, flippy   # storage to read games from, most wanted first
 ```
 
 ## On/off switches
@@ -118,19 +118,25 @@ which chainloads Swiss with `Autoload=dvd:/*.gcm`. Two things come with that:
 
 - **IGR** — the in-game reset combo returns to cubiboot instead of the stock IPL. This needs
   `apploader.img` (built alongside `IPL.dol`) copied to `/swiss/patches/apploader.img` on the
-  card; without it Swiss still boots the disc, but the reset combo does not come back.
+  card; without it Swiss still boots the disc, but the reset combo does not come back. On a
+  **FlippyDrive** no `apploader.img` is involved: cubiboot passes `IGRType=Reboot` instead,
+  because the drive autoloads cubiboot from its flash on every reboot anyway.
 - **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region.
 
 Set it to `off` and the disc is handed to the console's own apploader instead -- the stock
 boot, without IGR and without the region bypass. Games on the card are unaffected either
 way: they always go through Swiss.
 
-Either way `swiss-gc.dol` must be at the card root.
+Either way Swiss has to be reachable: `swiss-gc.dol` at the card root, except on a
+FlippyDrive, where the copy in the drive's flash is used first and the card root is only the
+fallback.
 
-None of this applies on a console with an ODE (GC Loader, CUBE-ODE, FlippyDrive): the ODE is
-what sits on the drive connector, so there is no optical drive to read and the disc screen
-does not open at all -- **Z** answers with the menu's error tone. The check is a single
-inquiry made once at startup, so it costs nothing per press.
+None of this applies on a console with an ODE (GC Loader, CUBE-ODE): the ODE is what sits on
+the drive connector, so there is no optical drive to read and the disc screen does not open
+at all -- **Z** answers with the menu's error tone. The check is a single inquiry made once
+at startup, so it costs nothing per press. A **FlippyDrive is not an ODE** -- it rides the
+drive ribbon beside the optical drive -- so it keeps the disc screen: cubiboot switches the
+drive into bypass for the read and back out afterwards.
 
 ## `device_order`
 
@@ -142,21 +148,22 @@ the volume everything comes off: the IPL dump, `swiss-gc.dol`, banners and the g
 | `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
 | `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
 | `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
-| `ode` | **Whichever ODE is installed** — resolved by asking the drive, so it covers both of the two below |
-| `gcloader` (or `gcldr`) | The SD card **inside a [GC Loader](https://gcloaderhq.com/)**, or anything answering the same drive commands |
+| `ode` (or `gcloader`, `gcldr`) | The SD card **inside an ODE** — a [GC Loader](https://gcloaderhq.com/), a CUBE-ODE, or anything answering the same drive commands |
 | `flippy`, `flippydrive` (or `fldrv`) | The SD card **inside a FlippyDrive** |
 
 Separate the names with commas or spaces; case does not matter. Unknown names are reported
 and skipped. Default when the key is absent:
 
 ```ini
-device_order = sd2sp2, slot_b, slot_a, ode
+device_order = sd2sp2, slot_b, slot_a, ode, flippy
 ```
 
-`ode` is the one to reach for: there is a single drive connector, so a GC Loader and a
-FlippyDrive can never both be installed, and cubiboot identifies which one is there from the
-drive's own inquiry. Naming a specific one is only useful for forcing the issue while
-diagnosing something.
+`ode` names the drive **replacements** — a GC Loader and a CUBE-ODE speak the same commands,
+so one entry covers both. A FlippyDrive is deliberately **not** under it: it is not an ODE
+(it rides the drive ribbon beside the optical drive rather than taking the drive's place),
+it speaks its own protocol, and it has its own entry. The two still cannot coexist — an ODE
+and a FlippyDrive want the same attachment point — which is why both being in the default
+order costs nothing: at most one of them can ever answer.
 
 Leaving a device out is how you keep cubiboot off it — there is no separate on/off switch.
 A console with both an SD2SP2 and a GC Loader, whose games live on the ODE, writes:
@@ -177,10 +184,10 @@ Two things to know:
 If nothing in the list mounts, cubiboot keeps whatever the search settled on rather than
 booting into an empty menu over one bad line.
 
-A GC Loader's card is mounted read-only. A console without an ODE pays **one** drive inquiry
-per boot no matter how many ODE names are in the list — the inquiry identifies every drive
-cubiboot knows in one answer, and gives up as soon as a real optical drive replies, or as
-soon as nothing replies at all.
+A GC Loader's card is mounted read-only. A console with neither an ODE nor a FlippyDrive
+pays **one** drive inquiry per boot no matter how many drive-interface names are in the
+list — the inquiry identifies every drive cubiboot knows in one answer, and gives up as soon
+as a real optical drive replies, or as soon as nothing replies at all.
 
 A FlippyDrive is not mounted at all, because it is not a disk: it serves files itself and
 cubiboot asks it for paths directly. Nothing about that is visible in `config.ini` — the
@@ -190,4 +197,6 @@ only in that the drive, not cubiboot, decides what the filesystem looks like.
 > [!NOTE]
 > On a FlippyDrive, cubiboot itself lives in the **drive's internal flash**, not on the SD
 > card — see [Method 4](../README.md#method-4-flippydrive) in the README. The SD card still
-> holds `config.ini`, Swiss and your games, exactly as on any other setup.
+> holds `config.ini` and your games. Swiss also comes from the drive's flash: a
+> `swiss-gc.dol` at the card root is only a fallback for a flash copy that went missing, and
+> `apploader.img` is not used on this hardware at all.

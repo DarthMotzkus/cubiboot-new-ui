@@ -45,6 +45,12 @@ int  fldrv_readdir(file_entry_t* dst, uint32_t fd);
 // the drive itself instead of being chainloaded.
 void fldrv_set_default_fd(uint32_t current_fd, uint32_t second_fd);
 
+// The drive goes transparent so the optical drive behind it answers the bus -- a
+// FlippyDrive sits in-line on the drive ribbon, so a real drive can still be there.
+// The file API is unreachable while bypassed; exit brings it back, handles intact.
+void fldrv_bypass_enter(void);
+void fldrv_bypass_exit(void);
+
 #ifdef __cplusplus
 }
 #endif

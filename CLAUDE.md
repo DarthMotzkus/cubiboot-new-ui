@@ -27,8 +27,10 @@ Adding a "menu feature" almost always means editing `patches/`, not `cubeboot/`.
 Code that both sides need lives in **`cubeboot/source/emu/`** and is **copied to
 `patches/source/emu/` at build time** by `entry/Makefile`. That copy is gitignored — never
 edit `patches/source/emu/`, your changes will be overwritten. That directory is how the FAT
-stack, the EXI SD driver (`tsd.c`) and the two ODE backends (`gcode.c`, `fldrv.c`) serve both
-programs from one source.
+stack, the EXI SD driver (`tsd.c`), the ODE backend (`gcode.c`) and the FlippyDrive backend
+(`fldrv.c`) serve both programs from one source. (A FlippyDrive is NOT an ODE: an ODE
+replaces the optical drive, the flippy rides its ribbon beside it — it keeps the disc
+screen, has its own `flippy` device_order entry, and gets IGR via `IGRType=Reboot`.)
 
 ## Repo map
 
@@ -42,7 +44,7 @@ cubeboot/source/    stage 2: the loader
     tsd.c           SD over EXI (SD2SP2, SD Gecko)
     gcode.c         SD inside a GC Loader style ODE, over the drive interface
     fldrv.c         FlippyDrive native file protocol; not a FatFs volume
-    drive_probe.c   one OEM inquiry decides which ODE is on the bus, shared by both
+    drive_probe.c   one OEM inquiry decides who answers the drive bus, shared by both
     flippy_emu.c    the dvd_custom_* file API both sides call; picks the device
   boot/             sidestep / ARAM helpers from iplboot
 patches/source/     stage 3: the injected menu
