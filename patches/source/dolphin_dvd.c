@@ -310,9 +310,7 @@ int disc_banner_poll(void) {
         DCInvalidateRange(dbr_out, sizeof(BNR));
 
         diag_banner_stage = 5;
-        // Leave the disc turning: whatever boots it next reads it again, and stopping the
-        // motor here only buys that reader a spin-up it has to sit through.
-        dvd_custom_bypass_release();
+        dvd_custom_bypass_exit();
         dbr_step = 5;
         return 1;
     }

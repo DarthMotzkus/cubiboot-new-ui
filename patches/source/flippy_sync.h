@@ -58,7 +58,6 @@ int dvd_custom_open(const char *path, uint8_t type, uint8_t flags);
 int dvd_custom_open_flash(const char *path, uint8_t type, uint8_t flags);
 void dvd_custom_bypass_enter();
 void dvd_custom_bypass_exit();
-void dvd_custom_bypass_release();
 int dvd_custom_presence(bool playing, const char *status, const char* sub_status);
 
 #endif // FLIPPY_SYNC_H
