@@ -588,6 +588,14 @@ void dvd_custom_bypass_exit() {
 	passthrough = false;
 }
 
+// Leaves bypass with the disc still turning, for when something else is about to read the
+// same disc. Swiss identifies the disc itself at startup no matter what was read before it,
+// and a stopped disc makes that wait out a full spin-up -- which is the drive audibly
+// starting over between the banner and the game.
+void dvd_custom_bypass_release() {
+	passthrough = false;
+}
+
 
 // not implemented
 int dvd_custom_write(char *buf, uint32_t offset, uint32_t length, uint32_t fd) {

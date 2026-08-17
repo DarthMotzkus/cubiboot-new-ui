@@ -940,6 +940,10 @@ __attribute_used__ s32 handle_gameselect_inputs() {
             *banner_ready = 1;
             stock_gameselect_init(0);
 
+            // The disc was left turning for whatever would boot it. Nothing will now, so
+            // stop it rather than leave the drive spinning under the browser.
+            dvd_stop_motor();
+
             // Nothing was loaded over the browser's memory on this path, so the grid it
             // had is still valid -- the rescan happens back on the Z press, while the disc
             // read owns the device layer.
