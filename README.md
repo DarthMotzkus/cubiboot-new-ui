@@ -123,11 +123,11 @@ Releases ship a commented template with every option — it is
 | [`default_folder`](docs/settings.md#default_folder) | path | card root | Folder the menu opens in |
 | [`remember_last_game`](docs/settings.md#remember_last_game) | `on` · `off` | `off` | Pre-select the last game or app you booted |
 | [`device_order`](docs/settings.md#device_order) | device names | `sd2sp2, slot_b, slot_a, ode, flippy` | Which storage to read games from |
-| [`theme_color`](docs/settings.md#colors) | hex RGB · `random` | stock | One color for the whole UI |
-| [`cube_color`](docs/settings.md#colors) | hex RGB · `random` | `theme_color` | Boot logo color |
-| [`menu_cube_color`](docs/settings.md#colors) | hex RGB · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
-| [`menu_box_color`](docs/settings.md#colors) | hex RGB · `random` | `theme_color` | Info panel under the game list |
-| [`menu_start_color`](docs/settings.md#colors) | hex RGB · `random` | `theme_color` | The big block "PRESS START" |
+| [`theme_color`](docs/settings.md#colors) | [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) · `random` | stock | One color for the whole UI |
+| [`cube_color`](docs/settings.md#colors) | [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) · `random` | `theme_color` | Boot logo color |
+| [`menu_cube_color`](docs/settings.md#colors) | [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) · `random` · palette name | `theme_color` | Grid cubes / banner tiles |
+| [`menu_box_color`](docs/settings.md#colors) | [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) · `random` | `theme_color` | Info panel under the game list |
+| [`menu_start_color`](docs/settings.md#colors) | [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) · `random` | `theme_color` | The big block "PRESS START" |
 | [`preboot_delay_ms`](docs/settings.md#preboot_delay_ms-and-postboot_delay_ms) | milliseconds | `0` | Wait before the boot animation, for a TV to lock on |
 | [`postboot_delay_ms`](docs/settings.md#preboot_delay_ms-and-postboot_delay_ms) | milliseconds | `0` | Hold the last frame after picking a game, before it boots |
 | [`force_widescreen`](docs/settings.md#force_widescreen) | `on` · `off` | `off` | Render the menu anamorphic for a 16:9 TV |
