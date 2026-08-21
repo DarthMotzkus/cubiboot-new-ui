@@ -1,12 +1,16 @@
 # Settings
 
-These are all of the values supported by the `config.ini` file.
+These are all of the values supported by the `config.ini` file, which lives in the root of
+the card cubiboot reads from. The file is optional: without one you get the `small_banners`
+layout and the card root as the starting folder.
 
 The commented template that ships in every release lives at
 [`.ci/config.ini`](../.ci/config.ini) — edit that one when adding or changing an option, and
 the release picks it up. This page is the prose reference.
 
 ```
+menu_grid_type = small_banners  # grid layout: small_banners | banners | square_icons
+default_folder = /games         # folder the menu opens in; unset = card root
 theme_color = 00ffff    # hex color code -- one color for the whole UI
 cube_color = 00ffff     # hex color code -- boot logo only
 menu_cube_color = green # hex color code, or a stock palette name
@@ -15,8 +19,11 @@ menu_start_color = ff2d55       # hex color code
 preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
 postboot_delay_ms = 2000        # hold the last frame before the game boots
 force_widescreen = on           # render the menu anamorphic for a 16:9 TV
+force_progressive = on          # menu in 480p -- IPL 1.1/1.2 only, no-op on IPL 1.0
 swiss_on_dvd_boot = off         # boot physical discs with the console instead of Swiss
-remember_last_game = on         # open on the last game you booted, already highlighted
+remember_last_game = on         # open on the last game or app you booted, already highlighted
+text_scroll = 2                 # long titles scroll after this many seconds (on/off work too)
+big_titles_scroll_speed = 10    # marquee pace in frames per character: 1 fastest, higher slower
 device_order = sd2sp2, slot_b, slot_a, ode, flippy   # storage to read games from, most wanted first
 ```
 
@@ -30,6 +37,96 @@ than a typo silently flipping the switch; the loader prints what it decided eith
 
 Parsed by `ini_get_bool()` in
 [`cubeboot/source/settings.c`](../cubeboot/source/settings.c).
+
+## `menu_grid_type`
+
+The selection-menu grid layout:
+
+| Value | Layout |
+|-------|--------|
+| `small_banners` | small banners, 4 columns (**default**) |
+| `banners` | large banners, 3 columns |
+| `square_icons` | square icons, 8 columns |
+
+The default applies even without a `config.ini`. `square_icons` is the one to use for very
+large folders — see [Large folders and the banner pool](#large-folders-and-the-banner-pool).
+
+## `default_folder`
+
+The directory the menu opens in. Leave it unset (or commented) to open the card root. A
+leading `/` is added automatically if you omit it, and if the folder can't be opened
+cubiboot falls back to the root.
+
+`default_folder` only changes where the menu browses for **games and homebrew**
+(`.dol` / `.iso` / …). The system files still have to sit at the card root: `ipl.dol`,
+`config.ini`, `swiss-gc.dol` and `swiss/patches/apploader.img`.
+
+When [`remember_last_game`](#remember_last_game) is on, it overrides this: the menu opens in
+the last played folder, and `default_folder` is only the fallback.
+
+## `remember_last_game`
+
+`on` makes the menu open **in the folder of the last thing you booted** — a game or a
+homebrew app/`.dol` alike — with it already highlighted, so on the next boot you just press
+**A**. Off by default. A physical-disc launch is skipped (there is no list entry to come
+back to), so the most recent card entry is selected instead.
+
+> [!IMPORTANT]
+> This reads Swiss's own recent list, so Swiss has to be keeping one. In Swiss, open
+> **Settings** and set **Recent List** to **On** (it writes `RecentListLevel=On` into
+> `/swiss/settings/global.ini`). With it **Off** there is no `recent.ini` to read and
+> cubiboot falls back to [`default_folder`](#default_folder).
+
+How it works, and how it interacts with `default_folder`:
+
+- Cubiboot boots games by chainloading **Swiss** with autoload, so Swiss records every launch
+  in its own recent-games list (`/swiss/settings/recent.ini`). Cubiboot just **reads** that
+  list back — there is no extra file to write.
+- On the next cold boot the menu opens directly in the folder holding the most recent entry
+  — including a letter/genre subfolder, not just `default_folder` — and highlights it.
+  Navigate away normally (**B** goes up a level).
+- **No stalls:** for that first folder cubiboot does *not* wait for every banner before
+  showing the list. It scans the folder (fast — headers only), puts the cursor on your last
+  game, and a **background thread** fills banners in priority order: the on-screen window
+  around your game first, so it appears almost immediately regardless of folder size, then
+  the rest while the menu is already usable. Pressing **A** works even while banners are
+  still loading.
+- **`remember_last_game` overrides `default_folder`.** When it's on, the menu **always**
+  opens in the last played folder. `default_folder` (or the card root, if unset) is only a
+  fallback: on the very first boot before anything has been played, or if the last entry's
+  folder is gone.
+- **Large folders:** if the last played folder holds more games than fit in the banner pool
+  (>128), it falls back to the sliding window — banners are read from the card as they
+  scroll into view. Either way your highlighted game shows first. See
+  [Large folders and the banner pool](#large-folders-and-the-banner-pool).
+
+## `preboot_delay_ms` and `postboot_delay_ms`
+
+Both in milliseconds, both `0` by default. `preboot_delay_ms` waits before the boot
+animation, holding a live video signal, so a TV or GCVideo has time to lock on before the
+animation starts. `postboot_delay_ms` holds the last frame after picking a game, before it
+boots.
+
+## `text_scroll`
+
+A game title longer than the info box holds still, then scrolls sideways so the whole name
+can be read; the description line under it scrolls by hand with the L and R triggers. This
+key controls the automatic part:
+
+- `on` (default) — long titles scroll after holding still for 2 seconds.
+- `off` — titles never scroll on their own. L/R on the description still works.
+- a number — seconds to hold still before scrolling starts. **This is the one key where
+  `1` and `0` are not switch values**: `1` waits one second, `0` starts scrolling
+  immediately. Capped at 600.
+
+Texts that already fit are never scrolled, whatever this is set to.
+
+## `big_titles_scroll_speed`
+
+How fast the title marquee moves once it starts, in **frames per character**: `1` steps every
+frame (fastest), `10` (the default) steps about six characters a second on NTSC, and larger
+numbers are slower. Accepts 1 to 255; anything else keeps the default. Only the automatic
+title marquee is affected -- the L/R scrolling of the description has its own fixed pace.
 
 ## Colors
 
@@ -110,6 +207,20 @@ boot animation, grid, banners — goes through the same projection, so everythin
 together. The trade-off is inherent to anamorphic output: the same 640 pixels now cover a
 wider image, so effective horizontal resolution drops. Off by default. Ported from
 [OffBroadway/cubeboot#57](https://github.com/OffBroadway/cubeboot/pull/57).
+
+## `force_progressive`
+
+Renders the **menu** in progressive scan (480p) — useful over component cables or a
+GCVideo. Off by default. Inherited from the original cubeboot: the loader rewrites the
+IPL's render mode to NTSC 480p before the BIOS main runs (a PAL IPL is switched to NTSC
+timing for the menu, with the boot animation retimed to match).
+
+Only covers **IPL 1.1 and 1.2**: on a launch console's **IPL 1.0** the loader force-disables
+it (`cubeboot/source/main.c`, inherited from upstream commit `f3d74d1`), so the key is
+safely ignored there — nothing breaks, it just does nothing.
+
+Menu only: when a game boots, video returns to interlaced (`patches/source/boot.c`) and the
+game's own progressive mode is negotiated by the game and Swiss as usual.
 
 ## `swiss_on_dvd_boot`
 
@@ -196,7 +307,106 @@ only in that the drive, not cubiboot, decides what the filesystem looks like.
 
 > [!NOTE]
 > On a FlippyDrive, cubiboot itself lives in the **drive's internal flash**, not on the SD
-> card — see [Method 4](../README.md#method-4-flippydrive) in the README. The SD card still
-> holds `config.ini` and your games. Swiss also comes from the drive's flash: a
+> card — see [Method 4](INSTALL.md#method-4-flippydrive) in the install guide. The SD card
+> still holds `config.ini` and your games. Swiss also comes from the drive's flash: a
 > `swiss-gc.dol` at the card root is only a fallback for a flash copy that went missing, and
 > `apploader.img` is not used on this hardware at all.
+
+# Menu behavior
+
+Not `config.ini` keys, but the reference for how the menu treats what it finds on the card.
+
+## Homebrew apps
+
+A folder that holds **`default.dol`** and **`opening.bnr`** side by side is treated as an
+application, not as a folder. It shows up in the grid with the banner from its `opening.bnr`,
+and pressing **A** runs the `.dol` directly instead of opening the folder.
+
+```
+/apps/
+  my-app/
+    default.dol     <- what gets launched
+    opening.bnr     <- name, description and banner art
+  another-app/
+    default.dol
+    opening.bnr
+```
+
+Both filenames are fixed. The banner is the same format retail discs use, so a title,
+description and 96x32 image all come from that one file.
+
+A folder missing either file behaves exactly as before — you enter it and browse. The check
+costs one file probe per folder while the list is being built, and folders without an
+`opening.bnr` stop right there, so a library of game folders is unaffected.
+
+**Making the banner.** [`tools/banner-converter/run.py`](../tools/banner-converter) turns any
+image into an `opening.bnr`. Download it from this repo, put your artwork next to it and run:
+
+```sh
+pip install Pillow
+python run.py
+```
+
+Pick option **2**, answer the title/author/description prompts, and it writes
+`output/<name>/opening.bnr`. Drop your `default.dol` beside that file and the folder is ready
+for the card. See [its README](../tools/banner-converter) for the sizing rules — the slot is
+96×32, so a wordmark that looks thin wants a *taller* source, not a wider one.
+
+## Launching Swiss from the menu
+
+Cubiboot boots games by chainloading Swiss. That makes Swiss itself a special case: handing
+it to Swiss would be asking Swiss to load a copy of itself, which resets the console to the
+stock GameCube menu. Cubiboot avoids that by recognising Swiss and running it directly — but
+it recognises it **by name**, so the name is what you have to get right.
+
+**Name it so it starts with `swiss`.** Capitalisation does not matter, and anything after
+the first five letters is ignored, so `Swiss v0.6r2073` works as well as `swiss`.
+
+| How you keep Swiss | What has to start with `swiss` | Example |
+|---|---|---|
+| A `.dol` in any folder | the **filename** | `swiss-gc.dol`, `Swiss v0.6r2073.dol` |
+| A [homebrew app](#homebrew-apps) folder | the **folder** name | `apps/Swiss v0.6r2073/default.dol` |
+| A disc image | the **filename** | `Swiss v0.6r2073.iso` |
+
+For the app folder, only `default.dol` inherits the folder's name — any other `.dol` sitting
+in there is treated as a different program that happens to live beside Swiss.
+
+Get the name wrong and Swiss is treated as an ordinary program: it gets handed to the Swiss
+at your card root, and the console resets to the stock menu instead of starting. Nothing is
+damaged, and renaming fixes it.
+
+Two things worth knowing:
+
+- **A Swiss app boots even with no `swiss-gc.dol` at the root.** Everything else needs that
+  file, because everything else is booted through Swiss — but Swiss needs no chainloader. So
+  a card that only carries Swiss as an app can still start it, which is what you want when
+  that root file is what went missing.
+- **Disc images do not need the name at all.** Every disc image boots through cubiboot's own
+  apploader, so a Swiss `.iso` works whatever it is called. The naming rule matters for the
+  `.dol` and the app folder, which are the forms that go through Swiss.
+
+This is all separate from the `swiss-gc.dol` at the card **root**, which is the copy games
+are launched with and has to be there regardless.
+
+## Large folders and the banner pool
+
+Banners live in a fixed low-memory pool capped at **128 banner images** (ARAM streaming was
+dropped — it corrupted banners on load). That cap defines two modes:
+
+| Files in the folder | Behaviour |
+|---|---|
+| **≤ 128** | All banners stay resident. Scrolling is instant. Best case for the banner layouts. |
+| **> 128** | The pool fills, then switches to an **on-demand sliding window** — off-screen banners are freed and re-read from the card as you scroll. Names still appear instantly; only images load on demand. |
+
+> [!WARNING]
+> In on-demand mode the banner layout gets sluggish and **may crash** while scrolling. For a
+> very large list in one folder, switch to `menu_grid_type = square_icons`. Filenames,
+> last-played and default-folder all still work in that layout.
+
+**Tips**
+
+- Keep folders under 128 files for instant scrolling.
+- Split big libraries into subfolders (genre, favourites, next-to-play).
+- For a large library you want to keep in one folder, use the cube layout.
+
+The 128 limit is a fail-safe. It can be raised in code, but that risks out-of-memory errors.

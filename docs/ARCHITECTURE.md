@@ -364,6 +364,27 @@ entry/          --make-->  entry.dol         (stub + cubeboot.gz, linked at 0x81
 stale one sends In-Game Reset back to an old menu. The CI and both local wrappers always
 rebuild them together.
 
+### How each release artifact is produced
+
+- **`apploader.img`** — `cubeboot.elf` packed with the
+  [swiss-gc packer](https://github.com/emukidid/swiss-gc/tree/master/cube/packer) (reboot
+  variant) and wrapped in a GameCube-apploader header. See
+  [.ci/build_apploader.sh](../.ci/build_apploader.sh).
+- **`cubiboot.iso`** — a GameCube El-Torito ISO9660 image built with `genisoimage` from
+  [cubeboot-tools'](https://github.com/makeo/cubeboot-tools) `gbi.hdr` (re-branded to the
+  Cubiboot banner), with the loader `.dol` as the boot image. See
+  [.ci/build_iso.sh](../.ci/build_iso.sh).
+- **`cubiboot_picoloader_payload.uf2`** — the [PicoLoader](https://github.com/makeo/PicoLoader)
+  firmware with `cubiboot.iso` embedded as the payload, replicating makeo's PicoLoader
+  converter. See [.ci/make_picoloader_uf2.py](../.ci/make_picoloader_uf2.py).
+- **`cubiboot_picoboot_payload.uf2`** — the [PicoBoot](https://github.com/webhdx/PicoBoot)
+  payload-only update. The payload is `entry/entry.dol` (the stage-1 stub linked at
+  `0x81300000` — the only DOL PicoBoot can inject), scrambled with the BS2 bootrom
+  scrambler and stamped with PicoBoot's `IPLBOOT `/`PICO` payload framing, replicating
+  PicoBoot's `tools/process_ipl.py`. It targets flash `0x80000`, where official PicoBoot
+  firmware ≥ v0.4 streams the payload from — which is why the official firmware has to be
+  flashed first. See [.ci/make_picoboot_uf2.py](../.ci/make_picoboot_uf2.py).
+
 ## Booting a game
 
 The menu does not boot games itself. `chainload_swiss_game()` in

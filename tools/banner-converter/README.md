@@ -2,7 +2,7 @@
 
 Turns an ordinary image into GameCube banner artwork. Use it to give a homebrew app the
 `opening.bnr` that makes cubiboot list it with a banner instead of as a folder — see
-[Homebrew apps](../../README.md#homebrew-apps).
+[Homebrew apps](../../docs/settings.md#homebrew-apps).
 
 It builds either of two things, picked from a menu when you run it:
 

@@ -11,6 +11,6 @@ for the next `.uf2`.
 
 Use it as the recovery step when a Pico refuses to take the PicoBoot firmware or
 behaves oddly after flashing — see the PicoBoot install notes in the
-[main README](../README.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader).
+[install guide](../../docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader).
 
 sha256: `3e26888f1393bee4fd0cc6a5191be470910c838feab751cba6c5fa254e9131b6`

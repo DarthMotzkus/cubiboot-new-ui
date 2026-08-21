@@ -54,7 +54,7 @@ patches/source/     stage 3: the injected menu
   linker/           one link script per IPL revision
 .ci/                scripts the GitHub workflow runs
 .localbuild/        local build wrappers (gitignored, comments in Portuguese)
-docs/               ARCHITECTURE.md, FORK_CHANGES.md, settings.md, README_es.md
+docs/               ARCHITECTURE.md, FORK_CHANGES.md, INSTALL.md, settings.md, README_es.md
 ```
 
 ## Building

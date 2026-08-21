@@ -16,6 +16,15 @@ con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares
 
 ---
 
+> [!NOTE]
+> La documentación en inglés fue reestructurada: el [README](../README.md) ahora es una guía
+> rápida, con la instalación completa en [docs/INSTALL.md](INSTALL.md) y todas las opciones
+> del `config.ini` en [docs/settings.md](settings.md). Esta página en español todavía sigue
+> la estructura anterior y puede estar desactualizada — ante cualquier diferencia, vale la
+> versión en inglés.
+
+---
+
 ## Contenido
 
 - [Novedades de este fork](#novedades-de-este-fork)
