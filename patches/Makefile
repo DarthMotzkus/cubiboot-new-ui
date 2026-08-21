@@ -36,6 +36,12 @@ endif
 #---------------------------------------------------------------------------------
 
 CFLAGS		= -O2 -Wall -Wno-main -ffixed-r12 -ffixed-r13 -ffunction-sections -fdata-sections -Wno-unused-function -Werror-implicit-function-declaration -DIPL_CODE $(MACHDEP) $(INCLUDE)
+
+# Build id the menu watermark draws (always visible in Dolphin, config-gated on hardware).
+# build.sh and CI pass CUBIBOOT_VERSION through the docker env; a bare `make` says "dev".
+CUBIBOOT_VERSION	?=	dev
+CFLAGS		+=	-DCUBIBOOT_VERSION=\"$(CUBIBOOT_VERSION)\"
+
 CXXFLAGS	= $(CFLAGS)
 
 LINKER_SCRIPTS	:=

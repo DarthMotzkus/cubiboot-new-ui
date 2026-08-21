@@ -1350,6 +1350,11 @@ void alpha_watermark(void) {
     prep_text_mode();
 
     GXColor yellow_alpha = {0xFF, 0xFF, 0x00, 0x80};
-    draw_text("BETA TEST", 24, 330, 0, &yellow_alpha);
-    draw_text("cubeboot rc" CONFIG_BETA_RC, 22, 330, 28, &yellow_alpha);
+    if (is_running_dolphin)
+        draw_text("DOLPHIN TEST", 24, 330, 0, &yellow_alpha);
+    else
+        draw_text("BETA TEST", 24, 330, 0, &yellow_alpha);
+    // Full git-describe is wider than the title: smaller and anchored further left,
+    // or the tail clips at the screen edge.
+    draw_text(CUBIBOOT_VERSION, 18, 300, 28, &yellow_alpha);
 }

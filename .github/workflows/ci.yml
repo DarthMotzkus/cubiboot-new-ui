@@ -43,10 +43,12 @@ jobs:
             VERSION="$(git rev-parse --short HEAD)"
           fi
           python3 .ci/brand_opening.py patches/data/default_opening.bin "$VERSION"
+          # The menu watermark shows the same id (patches/Makefile reads CUBIBOOT_VERSION).
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       # ipl.dol: the cubeboot loader (entry/ build copies emu sources + compresses payload).
       - name: Build ipl.dol
-        run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'cd entry && make clean && make'
+        run: docker run --rm -v "$PWD":/work -e CUBIBOOT_VERSION="$VERSION" cubiboot-dev bash -lc 'cd entry && make clean && make'
 
       # apploader.img: Swiss IGR redirect embedding the freshly built cubeboot loader.
       - name: Build apploader.img
