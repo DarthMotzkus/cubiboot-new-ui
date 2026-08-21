@@ -41,8 +41,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Text scrolling** | A title longer than the info box [scrolls on its own](docs/settings.md#text_scroll); the description scrolls with **L**/**R**. |
 | **Games from the ODE / FlippyDrive SD** | [`device_order`](docs/settings.md#device_order) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE or a FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **16:9 widescreen menu** | [`force_widescreen = on`](docs/settings.md#force_widescreen) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
-| **Cold-boot banner fix** | Banner pools live in low memory that PicoBoot doesn't clear on cold boot, so stale "in-use" flags used to alias buffers (corruption) or starve them (blank) — worse the colder the console. The pools are now zeroed at startup and banners stay resident in MRAM. |
-| **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads "CUBIBOOT New UI". |
+| **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads your device names (e.g. SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
 | **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader_payload.uf2`. |
 
