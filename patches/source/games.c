@@ -1084,13 +1084,33 @@ static const char *gm_strip_device(const char *value) {
     return colon != NULL ? colon + 1 : value;
 }
 
-// Read Swiss's recent-games list and return the most-recently-played GAME path into `out`.
-// Swiss writes entries newest-first ("Recent_0=...", "Recent_1=..."), so we walk the lines
-// top-to-bottom and return the first whose extension is a game image -- this skips a
-// last-launched utility (.dol) so it doesn't shadow the real last game. Uses the synchronous
-// DI read so it is safe both pre-thread (startup folder selection) and on the enum thread
-// (matching). Returns false if the option is off, the file is missing/empty, or it holds no
-// game entry (e.g. Swiss's "Recent List" setting is disabled).
+// The slash separating the browsed folder from the list entry a recent path maps to.
+// A file sits in its parent folder; an app's default.dol maps to the app-folder entry,
+// which sits one level further up -- recognized, like the enumerator does, by the
+// opening.bnr sibling (a bare default.dol without one is a plain program entry).
+static char *gm_recent_entry_slash(char *path) {
+    char *last_slash = strrchr(path, '/');
+    if (last_slash == NULL) return NULL;
+    if (strcasecmp(last_slash, APP_DOL_NAME) != 0) return last_slash;
+
+    char banner[GM_PATH_MAX];
+    gm_app_banner_path(path, banner);
+    if (!gm_file_exists(banner)) return last_slash;
+
+    for (char *p = last_slash - 1; p >= path; p--)
+        if (*p == '/') return p;
+    return last_slash; // malformed (no slash before the app folder)
+}
+
+// Read Swiss's recent list and return the most-recently-played path into `out`. Swiss
+// writes entries newest-first ("Recent_0=...", "Recent_1=..."), so we walk the lines
+// top-to-bottom and return the first that maps to a list entry: a game image or a .dol
+// (a plain homebrew program and an app's default.dol alike -- everything the browser can
+// re-select). "dvd:" lines are skipped: a physical disc has no list entry to come back to
+// (its screen is reached by Z), so it must not shadow the SD entries below it. Uses the
+// synchronous DI read so it is safe both pre-thread (startup folder selection) and on the
+// enum thread (matching). Returns false if the option is off, the file is missing/empty,
+// or it holds no usable entry (e.g. Swiss's "Recent List" setting is disabled).
 static bool gm_read_last_played(char *out, int out_len) {
     static GCN_ALIGNED(char) rbuf[RECENT_READ_SIZE];
     memset(rbuf, 0, sizeof(rbuf));
@@ -1113,9 +1133,12 @@ static bool gm_read_last_played(char *out, int out_len) {
 
         if (strncmp(p, "Recent_", 7) == 0) {
             char *eq = strchr(p, '=');
-            if (eq != NULL) {
+            // "dvd:" is machine-written by Swiss, always lowercase -- plain strncmp is
+            // enough (and patches/ has no strncasecmp implementation to link).
+            if (eq != NULL && strncmp(eq + 1, "dvd:", 4) != 0) {
                 const char *path = gm_strip_device(eq + 1);
-                if (path[0] != '\0' && gm_get_file_type(path) == GM_FILE_TYPE_GAME) {
+                gm_file_type_t type = path[0] != '\0' ? gm_get_file_type(path) : GM_FILE_TYPE_UNKNOWN;
+                if (type == GM_FILE_TYPE_GAME || type == GM_FILE_TYPE_PROGRAM) {
                     strncpy(out, path, out_len - 1);
                     out[out_len - 1] = '\0';
                     return true;
@@ -1139,11 +1162,11 @@ char *gm_last_played_folder(void) {
     if (!remember_last_game) return NULL;
     if (!gm_read_last_played(folder_buf, sizeof(folder_buf))) return NULL;
 
-    // strip the filename to get the containing folder
-    char *last_slash = strrchr(folder_buf, '/');
+    // strip down to the folder whose listing holds the entry (an app strips two levels)
+    char *last_slash = gm_recent_entry_slash(folder_buf);
     if (last_slash == NULL) return NULL;        // malformed (no slash)
     if (last_slash == folder_buf) {
-        folder_buf[1] = '\0';                   // game at root -> "/"
+        folder_buf[1] = '\0';                   // entry at root -> "/"
     } else {
         *last_slash = '\0';                     // "/a/b/Game.iso" -> "/a/b"
     }
@@ -1168,11 +1191,11 @@ static void gm_arm_last_played(const char *folder) {
 
     if (!gm_read_last_played(gm_last_played_path, sizeof(gm_last_played_path))) return;
 
-    // Only arm if we actually landed in the game's folder (pre-thread normally ensures this).
-    // Derive the game's folder (keep the trailing slash) and compare to the scanned folder.
+    // Only arm if we actually landed in the entry's folder (pre-thread normally ensures
+    // this). Derive that folder (keep the trailing slash) and compare to the scanned one.
     char game_folder[MAX_FILE_NAME];
     strcpy(game_folder, gm_last_played_path);
-    char *slash = strrchr(game_folder, '/');
+    char *slash = gm_recent_entry_slash(game_folder);
     if (slash == NULL) return;
     slash[1] = '\0';                                // "/Games/x.iso" -> "/Games/"
     if (strcasecmp(game_folder, folder) == 0) {
@@ -1187,7 +1210,10 @@ static void gm_match_last_played() {
 
     for (int i = 0; i < gm_entry_count; i++) {
         gm_file_entry_t *e = gm_entry_backing[i];
-        if (e == NULL || e->type != GM_FILE_TYPE_GAME) continue;
+        if (e == NULL) continue;
+        // Games, apps and plain programs all boot through Swiss and land in its recent
+        // list; their entry paths are all the booted file's path, so one compare fits all.
+        if (e->type != GM_FILE_TYPE_GAME && e->type != GM_FILE_TYPE_APP && e->type != GM_FILE_TYPE_PROGRAM) continue;
         // Case-INSENSITIVE: the folder is opened via FAT (case-insensitive), so Swiss can
         // record a path whose casing differs from the on-disc directory entry. A
         // case-sensitive compare would open the right folder yet fail to highlight.
