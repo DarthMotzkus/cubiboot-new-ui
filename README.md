@@ -49,7 +49,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 ## Before you start
 
 > [!IMPORTANT]
-> - Format the SD card as **exFAT**, not FAT32. Loading is very slow on FAT32.
+> - Format the SD card (from any size) as **exFAT**, not FAT32.
 > - Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin Emulator**, even with an IPL.bin configured.
 
 You will also need [Swiss](https://github.com/emukidid/swiss-gc/releases/latest): cubiboot
