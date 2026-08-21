@@ -130,7 +130,7 @@ title marquee is affected -- the L/R scrolling of the description has its own fi
 
 ## Colors
 
-Every color key takes a hex RGB code or `random` (re-rolled on each boot). `000000` is a
+Every color key takes a [hex RGB](https://www.w3schools.com/colors/colors_hexadecimal.asp) code or `random` (re-rolled on each boot). `000000` is a
 real black, not "unset". With no color key at all, the stock look is untouched.
 
 `theme_color` is the umbrella: it feeds the boot logo, the grid cubes, the info-box gradient
