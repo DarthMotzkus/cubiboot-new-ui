@@ -659,6 +659,132 @@ static const char *device_header_text(void) {
     return "CUBIBOOT New UI";
 }
 
+// --- info box text scrolling ---------------------------------------------
+// The IPL blob text elements clip at the box edge. Both menus redraw every
+// frame with a fresh string pointer, so scrolling is drawing from an offset:
+// the title marquees on its own, the description pages with the L/R triggers.
+// The two rows are not the same width: the description row starts after the
+// ISO/DOL tag, so it fits a few glyphs fewer than the title row above it.
+#define SCROLL_VISIBLE_TITLE 28 // glyphs that fit the title row (full box width)
+#define SCROLL_VISIBLE_INFO  24 // glyphs that fit the narrower description row
+#define SCROLL_END_HOLD_FRAMES 75 // pause with the tail visible before wrapping
+#define SCROLL_REPEAT_DELAY_FRAMES 20 // hold L/R this long before it auto-repeats
+#define SCROLL_REPEAT_STEP_FRAMES   4 // then one character per this many frames
+
+// Patched in by the loader (cubeboot/main.c) from config.ini's text_scroll and
+// big_titles_scroll_speed keys. The delay is in seconds -- frames depend on the
+// video mode, so it converts here. The marquee pace is frames per character
+// step (1 = fastest); the loader clamps it to 1..255.
+__attribute_data__ u32 text_scroll_enabled = 1;
+__attribute_data__ u32 text_scroll_delay_s = 2;
+__attribute_data__ u32 title_scroll_step_frames = 10;
+
+static u16 scroll_start_hold_frames(void) {
+    u32 fps = (rmode->viTVMode >> 2 == VI_NTSC) ? 60 : 50;
+    u32 frames = text_scroll_delay_s * fps;
+    if (frames > 60000) frames = 60000; // loader clamps at 600s; belt and braces for the u16 timers
+    return (u16)frames;
+}
+
+static int title_scroll_off = 0;
+static u16 title_scroll_timer = 0;
+static int info_scroll_off = 0;
+static int start_title_off = 0; // Game Play screen title, own element geometry
+static u16 start_title_timer = 0;
+
+// JPN banners are Shift-JIS: a lead byte must never be split from its trail
+// byte or the IPL font renders garbage from the offset onward.
+static bool scroll_sjis_lead(u8 c) {
+    return (c >= 0x81 && c <= 0x9F) || (c >= 0xE0 && c <= 0xFC);
+}
+
+static int scroll_next(const char *s, int off, bool sjis) {
+    if (s[off] == '\0') return off;
+    if (sjis && scroll_sjis_lead((u8)s[off]) && s[off + 1] != '\0') return off + 2;
+    return off + 1;
+}
+
+// Byte position after skipping nchars characters, never splitting an SJIS pair.
+static int scroll_skip_chars(const char *s, int len, int nchars, bool sjis) {
+    int off = 0;
+    while (nchars-- > 0 && off < len) {
+        if (sjis && scroll_sjis_lead((u8)s[off]) && off + 1 < len) off += 2;
+        else off++;
+    }
+    return off;
+}
+
+// The description is one BNR field, but banners embed '\n' to stack extra rows
+// (version, author, year). The grid's info element renders exactly one row of a
+// multi-line string, so the grid always draws the rows joined into one stream
+// (a single space replaces each break -- banner rows don't end in spaces, so
+// nothing at all would glue words together) and the L/R offset walks the whole
+// thing: every byte of every row passes through the box. The Game Play screen
+// keeps the raw string; its draw_blob_text_long wraps all rows readably.
+// Bounded by BNR_DESC_LEN, not strlen: a banner that fills the field to the
+// brim carries no terminating NUL.
+static const char *scroll_desc_flatten(const char *s) {
+    static char flat[BNR_DESC_LEN * 2];
+    int w = 0;
+    bool sep_pending = false;
+    for (int i = 0; i < BNR_DESC_LEN && s[i] != '\0'; i++) {
+        if (s[i] == '\n' || s[i] == '\r') {
+            if (w > 0) sep_pending = true; // runs of breaks collapse into one separator
+            continue;
+        }
+        if (sep_pending) {
+            if (flat[w - 1] != ' ') flat[w++] = ' ';
+            sep_pending = false;
+        }
+        flat[w++] = s[i];
+    }
+    flat[w] = '\0';
+    return flat;
+}
+
+// True while the flattened text still has content clipped past the box at this
+// scroll position -- the R trigger's limit.
+static bool scroll_desc_overflows(const char *s, int off_chars, bool sjis) {
+    const char *flat = scroll_desc_flatten(s);
+    int skip = scroll_skip_chars(flat, (int)strlen(flat), off_chars, sjis);
+    return (int)strlen(flat + skip) > SCROLL_VISIBLE_INFO;
+}
+
+// Both menu draw paths fetch the entry each frame; the first one to see a new
+// entry resets every scroll state so no offset outlives the string it indexed.
+static void scroll_check_entry(gm_file_entry_t *entry) {
+    static gm_file_entry_t *scroll_entry = NULL;
+    if (entry == scroll_entry) return;
+    scroll_entry = entry;
+    title_scroll_off = info_scroll_off = start_title_off = 0;
+    title_scroll_timer = start_title_timer = 0;
+}
+
+static void marquee_tick(const char *s, bool sjis, int visible, int *off, u16 *timer) {
+    int len = (int)strlen(s);
+    if (!text_scroll_enabled || len <= visible || *off >= len) {
+        *off = 0;
+        *timer = 0;
+        return;
+    }
+    if ((int)strlen(s + *off) <= visible) {
+        // tail fully visible: hold, then wrap back to the head
+        if (++*timer >= SCROLL_END_HOLD_FRAMES) {
+            *off = 0;
+            *timer = 0;
+        }
+        return;
+    }
+    if (*off == 0 && *timer < scroll_start_hold_frames()) {
+        ++*timer;
+        return;
+    }
+    if (*off == 0 || ++*timer >= title_scroll_step_frames) {
+        *off = scroll_next(s, *off, sjis);
+        *timer = 0;
+    }
+}
+
 __attribute_data__ u32 current_gameselect_state = SUBMENU_GAMESELECT_LOADER;
 // While this is set, the IPL owns the Game Play screen and its asynchronous disc state
 // machine. The assembly draw dispatcher uses the same flag to restore the stock portion
@@ -756,12 +882,17 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
 
     gm_file_entry_t *entry = gm_get_game_entry(selected_slot);
     if (entry != NULL && selected_slot < game_backing_count) {
-        if (entry->extra.game_id[3] == 'J') switch_lang_jpn();
+        bool sjis = entry->extra.game_id[3] == 'J';
+        if (sjis) switch_lang_jpn();
         else switch_lang_eng();
 
         // info
-        draw_blob_text(make_type('t','i','t','l'), menu_blob, &white, entry->desc.fullGameName, 0x1f);
-        draw_blob_text(make_type('i','n','f','o'), menu_blob, &white, entry->desc.description, 0x1f);
+        scroll_check_entry(entry);
+        marquee_tick(entry->desc.fullGameName, sjis, SCROLL_VISIBLE_TITLE, &title_scroll_off, &title_scroll_timer);
+        draw_blob_text(make_type('t','i','t','l'), menu_blob, &white, entry->desc.fullGameName + title_scroll_off, 0x1f);
+        const char *flat = scroll_desc_flatten(entry->desc.description);
+        char *desc_draw = (char*)flat + scroll_skip_chars(flat, (int)strlen(flat), info_scroll_off, sjis);
+        draw_blob_text(make_type('i','n','f','o'), menu_blob, &white, desc_draw, 0x1f);
 
         switch_lang_eng();
         if (entry->type == GM_FILE_TYPE_PROGRAM || entry->type == GM_FILE_TYPE_DIRECTORY) {
@@ -811,7 +942,8 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
 
     gm_file_entry_t *entry = gm_get_game_entry(selected_slot);
     if (entry == NULL) return; // protect against transition during enum
-    if (entry->extra.game_id[3] == 'J') switch_lang_jpn();
+    bool title_sjis = entry->extra.game_id[3] == 'J';
+    if (title_sjis) switch_lang_jpn();
     else switch_lang_eng();
 
     bool can_boot = emu_can_boot(entry);
@@ -829,7 +961,9 @@ __attribute_used__ void original_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, 
 
     // game info
     prep_text_mode();
-    draw_blob_text(make_type('t','i','t','l'), game_blob_b, &white, entry->desc.fullGameName, 0x40);
+    scroll_check_entry(entry);
+    marquee_tick(entry->desc.fullGameName, title_sjis, SCROLL_VISIBLE_TITLE, &start_title_off, &start_title_timer);
+    draw_blob_text(make_type('t','i','t','l'), game_blob_b, &white, entry->desc.fullGameName + start_title_off, 0x40);
     if (has_banner) {
         // Author and description come out of the banner, for a disc and an app alike.
         draw_blob_text(make_type('m','a','k','r'), game_blob_b, &white, entry->desc.fullCompany, 0x40);
@@ -985,6 +1119,41 @@ __attribute_used__ s32 handle_gameselect_inputs() {
                 original_menu_transition_alpha += transition_step;
                 break;
             default:
+        }
+    }
+
+    // L/R scroll the info box description a character at a time; holding a
+    // trigger auto-repeats after a short delay. Bounded at both ends: L never
+    // past the start, R never past the point where the flattened text fits the
+    // row. The offset is a character count over the flattened stream (see
+    // scroll_desc_flatten), which is what makes stepping back a plain
+    // decrement even in SJIS.
+    {
+        static u16 lr_hold_timer = 0;
+        u16 lr_held = pad_status->pad.button & (PAD_TRIGGER_L | PAD_TRIGGER_R);
+        if (lr_held == 0) {
+            lr_hold_timer = 0;
+        } else if (current_gameselect_state == SUBMENU_GAMESELECT_LOADER && !in_submenu_transition) {
+            bool step;
+            if (pad_status->buttons_down & (PAD_TRIGGER_L | PAD_TRIGGER_R)) {
+                lr_hold_timer = 0; // fresh press: step now, repeat after the delay
+                step = true;
+            } else {
+                lr_hold_timer++;
+                step = lr_hold_timer >= SCROLL_REPEAT_DELAY_FRAMES &&
+                       (lr_hold_timer - SCROLL_REPEAT_DELAY_FRAMES) % SCROLL_REPEAT_STEP_FRAMES == 0;
+            }
+
+            gm_file_entry_t *scroll_target = gm_get_game_entry(selected_slot);
+            if (step && scroll_target != NULL && selected_slot < game_backing_count) {
+                bool sjis = scroll_target->extra.game_id[3] == 'J';
+                if (lr_held & PAD_TRIGGER_R) {
+                    if (scroll_desc_overflows(scroll_target->desc.description, info_scroll_off, sjis))
+                        info_scroll_off++;
+                } else if (info_scroll_off > 0) {
+                    info_scroll_off--;
+                }
+            }
         }
     }
 

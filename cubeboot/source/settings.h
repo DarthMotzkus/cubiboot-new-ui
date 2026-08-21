@@ -21,6 +21,12 @@ typedef struct settings {
     u32 force_widescreen;
     u32 preboot_delay_ms;
     u32 postboot_delay_ms;
+    // Auto-scroll of long texts in the game list. A number in the ini is the delay in
+    // seconds before scrolling starts, so 0/1 are NOT the usual switch values here.
+    u32 text_scroll_enabled;
+    u32 text_scroll_delay_s;
+    // Title marquee pace in frames per character: 1 is fastest, higher is slower.
+    u32 big_titles_scroll_speed;
     // Raw [cubeboot] device_order value: FatFs volume names, in the order the loader
     // should try them. Parsed by emu_apply_device_order(), which owns the device list.
     char *device_order;

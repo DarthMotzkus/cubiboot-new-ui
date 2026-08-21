@@ -96,6 +96,11 @@ void load_settings() {
     // Default the menu layout in code so the banner grid works even without a
     // config.ini being present/readable; config.ini can still override it below.
     settings.menu_grid_type = MENU_GRID_SMALL_BANNERS;
+    // Long texts scroll by default, after holding still for 2 seconds, one character
+    // every 10 frames.
+    settings.text_scroll_enabled = 1;
+    settings.text_scroll_delay_s = 2;
+    settings.big_titles_scroll_speed = 10;
     int config_size = get_file_size("/config.ini");
     if (config_size == SD_FAIL) return;
 
@@ -183,6 +188,46 @@ void load_settings() {
     } else {
         iprintf("Found postboot_delay_ms = %u\n", postboot_delay_ms);
         settings.postboot_delay_ms = postboot_delay_ms;
+    }
+
+    // Auto-scroll of long menu texts. Not ini_get_bool on purpose: a number here is the
+    // delay in seconds before a long title starts scrolling, so `0` and `1` mean seconds,
+    // not off/on. `on`/`yes`/`true` keep the default delay; `off`/`no`/`false` disable it.
+    // Anything else, or a missing key, keeps the defaults set above.
+    const char *text_scroll_raw = ini_get(conf, "cubeboot", "text_scroll");
+    if (text_scroll_raw != NULL) {
+        char *num_end = NULL;
+        long scroll_secs = strtol(text_scroll_raw, &num_end, 10);
+        if (num_end != text_scroll_raw && *num_end == '\0' && scroll_secs >= 0) {
+            if (scroll_secs > 600) scroll_secs = 600; // keep seconds*fps inside the menu's u16 frame timer
+            settings.text_scroll_enabled = 1;
+            settings.text_scroll_delay_s = (u32)scroll_secs;
+            iprintf("Found text_scroll = %us delay\n", settings.text_scroll_delay_s);
+        } else if (strcasecmp(text_scroll_raw, "on") == 0 || strcasecmp(text_scroll_raw, "yes") == 0 ||
+                   strcasecmp(text_scroll_raw, "true") == 0) {
+            settings.text_scroll_enabled = 1;
+            iprintf("Found text_scroll = on\n");
+        } else if (strcasecmp(text_scroll_raw, "off") == 0 || strcasecmp(text_scroll_raw, "no") == 0 ||
+                   strcasecmp(text_scroll_raw, "false") == 0) {
+            settings.text_scroll_enabled = 0;
+            iprintf("Found text_scroll = off\n");
+        } else {
+            iprintf("Ignoring unreadable text_scroll = %s (keeping %s, %us)\n", text_scroll_raw,
+                    settings.text_scroll_enabled ? "on" : "off", settings.text_scroll_delay_s);
+        }
+    }
+
+    // Title marquee pace, in frames per character step: 1 is the fastest, larger numbers
+    // are slower. Out-of-range or unreadable values keep the default.
+    u32 big_titles_scroll_speed = 0;
+    if (ini_sget(conf, "cubeboot", "big_titles_scroll_speed", "%u", &big_titles_scroll_speed)) {
+        if (big_titles_scroll_speed >= 1 && big_titles_scroll_speed <= 255) {
+            settings.big_titles_scroll_speed = big_titles_scroll_speed;
+            iprintf("Found big_titles_scroll_speed = %u\n", big_titles_scroll_speed);
+        } else {
+            iprintf("Ignoring out-of-range big_titles_scroll_speed = %u (keeping %u)\n",
+                    big_titles_scroll_speed, settings.big_titles_scroll_speed);
+        }
     }
 
     settings.show_watermark = ini_get_bool(conf, "show_watermark", 0);

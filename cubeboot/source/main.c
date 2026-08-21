@@ -324,6 +324,10 @@ int main(int argc, char **argv) {
     set_patch_value(symshdr, syment, symstringdata, "preboot_delay_ms", settings.preboot_delay_ms);
     set_patch_value(symshdr, syment, symstringdata, "postboot_delay_ms", settings.postboot_delay_ms);
 
+    set_patch_value(symshdr, syment, symstringdata, "text_scroll_enabled", settings.text_scroll_enabled);
+    set_patch_value(symshdr, syment, symstringdata, "text_scroll_delay_s", settings.text_scroll_delay_s);
+    set_patch_value(symshdr, syment, symstringdata, "title_scroll_step_frames", settings.big_titles_scroll_speed);
+
     set_patch_value(symshdr, syment, symstringdata, "menu_grid_type", settings.menu_grid_type);
 
     // // Copy settings string
