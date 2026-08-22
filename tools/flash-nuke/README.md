@@ -9,8 +9,12 @@ into RAM (`0x20000000`) and erases the entire flash, so it works no matter what 
 the flash is in. After it runs, the Pico comes back in BOOTSEL mode by itself, ready
 for the next `.uf2`.
 
-Use it as the recovery step when a Pico refuses to take the PicoBoot firmware or
-behaves oddly after flashing — see the PicoBoot install notes in the
-[install guide](../../docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader).
+Use it as the **recommended first step before any PicoBoot/PicoLoader install**, not just
+as recovery: leftovers of whatever was flashed before can survive next to the new install,
+and the classic symptom is a **double boot** — the console visibly passes through two
+loaders back to back, or keeps booting the old one as if the new flash never happened.
+Wiping first guarantees the next `.uf2` is the only thing on the chip. It is also the
+recovery step when a Pico refuses to take the PicoBoot firmware or behaves oddly after
+flashing — see the [install guide](../../docs/INSTALL.md#wipe-the-pico-first-recommended).
 
 sha256: `3e26888f1393bee4fd0cc6a5191be470910c838feab751cba6c5fa254e9131b6`

@@ -4,6 +4,7 @@ Every way of getting cubiboot onto a console, in full detail. The
 [README](../README.md#installation) has the short version; this page is the reference.
 
 - [Files on the card](#files-on-the-card)
+- [Wipe the Pico first (recommended)](#wipe-the-pico-first-recommended)
 - [Method 1: PicoBoot or PicoLoader with gekkoboot](#method-1-picoboot-or-picoloader-with-gekkoboot)
 - [Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
 - [Method 3: GC Loader and CUBE-ODE](#method-3-gc-loader-and-cube-ode)
@@ -44,16 +45,32 @@ Your games can live anywhere, including subfolders — see
 > all: In-Game Reset on a FlippyDrive goes through Swiss's **Reboot** option instead
 > ([details](#in-game-reset)).
 
+## Wipe the Pico first (recommended)
+
+Before flashing anything in Method 1 or 2, wipe the Pico: hold **BOOTSEL** while plugging
+it into your PC and copy
+[`universal_flash_nuke.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/raw/main/tools/flash-nuke/universal_flash_nuke.uf2)
+to the USB drive that appears. It erases the whole flash and drops the Pico straight back
+into BOOTSEL, ready for the real firmware.
+
+Why it matters: a Pico that was flashed before keeps whatever lived there — an old
+gekkoboot, another payload, a different firmware — and those leftovers can survive next to
+the new install. The classic symptom is a **double boot** (the console visibly passes
+through two loaders back to back), or the old loader still coming up as if the new flash
+never happened. Wiping first guarantees the next `.uf2` is the only thing on the chip.
+Works on Pico and Pico 2; details in [tools/flash-nuke](../tools/flash-nuke/README.md).
+
 ## Method 1: PicoBoot or PicoLoader with gekkoboot
 
 **Recommended.** Updating cubiboot later is just replacing files on the SD card — no
 disassembly. See [Updating](#updating) for which ones.
 
-1. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
+1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before.
+2. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
    [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2).
-2. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
+3. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    and copy it to the **root** of your SD card.
-3. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
+4. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
    `swiss-gc.dol`, plus a [`config.ini`](settings.md) and your games.
 
 ## Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)
@@ -63,31 +80,29 @@ on the card.
 
 **PicoBoot (Pico or Pico 2):**
 
-1. Flash the **official PicoBoot firmware** first, if the Pico doesn't run it yet: hold
-   the **BOOTSEL** button on the Pico while plugging it into your PC, and copy
-   `picoboot_full_pico.uf2` (Pico) or `picoboot_full_pico2.uf2` (Pico 2) from the
+1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before —
+   leftovers of a previous install are what cause a double boot.
+2. Flash the **official PicoBoot firmware**: hold the **BOOTSEL** button on the Pico while
+   plugging it into your PC, and copy `picoboot_full_pico.uf2` (Pico) or
+   `picoboot_full_pico2.uf2` (Pico 2) from the
    [PicoBoot releases](https://github.com/webhdx/PicoBoot/releases) to the USB drive that
-   appears. Already running PicoBoot ≥ v0.4 (Pico 2 shipped with v0.5.0)? Skip this step.
-2. Enter BOOTSEL mode again (the Pico reboots after step 1 — unplug, hold the button,
+   appears. Already running a freshly-flashed PicoBoot ≥ v0.4 (Pico 2 shipped with
+   v0.5.0)? Skip this step.
+3. Enter BOOTSEL mode again (the Pico reboots after step 2 — unplug, hold the button,
    replug) and copy
    [`cubiboot_picoboot_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoboot_payload.uf2)
    — it replaces the gekkoboot payload embedded in the firmware with cubiboot, leaving
    the firmware itself untouched. One file for both boards, and the only file to
    re-flash on later updates.
 
-> [!TIP]
-> Pico misbehaving, or no idea what is flashed on it? In BOOTSEL mode, copy
-> [`universal_flash_nuke.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/raw/main/tools/flash-nuke/universal_flash_nuke.uf2)
-> to it first — it wipes the flash completely and drops the Pico straight back into
-> BOOTSEL, ready for step 1. Works on both boards; see
-> [tools/flash-nuke](../tools/flash-nuke/README.md).
-
 **PicoLoader:**
 
-1. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
-2. Download [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
-3. Hold the button on the RP2040 Pico while plugging it into your PC.
-4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
+1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before —
+   leftovers of a previous install are what cause a double boot.
+2. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
+3. Download [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
+4. Hold the button on the RP2040 Pico while plugging it into your PC.
+5. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
 
 **Either way:** put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
 [`config.ini`](settings.md) and your games.

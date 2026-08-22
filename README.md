@@ -87,14 +87,22 @@ Every tagged release (`v*`) publishes:
 
 ## Installation
 
-The most common setup — a **PicoBoot or PicoLoader** modchip with gekkoboot — is three steps,
-and updating later is just swapping files on the card:
+The most common setup — a **PicoBoot or PicoLoader** modchip with gekkoboot — and updating
+later is just swapping files on the card:
 
-1. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
+1. **Wipe the Pico first** (recommended): hold **BOOTSEL** while plugging the Pico into
+   your PC and copy
+   [`universal_flash_nuke.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/raw/main/tools/flash-nuke/universal_flash_nuke.uf2)
+   to the USB drive that appears. It erases the flash completely and drops the Pico
+   straight back into BOOTSEL, ready for the next step. Skipping this is the classic cause
+   of a **double boot**: leftovers of whatever was flashed before survive next to the new
+   install, and the console boots through two loaders — or keeps loading the old one.
+   Works on Pico and Pico 2; see [tools/flash-nuke](tools/flash-nuke/README.md).
+2. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
    [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2).
-2. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
+3. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    and copy it to the **root** of your SD card.
-3. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
+4. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
    `swiss-gc.dol`, plus a [`config.ini`](#configuration) and your games.
 
 Every other path is in the **[install guide](docs/INSTALL.md)**:

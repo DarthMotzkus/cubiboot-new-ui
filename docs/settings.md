@@ -30,7 +30,7 @@ device_order = sd2sp2, slot_b, slot_a, ode, flippy   # storage to read games fro
 ## On/off switches
 
 Every switch below -- `swiss_on_dvd_boot`, `remember_last_game`, `force_widescreen`,
-`force_progressive`, `show_watermark`, `disable_mcp_select` -- reads `on` or `off`. `1`/`0`,
+`force_progressive`, `disable_mcp_select` -- reads `on` or `off`. `1`/`0`,
 `yes`/`no` and `true`/`false` are accepted as well, so a config carried over from another
 tool still reads. A value that is none of those is ignored and the default stays, rather
 than a typo silently flipping the switch; the loader prints what it decided either way.
