@@ -15,17 +15,19 @@ without stealing the release.
 Only the "What's new" notes and the compare link get rewritten each release.
 -->
 
-## What's new in v1.9.7
+## What's new in v1.9.8
 
-* **Long titles scroll.** A title wider than the info box holds still for a moment, then scrolls sideways so the whole name can be read — in the game list and on the Game Play screen. Names that fit never move, and Japanese titles scroll cleanly (the stepping never splits a Shift-JIS character). Two new `config.ini` keys tune it: [`text_scroll`](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md#text_scroll) — `on` (default, 2-second delay), `off`, or the delay in seconds (the one key where `0` and `1` mean seconds, not switches) — and [`big_titles_scroll_speed`](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md#big_titles_scroll_speed), the pace in frames per character (`1` fastest, default `10`). The old "keep filenames under 28 characters" advice is retired.
+* **The title marquee is now a ticker.** A long title runs left, a gap follows the tail, and the head re-enters right behind it; the loop parks only once the beginning is back at the box edge, then holds and goes again. The resting frame is always the readable start of the name — v1.9.7 parked on the tail and could leave the last letter clipped. The Game Play screen also got its own width limit (35 characters, hardware-measured), so titles that fit there no longer scroll for nothing.
 
-* **The description scrolls by hand with L and R.** One character per press, hold to keep scrolling, bounded at both ends. A banner description with embedded line breaks is joined into one stream while scrolling, so every line can be read — the info box's single visible row used to hide the rest of a multi-line description outright.
+* **L and R scroll on analog travel.** The description scroll now reacts to the triggers' analog pressure, not just the full-press digital click — pads whose triggers never reach the click, or that lack it entirely, work now. Hysteresis keeps a worn trigger from flapping, and holding still auto-repeats as before.
 
-* **`remember_last_game` now comes back to apps too.** A homebrew app (`default.dol` + `opening.bnr`) or a plain `.dol` you booted is re-selected on the next boot exactly like a game, in whatever folder it lives. A physical-disc launch is skipped — there is no list entry to come back to — so it no longer shadows the most recent card entry.
+* **The header shows a real Z button.** "Load Disc (Z)" is now a purple GameCube-Z pill (the pad's #6B5CB1, drawn with the Z glyph from the BIOS's own font) pulsing next to "Load Disc", matching the stock A/B button pills.
 
-* **The docs were restructured.** The [README](https://github.com/DarthMotzkus/cubiboot-new-ui#readme) is now a quick guide; the four installation methods, In-Game Reset and updating moved to [docs/INSTALL.md](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md), and every `config.ini` key with its full behavior notes lives in [docs/settings.md](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md). `force_progressive` is now documented there too: menu in 480p, IPL 1.1/1.2 only, safely ignored on IPL 1.0.
+* **The yellow "BETA TEST" overlay is gone.** It sat on the header row and got in the way. The build id is still stamped on the boot banner and readable inside the binary; the `show_watermark` key is currently inert.
 
-**Full Changelog:** [v1.9.6...v1.9.7](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.9.6...v1.9.7)
+* **Install guides now say to wipe the Pico first.** Leftovers of a previous firmware or payload are the classic cause of a double boot — the console visibly passing through two loaders — so `universal_flash_nuke.uf2` is now the recommended first step of every PicoBoot/PicoLoader install, in the [README](https://github.com/DarthMotzkus/cubiboot-new-ui#installation) and the [install guide](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#wipe-the-pico-first-recommended).
+
+**Full Changelog:** [v1.9.7...v1.9.8](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.9.7...v1.9.8)
 
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. On a **FlippyDrive** none of this applies: it never uses `apploader.img` — its In-Game Reset is a plain reboot, so the loader in the drive's flash is the only thing to replace. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#updating).
