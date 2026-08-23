@@ -6,7 +6,7 @@
 
 <img width="320" height="240" alt="cubiboot menu" src="https://github.com/user-attachments/assets/eb1d6fc9-f0eb-4a38-8f93-20daa4a0af19" />
 
-**Hello there! Welcome. FIRST OF ALL: This is not a simple forwarder as the original cubeboot/cubiboot. It's support too many devices, settings and customizations, you HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use. Use AI to a faster Q&A, it will read the /docs folder for a much faster support for your questions.**   
+**Hello there! Welcome. FIRST OF ALL: This is not a simple forwarder as the original cubeboot/cubiboot. It's support too many devices, settings and customizations... You HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use. Use AI to a faster Q&A, it will read the /docs folder for a much faster support for your questions.**   
 
 A fork of [makeo/cubiboot](https://github.com/makeo/cubiboot) — itself a fork of
 [cubeboot](https://github.com/OffBroadway/cubeboot) by [TeamOffBroadway](https://github.com/OffBroadway) —
