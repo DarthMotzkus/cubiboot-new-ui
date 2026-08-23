@@ -208,9 +208,10 @@ cube_logo = /logo.raw
 ```
 
 The file is **raw RGBA8, exactly 352×40 px (56,320 bytes)** — not a PNG. Convert your
-image with the [cube logo converter](../tools/cube-logo-converter/): open its `index.html`
-in any browser (nothing to install) or run its `png2cubelogo.py`, then copy the resulting
-`.raw` to the card. For drawing the logo itself,
+image with the [cube logo converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — it opens as a
+page in any browser, nothing to install — or run
+[`png2cubelogo.py`](../tools/cube-logo-converter/) instead, then copy the resulting `.raw`
+to the card. For drawing the logo itself,
 [fontmeme's GameCube font](https://fontmeme.com/gamecube-font/) is a good starting point —
 but the PNG still has to go through the converter (a `.png` on the card is rejected; this
 fork's firmware has no PNG decoder, unlike the original cubeboot other guides may

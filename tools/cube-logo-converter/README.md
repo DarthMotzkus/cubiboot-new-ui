@@ -23,9 +23,13 @@ PNG decoder no longer exists in this fork).
 
 ## Option 1: the web page (no install)
 
-Open [`index.html`](index.html) in any browser — Windows, Linux and macOS all work, nothing
-is uploaded anywhere. Drop your image in, pick the options, check the live preview and
-download the `.raw`.
+**[Open the converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html)** — it runs in the browser on Windows,
+Linux and macOS, and nothing is uploaded anywhere. Drop your image in, pick the options,
+check the live preview and download the `.raw`.
+
+That link renders this folder's `index.html` as a page. Linking the file inside the repo
+instead would only show its source, because GitHub serves `.html` as text. Offline, opening
+your local copy of `index.html` in a browser works exactly the same.
 
 ## Option 2: the command line script
 

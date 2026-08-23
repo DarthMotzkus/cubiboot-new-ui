@@ -44,7 +44,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Games from the ODE / FlippyDrive SD** | [`device_order`](docs/settings.md#device_order) can point cubiboot at the SD card inside a GC Loader/CUBE-ODE or a FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **16:9 widescreen menu** | [`force_widescreen = on`](docs/settings.md#force_widescreen) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads your device names (e.g. SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
-| **Custom boot logo** | [`cube_logo`](docs/settings.md#cube_logo) swaps the "GAMECUBE" text in the boot animation for your own art. Draw it anywhere, then convert the PNG with the [cube logo converter](tools/cube-logo-converter/) — a browser page with live preview, nothing to install. |
+| **Custom boot logo** | [`cube_logo`](docs/settings.md#cube_logo) swaps the "GAMECUBE" text in the boot animation for your own art. Draw it anywhere, then convert the PNG with the [cube logo converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — a browser page with live preview, nothing to install. |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
 
 ## Before you start

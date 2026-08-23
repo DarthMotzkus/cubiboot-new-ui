@@ -69,7 +69,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta muestra el nombre de tu dispositivo (por ejemplo SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
 | **Texto que se desplaza** | Un título más largo que el cuadro de info [se desplaza solo](#todas-las-opciones); la descripción se desplaza con **L**/**R**. |
 | **Menú panorámico 16:9** | [`force_widescreen = on`](#todas-las-opciones) renderiza todo el menú anamórfico, así sale con las proporciones correctas en una TV puesta en Full/16:9. Portado de [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
-| **Logo de arranque personalizado** | [`cube_logo`](#logo-de-arranque-personalizado) cambia el texto "GAMECUBE" de la animación de arranque por tu propia imagen. Dibújala donde quieras y convierte el PNG con el [conversor de logo](../tools/cube-logo-converter/) — una página de navegador con vista previa, sin instalar nada. |
+| **Logo de arranque personalizado** | [`cube_logo`](#logo-de-arranque-personalizado) cambia el texto "GAMECUBE" de la animación de arranque por tu propia imagen. Dibújala donde quieras y convierte el PNG con el [conversor de logo](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — una página de navegador con vista previa, sin instalar nada. |
 | **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
 
 Lista completa de cambios frente al upstream: [docs/FORK_CHANGES.md](FORK_CHANGES.md).
@@ -629,9 +629,10 @@ cube_logo = /logo.raw
 ```
 
 El archivo es **RGBA8 en crudo, exactamente 352x40 px (56 320 bytes)** — no es un `.png`.
-Convierte tu imagen con el [conversor de logo](../tools/cube-logo-converter/): abre su
-`index.html` en cualquier navegador (no hay nada que instalar) o usa su `png2cubelogo.py`, y
-copia el `.raw` resultante a la tarjeta. Para dibujar el logo,
+Convierte tu imagen con el [conversor de logo](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — se abre
+como página en cualquier navegador, sin instalar nada — o usa
+[`png2cubelogo.py`](../tools/cube-logo-converter/), y copia el `.raw` resultante a la
+tarjeta. Para dibujar el logo,
 [la fuente GameCube de fontmeme](https://fontmeme.com/gamecube-font/) es un buen punto de
 partida — pero el PNG igual tiene que pasar por el conversor (un `.png` en la tarjeta se
 rechaza; este fork no tiene decodificador de PNG, a diferencia del cubeboot original al que
