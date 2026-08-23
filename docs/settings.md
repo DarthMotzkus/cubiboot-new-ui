@@ -16,6 +16,7 @@ cube_color = 00ffff     # hex color code -- boot logo only
 menu_cube_color = green # hex color code, or a stock palette name
 menu_box_color = 6e00b3         # hex color code
 menu_start_color = ff2d55       # hex color code
+cube_logo = /logo.raw           # your art instead of the "GAMECUBE" boot text (raw RGBA8 352x40)
 preboot_delay_ms = 3000         # wait before the boot animation, in milliseconds
 postboot_delay_ms = 2000        # hold the last frame before the game boots
 force_widescreen = on           # render the menu anamorphic for a 16:9 TV

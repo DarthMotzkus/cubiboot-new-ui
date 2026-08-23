@@ -202,8 +202,9 @@ Current contract:
 | `remember_last_game` | `config.ini` |
 | `show_watermark` | `config.ini` |
 | `preboot_delay_ms`, `postboot_delay_ms` | `config.ini` |
+| `text_scroll_enabled`, `text_scroll_delay_s`, `title_scroll_step_frames` | `config.ini` |
 | `menu_grid_type` | `config.ini` |
-| `default_folder` | `config.ini` (string, `strcpy`'d into the patch buffer) |
+| `default_folder`, `cube_logo_path` | `config.ini` (strings, `strcpy`'d into the patch buffer) |
 | `start_passthrough_game` | argv / the `PASS` magic at `0x80001800` |
 | `is_running_dolphin` | ECID probe (`helpers.c`) |
 | **`emu_sd_device`** | which storage volume the loader mounted |
@@ -320,7 +321,7 @@ ODE as a GC Loader, cubiboot will read it too.** FlippyDrive uses a different co
 |---|---|
 | `0x80000000` | low memory / OS globals; the loader preserves `0xF4`, `0xC0`, `0xD4` across `SYS_ResetSystem` |
 | `0x80001800` | stub magic — `PASS` (`0x50415353`) forces passthrough boot |
-| `0x80100000` | `.data_lowmem` — banner and icon pools (`0x348560`, ~3.3 MB), `NOLOAD`, zeroed by `gm_init_heap()` |
+| `0x80100000` | `.data_lowmem` — banner/icon pools, the path lists, the 2 MB games heap and the boot-logo texture (`0x3b8740`, ~3.7 MB of the 4 MB `link.ld` asserts), `NOLOAD`; the pools are zeroed by `gm_init_heap()` |
 | `0x81300000` | BS2 lands here; also the loader's arena ceiling (`__myArena1Hi`) and where stage 1 links |
 | `0x81500000` | `ipl_metadata_t` sits just below this |
 | `0x81600000` | `.data_empty` |

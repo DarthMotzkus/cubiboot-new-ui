@@ -46,6 +46,7 @@ con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares
   - [De dónde se leen los juegos](#de-dónde-se-leen-los-juegos)
   - [Iniciar Swiss desde el menú](#iniciar-swiss-desde-el-menú)
   - [Colores](#colores)
+  - [Logo de arranque personalizado](#logo-de-arranque-personalizado)
 - [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners)
 - [Limitaciones conocidas](#limitaciones-conocidas)
 - [Compilación](#compilación)
@@ -62,10 +63,13 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Menú en cuadrícula con banners** | Portado desde cubeboot. Tres diseños, seleccionables con [`menu_grid_type`](#diseño-del-menú); usa `small_banners` por defecto incluso sin `config.ini`. |
 | **Nombres de archivo reales** | La lista muestra el **nombre del archivo** `.iso` en lugar del nombre interno del juego, y carga el banner correcto de cada disco en juegos multidisco (por ejemplo Resident Evil 0 Disco 1 / Disco 2). |
 | **Apps homebrew con banner** | Una carpeta con `default.dol` junto a `opening.bnr` aparece como una aplicación lanzable con su propio banner, en vez de una carpeta que hay que abrir. Mira [Apps homebrew](#apps-homebrew). |
-| **Recordar el último jugado** | [`remember_last_game = 1`](#recordar-el-último-jugado) abre el menú en la carpeta de tu último juego, ya resaltado — pulsas **A** y listo. |
-| **Juegos desde la SD del ODE** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader, así el menú lista lo que ya hay en ella sin un segundo lector. |
+| **Recordar el último jugado** | [`remember_last_game = on`](#recordar-el-último-jugado) abre el menú en la carpeta del último juego o app que arrancaste, ya resaltado — pulsas **A** y listo. |
+| **Juegos desde la SD del ODE / FlippyDrive** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader/CUBE-ODE o de una FlippyDrive, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
-| **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta dice "CUBIBOOT New UI". |
+| **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta muestra el nombre de tu dispositivo (por ejemplo SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
+| **Texto que se desplaza** | Un título más largo que el cuadro de info [se desplaza solo](#todas-las-opciones); la descripción se desplaza con **L**/**R**. |
+| **Menú panorámico 16:9** | [`force_widescreen = on`](#todas-las-opciones) renderiza todo el menú anamórfico, así sale con las proporciones correctas en una TV puesta en Full/16:9. Portado de [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
+| **Logo de arranque personalizado** | [`cube_logo`](#logo-de-arranque-personalizado) cambia el texto "GAMECUBE" de la animación de arranque por tu propia imagen. Dibújala donde quieras y convierte el PNG con el [conversor de logo](../tools/cube-logo-converter/) — una página de navegador con vista previa, sin instalar nada. |
 | **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
 
 Lista completa de cambios frente al upstream: [docs/FORK_CHANGES.md](FORK_CHANGES.md).
@@ -344,8 +348,8 @@ menu_grid_type = small_banners
 ; Carpeta en la que se abre el menú al arrancar. Coméntala para la raíz de la tarjeta.
 ; default_folder = /games
 
-; Preseleccionar el último juego arrancado al abrir el menú (1 = sí, 0 = no).
-remember_last_game = 0
+; Preseleccionar el último juego o app arrancado al abrir el menú (on / off).
+remember_last_game = off
 
 ; De qué almacenamiento leer los juegos, el preferido primero: sd2sp2, slot_b, slot_a,
 ; ode (GC Loader / CUBE-ODE) y flippy (FlippyDrive). Los nombres de volumen de FatFs
@@ -360,7 +364,9 @@ remember_last_game = 0
 |-------|---------|-------------|----------|
 | [`menu_grid_type`](#diseño-del-menú) | `small_banners` · `banners` · `square_icons` | `small_banners` | Diseño de la cuadrícula |
 | [`default_folder`](#carpeta-de-inicio) | ruta | raíz de la tarjeta | Carpeta en la que abre el menú |
-| [`remember_last_game`](#recordar-el-último-jugado) | `1` · `0` | `0` | Preselecciona el último juego arrancado |
+| [`remember_last_game`](#recordar-el-último-jugado) | `on` · `off` | `off` | Preselecciona el último juego arrancado |
+| `text_scroll` | `on` · `off` · segundos | `on` | Desplaza solo un título que no cabe en el cuadro de info |
+| `big_titles_scroll_speed` | `1`-`255` | `10` | Fotogramas por carácter del desplazamiento del título |
 | [`device_order`](#de-dónde-se-leen-los-juegos) | nombres de dispositivo | `sd2sp2, slot_b, slot_a, ode, flippy` | De qué almacenamiento leer los juegos |
 | [`theme_color`](#colores) | RGB hex · `random` | original | Un color para toda la interfaz |
 | [`cube_color`](#colores) | RGB hex · `random` | `theme_color` | Color del logo de arranque |
@@ -369,6 +375,10 @@ remember_last_game = 0
 | [`menu_start_color`](#colores) | RGB hex · `random` | `theme_color` | El "PRESS START" grande de bloques |
 | `preboot_delay_ms` | milisegundos | `0` | Espera antes de la animación de arranque, para que la TV sincronice |
 | `postboot_delay_ms` | milisegundos | `0` | Mantiene el último fotograma tras elegir un juego, antes de arrancarlo |
+| [`cube_logo`](#logo-de-arranque-personalizado) | ruta a un `.raw` | texto original | Tu imagen en lugar del texto "GAMECUBE" del arranque |
+| [`swiss_on_dvd_boot`](#iniciar-swiss-desde-el-menú) | `on` · `off` | `on` | Si un disco físico arranca a través de Swiss (lo que mantiene el IGR) |
+| `force_widescreen` | `on` · `off` | `off` | Menú anamórfico para una TV en 16:9 |
+| `force_progressive` | `on` · `off` | `off` | Renderiza el menú en 480p (escaneo progresivo) |
 
 Esa es la lista completa. Referencia completa: [docs/settings.md](settings.md).
 
@@ -396,7 +406,7 @@ la omites, y si la carpeta no se puede abrir cubiboot vuelve a la raíz.
 
 ### Recordar el último jugado
 
-`remember_last_game = 1` hace que el menú abra **en la carpeta del último juego que
+`remember_last_game = on` hace que el menú abra **en la carpeta del último juego o app que
 arrancaste**, con ese juego ya resaltado — así en el siguiente arranque solo pulsas **A**.
 Desactivado por defecto.
 
@@ -606,6 +616,29 @@ siempre queda en blanco.
 
 > [!NOTE]
 > `000000` funciona como negro real, y `random` elige un color nuevo en cada arranque.
+
+### Logo de arranque personalizado
+
+Cambia el texto "GAMECUBE" que aparece bajo el cubo en la animación de arranque por tu
+propia imagen:
+
+```ini
+[cubeboot]
+cube_logo = /logo.raw
+```
+
+El archivo es **RGBA8 en crudo, exactamente 352x40 px (56 320 bytes)** — no es un `.png`.
+Convierte tu imagen con el [conversor de logo](../tools/cube-logo-converter/): abre su
+`index.html` en cualquier navegador (no hay nada que instalar) o usa su `png2cubelogo.py`, y
+copia el `.raw` resultante a la tarjeta. Para dibujar el logo,
+[la fuente GameCube de fontmeme](https://fontmeme.com/gamecube-font/) es un buen punto de
+partida — pero el PNG igual tiene que pasar por el conversor (un `.png` en la tarjeta se
+rechaza; este fork no tiene decodificador de PNG, a diferencia del cubeboot original al que
+otras guías se refieren).
+
+Se respeta la transparencia y los colores de tu imagen se usan tal cual. Un archivo que falte
+o tenga el tamaño equivocado deja el texto original, así que una conversión mala no puede
+romper el arranque.
 
 ## Carpetas grandes y el pool de banners
 

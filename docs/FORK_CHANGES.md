@@ -2,7 +2,7 @@
 
 This fork = pristine **makeo/cubiboot `main`** + the `OffBroadway/cubeboot@custom-loader-menu`
 banner-grid layout + a cold-boot banner-corruption fix + Cubiboot branding + a CI that
-releases all artifacts + the menu/quality-of-life work in sections F–O. This document records
+releases all artifacts + the menu/quality-of-life work in sections F–P. This document records
 every change so it can be re-applied onto a fresh makeo clone.
 
 For how the pieces fit together — the two-binary split, how the BIOS is patched, how settings
@@ -25,6 +25,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | M | Boot delays (`preboot_delay_ms`, `postboot_delay_ms`) that actually fire | `patches/source/main.c` |
 | N | Faster game lists: per-file sector buffer + a sector cache | `cubeboot/source/emu/ffs/` |
 | O | Native FlippyDrive support | `cubeboot/source/emu/drive_probe.c`, `fldrv.c`, `flippy_emu.c` |
+| P | `cube_logo`: custom boot logo, revived without a PNG decoder | `patches/source/games.c`, `tools/cube-logo-converter/` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -478,6 +479,43 @@ normally. A console without one cannot reach any of it -- the probe has to posit
 identify a FlippyDrive first, and everything else falls through to the card readers as
 before.
 
+## P. `cube_logo`: custom boot logo  (`patches/source/games.c`, `tools/cube-logo-converter/`)
+
+The original cubeboot had a `cube_logo` option that replaced the "GAMECUBE" text under the
+cube in the boot animation. It has been dead since upstream's
+[873893b](https://github.com/OffBroadway/cubeboot/commit/873893b) ("slide back on patch and
+png changes") reverted the PNG work: the loader kept parsing the key, but the patch-side
+loader was left inside `#if 0` calling into `upng`, and both PNG libraries (`upng`, `ok_png`)
+were deleted from the tree. Nothing on the console said so — the key simply did nothing.
+
+Revived without reintroducing a decoder. The console reads **raw linear RGBA8, exactly
+352x40 (56320 bytes)** and does only the GX tiling, through the `Metaphrasis` converter
+already linked in for banners. Keeping the decode off the console is what keeps the injected
+blob small: `IPL.dol` grows by 448 bytes in total, because the 56 KB texture buffer lands in
+`.data_lowmem` (`NOLOAD`) and is fully overwritten by the conversion before use.
+
+`gm_load_cube_logo()` runs as the first act of `gm_thread_worker()`, **not** from a boot hook
+— the same constraint as section G: at `pre_thread_init()` the BIOS still owns EXI channels
+0/1, so a slot A/B reader's first access fails. It is the enum thread's first read, small, and
+lands well before the animation draws the text. Wrong size or missing file falls back to the
+stock text, so a bad conversion cannot break the boot.
+
+**Alignment is not the obvious thing.** The stock texture does not fill its canvas: the
+letters occupy a 316x33 box at +6,+3 and the trademark sign takes x 324..345, so the word
+sits left of the texture centre and the model position compensates. Art centred on the full
+352x40 canvas therefore renders visibly shifted right on a TV. The geometry was measured from
+the IPL's own texture (descramble the dump, decompress the Yay0 archive at `0xb5260` of
+NTSC 1.1, decode the I8 tiles), and both converters default to that box.
+
+`tools/cube-logo-converter/` ships the conversion: `index.html` is a single-file browser page
+(vanilla JS, Lanczos-3 resample on premultiplied alpha, live preview, geometry guides, no
+build step and nothing uploaded) and `png2cubelogo.py` is the Pillow CLI with the same
+geometry constants. Verified equivalent: same placement, and the few byte differences are
+edge pixels where the page's premultiplied path is the more correct of the two.
+
+**Confirmed on hardware by the maintainer**: a custom logo loads and draws correctly on a
+NTSC-J IPL 1.1 console with an SD2SP2, alignment fix included.
+
 ## Re-applying onto a fresh makeo clone
 
 1. `git clone https://github.com/makeo/cubiboot && cd cubiboot`
@@ -499,8 +537,11 @@ before.
 9. Apply the FlippyDrive work (O): `emu/drive_probe.{c,h}` and `emu/fldrv.{c,h}`, the
    `device_prio`/alias/dispatch changes in `emu/flippy_emu.c`, the include guard on both
    `flippy_sync.h` copies, and the `flippydrive.dol` artifact in the workflow.
-10. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
+10. Apply the custom boot logo (P): `gm_load_cube_logo()` in `patches/source/games.c`, the
+   un-`static`'d `cube_text_tex` in `patches/source/main.c`, the `cube_logo_path` `strcpy` in
+   `cubeboot/source/main.c`, and `tools/cube-logo-converter/`.
+11. Run `brand_opening.py` once on `patches/data/default_opening.bin` (force-add it; it is
    `*.bin`-gitignored).
-11. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
+12. Add `CLAUDE.md` and `docs/ARCHITECTURE.md`; drop the upstream `docs/SD_Boot*.md` and
    `docs/RP2040_Boot*.md` guides, which describe cubeboot's filenames and options, not this
    fork's.
