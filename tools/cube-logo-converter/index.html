@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cubiboot-new-ui boot logo converter</title>
+<style>
+  :root {
+    --bg: #101018;
+    --panel: #1a1a26;
+    --border: #2e2e40;
+    --text: #e8e8f0;
+    --muted: #9a9ab0;
+    --accent: #7b6fd0;
+    --accent-2: #5a50a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  #drop {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 36px 16px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #drop.hover { border-color: var(--accent); background: #201f30; }
+  #drop strong { color: var(--text); }
+  input[type=file] { display: none; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0 0 12px;
+    padding: 8px 12px 10px;
+  }
+  legend { color: var(--muted); font-size: 13px; padding: 0 6px; }
+  label.opt { margin-right: 18px; cursor: pointer; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .row > fieldset { flex: 1 1 260px; }
+  canvas { display: block; }
+  #preview-wrap {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 12px;
+    overflow-x: auto;
+  }
+  #preview {
+    image-rendering: pixelated;
+    margin: 0 auto;
+  }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .controls-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-2); }
+  button:disabled { background: #333344; color: #777788; cursor: default; }
+  pre {
+    background: #0c0c14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    font-size: 13.5px;
+  }
+  .hidden { display: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>cubiboot-new-ui boot logo converter</h1>
+  <p class="sub">Turns an image into the raw RGBA8 352&times;40 file the <code>cube_logo</code>
+  setting expects. Everything runs in your browser &mdash; nothing is uploaded.</p>
+
+  <div class="card">
+    <div id="drop">
+      <strong>Drop an image here</strong> or click to choose one<br>
+      <span>PNG recommended (transparency is kept); any image your browser can open works</span>
+    </div>
+    <input type="file" id="file" accept="image/*">
+  </div>
+
+  <div class="card hidden" id="options">
+    <div class="row">
+      <fieldset>
+        <legend>Placement</legend>
+        <label class="opt"><input type="radio" name="area" value="stock" checked>
+          Match stock logo <span title="The original GAMECUBE art does not fill the texture: the letters sit in a 316x33 box at +6,+3 (the trademark sign uses the right edge). Placing your art in that same box is what looks centered on screen.">(recommended)</span></label>
+        <label class="opt"><input type="radio" name="area" value="full"> Full 352&times;40 canvas</label>
+      </fieldset>
+      <fieldset>
+        <legend>Scaling</legend>
+        <label class="opt"><input type="radio" name="scaling" value="fit" checked> Fit (keep aspect ratio)</label>
+        <label class="opt"><input type="radio" name="scaling" value="stretch"> Stretch to fill</label>
+      </fieldset>
+    </div>
+    <div class="controls-line">
+      <span class="meta">Preview zoom:
+        <label class="opt"><input type="radio" name="zoom" value="1"> 1&times;</label>
+        <label class="opt"><input type="radio" name="zoom" value="2" checked> 2&times;</label>
+        <label class="opt"><input type="radio" name="zoom" value="4"> 4&times;</label>
+      </span>
+      <label class="opt meta"><input type="checkbox" id="guides"> Show stock geometry guides</label>
+    </div>
+  </div>
+
+  <div class="card hidden" id="result">
+    <div id="preview-wrap"><canvas id="preview" width="352" height="40"></canvas></div>
+    <p class="meta" id="info"></p>
+    <div class="controls-line">
+      <button id="download">Download .raw</button>
+      <span class="meta">56,320 bytes &middot; raw RGBA8 &middot; 352&times;40</span>
+    </div>
+    <p>Copy the file to your SD card and point <code>config.ini</code> at it:</p>
+    <pre id="snippet"></pre>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const W = 352, H = 40;
+// Box occupied by the stock "GAMECUBE" letters inside the texture (the (tm) sign
+// uses x 324..345, so the letters sit left of the texture center and the boot
+// screen model position compensates for that).
+const STOCK = { x: 6, y: 3, w: 316, h: 33 };
+
+let srcImage = null;   // { data: Float32Array premultiplied RGBA (trimmed), w, h }
+let srcName = "logo";
+let outPixels = null;  // Uint8ClampedArray, W*H*4, straight alpha
+
+// ---------- Lanczos-3 resample (separable, premultiplied alpha) ----------
+
+function lanczos(x, a) {
+  if (x === 0) return 1;
+  if (x <= -a || x >= a) return 0;
+  const px = Math.PI * x;
+  return a * Math.sin(px) * Math.sin(px / a) / (px * px);
+}
+
+// Per-output-pixel kernel weights, widened when downscaling (like Pillow).
+function buildWeights(srcLen, dstLen, a) {
+  const scale = srcLen / dstLen;
+  const fscale = Math.max(scale, 1);
+  const support = a * fscale;
+  const out = [];
+  for (let i = 0; i < dstLen; i++) {
+    const center = (i + 0.5) * scale;
+    const lo = Math.max(Math.floor(center - support), 0);
+    const hi = Math.min(Math.ceil(center + support), srcLen);
+    const w = new Float32Array(hi - lo);
+    let sum = 0;
+    for (let j = lo; j < hi; j++) {
+      const v = lanczos((j + 0.5 - center) / fscale, a);
+      w[j - lo] = v;
+      sum += v;
+    }
+    for (let k = 0; k < w.length; k++) w[k] /= sum;
+    out.push({ lo, w });
+  }
+  return out;
+}
+
+// src: premultiplied Float32Array RGBA. Returns same, resized.
+function resizeLanczos(src, sw, sh, dw, dh) {
+  const a = 3;
+  const wx = buildWeights(sw, dw, a);
+  const wy = buildWeights(sh, dh, a);
+
+  // horizontal pass: sw x sh -> dw x sh
+  const mid = new Float32Array(dw * sh * 4);
+  for (let y = 0; y < sh; y++) {
+    const row = y * sw * 4;
+    for (let x = 0; x < dw; x++) {
+      const { lo, w } = wx[x];
+      let r = 0, g = 0, b = 0, al = 0;
+      for (let k = 0; k < w.length; k++) {
+        const s = row + (lo + k) * 4, wv = w[k];
+        r += src[s] * wv; g += src[s + 1] * wv; b += src[s + 2] * wv; al += src[s + 3] * wv;
+      }
+      const d = (y * dw + x) * 4;
+      mid[d] = r; mid[d + 1] = g; mid[d + 2] = b; mid[d + 3] = al;
+    }
+  }
+
+  // vertical pass: dw x sh -> dw x dh
+  const dst = new Float32Array(dw * dh * 4);
+  for (let x = 0; x < dw; x++) {
+    for (let y = 0; y < dh; y++) {
+      const { lo, w } = wy[y];
+      let r = 0, g = 0, b = 0, al = 0;
+      for (let k = 0; k < w.length; k++) {
+        const s = ((lo + k) * dw + x) * 4, wv = w[k];
+        r += mid[s] * wv; g += mid[s + 1] * wv; b += mid[s + 2] * wv; al += mid[s + 3] * wv;
+      }
+      const d = (y * dw + x) * 4;
+      dst[d] = r; dst[d + 1] = g; dst[d + 2] = b; dst[d + 3] = al;
+    }
+  }
+  return dst;
+}
+
+// ---------- conversion pipeline ----------
+
+function convert() {
+  if (!srcImage) return;
+  const area = document.querySelector('input[name=area]:checked').value;
+  const scaling = document.querySelector('input[name=scaling]:checked').value;
+
+  const box = area === "full" ? { x: 0, y: 0, w: W, h: H } : STOCK;
+
+  let nw, nh;
+  if (scaling === "stretch") {
+    nw = box.w; nh = box.h;
+  } else {
+    const s = Math.min(box.w / srcImage.w, box.h / srcImage.h);
+    nw = Math.max(1, Math.round(srcImage.w * s));
+    nh = Math.max(1, Math.round(srcImage.h * s));
+  }
+
+  const resized = resizeLanczos(srcImage.data, srcImage.w, srcImage.h, nw, nh);
+
+  // paste centered in the box, unpremultiply, clamp
+  const out = new Uint8ClampedArray(W * H * 4);
+  const ox = box.x + Math.floor((box.w - nw) / 2);
+  const oy = box.y + Math.floor((box.h - nh) / 2);
+  for (let y = 0; y < nh; y++) {
+    for (let x = 0; x < nw; x++) {
+      const s = (y * nw + x) * 4;
+      const al = Math.min(Math.max(resized[s + 3], 0), 1);
+      const d = ((oy + y) * W + (ox + x)) * 4;
+      if (al > 0) {
+        out[d]     = (resized[s]     / al) * 255;
+        out[d + 1] = (resized[s + 1] / al) * 255;
+        out[d + 2] = (resized[s + 2] / al) * 255;
+      }
+      out[d + 3] = al * 255;
+    }
+  }
+  outPixels = out;
+
+  document.getElementById("info").textContent =
+    `${srcName}: ${srcImage.w}×${srcImage.h} (after trimming transparent margins) ` +
+    `→ art ${nw}×${nh} at +${ox},+${oy}`;
+  render();
+}
+
+// ---------- preview ----------
+
+function render() {
+  if (!outPixels) return;
+  const zoom = +document.querySelector('input[name=zoom]:checked').value;
+  const guides = document.getElementById("guides").checked;
+
+  const cv = document.getElementById("preview");
+  cv.width = W; cv.height = H;
+  cv.style.width = (W * zoom) + "px";
+  cv.style.height = (H * zoom) + "px";
+  const ctx = cv.getContext("2d");
+  ctx.putImageData(new ImageData(outPixels, W, H), 0, 0);
+
+  if (guides) {
+    ctx.strokeStyle = "rgba(120,220,120,.9)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(STOCK.x - .5, STOCK.y - .5, STOCK.w + 1, STOCK.h + 1);
+    ctx.strokeStyle = "rgba(220,120,120,.9)";
+    ctx.beginPath();
+    ctx.moveTo(STOCK.x + STOCK.w / 2, 0);
+    ctx.lineTo(STOCK.x + STOCK.w / 2, H);
+    ctx.stroke();
+  }
+}
+
+// ---------- input ----------
+
+function loadFile(file) {
+  srcName = file.name.replace(/\.[^.]*$/, "") || "logo";
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    // draw at natural size to read pixels
+    const cv = document.createElement("canvas");
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const ctx = cv.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const px = ctx.getImageData(0, 0, cv.width, cv.height).data;
+
+    // trim transparent margins so alignment follows the visible content
+    let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < cv.height; y++) {
+      for (let x = 0; x < cv.width; x++) {
+        if (px[(y * cv.width + x) * 4 + 3] > 0) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+    if (x1 < 0) { alert("This image is fully transparent."); return; }
+
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    const data = new Float32Array(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const s = ((y + y0) * cv.width + (x + x0)) * 4;
+        const d = (y * w + x) * 4;
+        const al = px[s + 3] / 255;
+        data[d]     = (px[s]     / 255) * al; // premultiply
+        data[d + 1] = (px[s + 1] / 255) * al;
+        data[d + 2] = (px[s + 2] / 255) * al;
+        data[d + 3] = al;
+      }
+    }
+    srcImage = { data, w, h };
+
+    document.getElementById("options").classList.remove("hidden");
+    document.getElementById("result").classList.remove("hidden");
+    document.getElementById("snippet").textContent =
+      "[cubeboot]\ncube_logo = /" + srcName + ".raw";
+    convert();
+  };
+  img.onerror = () => alert("Could not open this file as an image.");
+  img.src = url;
+}
+
+// ---------- download ----------
+
+document.getElementById("download").addEventListener("click", () => {
+  if (!outPixels) return;
+  const blob = new Blob([new Uint8Array(outPixels.buffer.slice(0))], { type: "application/octet-stream" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = srcName + ".raw";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ---------- wiring ----------
+
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+drop.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("hover"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("hover"));
+drop.addEventListener("drop", e => {
+  e.preventDefault();
+  drop.classList.remove("hover");
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+for (const el of document.querySelectorAll('input[name=area], input[name=scaling]'))
+  el.addEventListener("change", convert);
+for (const el of document.querySelectorAll('input[name=zoom]'))
+  el.addEventListener("change", render);
+document.getElementById("guides").addEventListener("change", render);
+</script>
+</body>
+</html>

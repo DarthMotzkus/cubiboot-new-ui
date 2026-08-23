@@ -29,9 +29,6 @@
 #define CUBE_TEX_WIDTH 84
 #define CUBE_TEX_HEIGHT 84
 
-#define GAMECUBE_LOGO_WIDTH 352
-#define GAMECUBE_LOGO_HEIGHT 40
-
 #define STATE_WAIT_LOAD  0x0f // delay after animation
 #define STATE_START_GAME 0x10 // play full animation and start game
 #define STATE_NO_DISC    0x12 // play full animation before menu
@@ -45,7 +42,7 @@
 __attribute_data__ u32 cube_color = 0;
 __attribute_data__ u32 start_passthrough_game = 0;
 
-__attribute_data__ static u8 *cube_text_tex = NULL;
+__attribute_data__ u8 *cube_text_tex = NULL; // set by gm_load_cube_logo (games.c)
 __attribute_data__ char cube_logo_path[MAX_FILE_NAME] = {0};
 __attribute_data__ char default_folder[MAX_FILE_NAME] = {0};
 __attribute_data__ u32 remember_last_game = 0;
@@ -252,73 +249,9 @@ __attribute_used__ void mod_cube_colors() {
     return;
 }
 
-#if 0
-__attribute_aligned_data_lowmem__ static u8 color_image_buffer[GAMECUBE_LOGO_WIDTH * GAMECUBE_LOGO_HEIGHT * 4];
-static void load_cube_logo(const char *path) {
-    if (path == NULL || strlen(path) == 0) {
-        OSReport("No cube logo path\n");
-        return;
-    }
-
-    OSReport("Loading cube logo: %s\n", path);
-
-    // load the icon
-    dvd_custom_open(path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE | IPC_FILE_FLAG_DISABLEFASTSEEK);
-    file_status_t *status = dvd_custom_status();
-    if (status == NULL || status->result != 0) {
-        OSReport("ERROR: could not open icon file: %s\n", path);
-        return;
-    }
-
-    // allocate file buffer
-    u32 file_size = (u32)__builtin_bswap64(*(u64*)(&status->fsize));
-    file_size += 31;
-    file_size &= 0xffffffe0;
-    void *file_buf = gm_memalign(file_size, 32);
-
-    // read
-    dvd_read(file_buf, file_size, 0, status->fd);
-    dvd_custom_close(status->fd);
-
-    upng_t *img = upng_new_from_bytes(file_buf, file_size);
-    if (img == NULL) {
-        OSReport("ERROR: could not allocate png\n");
-        goto cleanup;
-    }
-
-    upng_error png_err = upng_decode(img);
-    if (png_err != UPNG_EOK) {
-        OSReport("ERROR: could not decode icon file (%d)\n", png_err);
-        goto cleanup;
-    }
-
-    // upng_get_format
-    upng_format png_format = upng_get_format(img);
-    if (png_format != UPNG_RGBA8) {
-        OSReport("ERROR: invalid png format (%d)\n", png_format);
-        goto cleanup;
-    }
-
-    u32 png_width = upng_get_width(img);
-    u32 png_height = upng_get_height(img);
-
-    OSReport("PNG: %d x %d\n", png_width, png_height);
-
-    if (png_width != GAMECUBE_LOGO_WIDTH || png_height != GAMECUBE_LOGO_HEIGHT) {
-        OSReport("ERROR: invalid png size\n");
-        goto cleanup;
-    }
-
-    Metaphrasis_convertBufferToRGBA8((uint32_t*)upng_get_buffer(img), (uint32_t*)color_image_buffer, png_width, png_height);
-    DCFlushRange(color_image_buffer, sizeof(color_image_buffer));
-
-    cube_text_tex = color_image_buffer;
-cleanup:
-    gm_freealign(file_buf);
-    upng_free(img);
-}
-#endif
-
+// The texture swap itself. cube_text_tex is filled by gm_load_cube_logo (games.c) on the
+// enum thread; until then this is a no-op and the stock "GAMECUBE" text stays. Idempotent:
+// the offset is recomputed from absolute addresses, so a second call writes the same values.
 __attribute_used__ void mod_cube_text() {
         tex_data *gc_text_tex = gc_text_model->data->tex->dat;
 

@@ -1358,7 +1358,67 @@ void gm_setup_grid(int line_count, bool initial) {
 static bool gm_cold_boot_resolve = false;
 extern char* resolve_default_folder(void);
 
+// Custom "GAMECUBE" boot text (config.ini cube_logo). The file is RAW linear RGBA8,
+// exactly 352x40x4 = 56320 bytes, top-left origin -- NOT a PNG: the tree no longer
+// carries a PNG decoder (upng and ok_png were both dropped upstream), so the pixel
+// conversion happens on the PC (see .localbuild/png2cubelogo.py). Loaded here on the
+// enum thread for the same reason as the cold-boot folder above: at the pre_thread_init
+// hook the BIOS still owns EXI 0/1 and a slot A/B reader's first access would fail.
+// Runs once, before any banner I/O, so it lands before the boot animation needs it.
+#define CUBE_LOGO_WIDTH  352
+#define CUBE_LOGO_HEIGHT 40
+#define CUBE_LOGO_SIZE   (CUBE_LOGO_WIDTH * CUBE_LOGO_HEIGHT * 4)
+extern char cube_logo_path[];
+extern u8 *cube_text_tex;
+extern void mod_cube_text(void);
+__attribute_aligned_data_lowmem__ static u8 cube_logo_tiled[CUBE_LOGO_SIZE];
+static void gm_load_cube_logo(void) {
+    static bool attempted = false;
+    if (attempted) return;
+    attempted = true;
+
+    if (cube_logo_path[0] == '\0') return;
+
+    OSReport("Loading cube logo: %s\n", cube_logo_path);
+    if (dvd_custom_open(cube_logo_path, FILE_ENTRY_TYPE_FILE, IPC_FILE_FLAG_DISABLECACHE) != 0) return;
+    file_status_t *status = dvd_custom_status();
+    if (status == NULL || status->result != 0) {
+        OSReport("ERROR: could not open cube logo\n");
+        return;
+    }
+
+    u32 fsize = (u32)__builtin_bswap64(*(u64*)&status->fsize);
+    if (fsize != CUBE_LOGO_SIZE) {
+        OSReport("ERROR: cube logo must be %d bytes of raw RGBA8, got %u\n", CUBE_LOGO_SIZE, fsize);
+        dvd_custom_close(status->fd);
+        return;
+    }
+
+    u8 *file_buf = gm_malloc(CUBE_LOGO_SIZE);
+    if (file_buf == NULL) {
+        dvd_custom_close(status->fd);
+        return;
+    }
+
+    int r = dvd_read(file_buf, CUBE_LOGO_SIZE, 0, status->fd);
+    dvd_custom_close(status->fd);
+    if (r != 0) {
+        OSReport("ERROR: cube logo read failed (%d)\n", r);
+        gm_free(file_buf);
+        return;
+    }
+
+    // Metaphrasis flushes the destination itself.
+    Metaphrasis_convertBufferToRGBA8((uint32_t*)file_buf, (uint32_t*)cube_logo_tiled, CUBE_LOGO_WIDTH, CUBE_LOGO_HEIGHT);
+    gm_free(file_buf);
+
+    cube_text_tex = cube_logo_tiled;
+    mod_cube_text();
+}
+
 void *gm_thread_worker(void* param) {
+    gm_load_cube_logo();
+
     if (gm_cold_boot_resolve) {
         gm_cold_boot_resolve = false;
         const char *resolved = gm_last_played_folder();

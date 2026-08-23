@@ -330,12 +330,12 @@ int main(int argc, char **argv) {
 
     set_patch_value(symshdr, syment, symstringdata, "menu_grid_type", settings.menu_grid_type);
 
-    // // Copy settings string
-    // void *cube_logo_ptr = (void*)get_symbol_value(symshdr, syment, symstringdata, "cube_logo_path");
-    // if (cube_logo_ptr != NULL && settings.cube_logo != NULL) {
-    //     iprintf("Copying cube_logo_path: %p\n", cube_logo_ptr);
-    //     strcpy(cube_logo_ptr, settings.cube_logo);
-    // }
+    // Copy custom boot logo path into the patch (raw RGBA8 352x40, see games.c)
+    void *cube_logo_ptr = (void*)get_symbol_value(symshdr, syment, symstringdata, "cube_logo_path");
+    if (cube_logo_ptr != NULL && settings.cube_logo != NULL) {
+        iprintf("Copying cube_logo_path: %p\n", cube_logo_ptr);
+        strcpy(cube_logo_ptr, settings.cube_logo);
+    }
 
     // Copy default folder string into the patch
     void *default_folder_ptr = (void*)get_symbol_value(symshdr, syment, symstringdata, "default_folder");

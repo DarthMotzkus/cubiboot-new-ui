@@ -197,6 +197,29 @@ The parsing lives in [`cubeboot/source/settings.c`](../cubeboot/source/settings.
 (`ini_get_color`), the derivations in
 [`patches/source/theme.c`](../patches/source/theme.c).
 
+## `cube_logo`
+
+Replaces the "GAMECUBE" text under the cube in the boot animation with your own art:
+
+```ini
+[cubeboot]
+cube_logo = /logo.raw
+```
+
+The file is **raw RGBA8, exactly 352×40 px (56,320 bytes)** — not a PNG. Convert your
+image with the [cube logo converter](../tools/cube-logo-converter/): open its `index.html`
+in any browser (nothing to install) or run its `png2cubelogo.py`, then copy the resulting
+`.raw` to the card. For drawing the logo itself,
+[fontmeme's GameCube font](https://fontmeme.com/gamecube-font/) is a good starting point —
+but the PNG still has to go through the converter (a `.png` on the card is rejected; this
+fork's firmware has no PNG decoder, unlike the original cubeboot other guides may
+reference).
+
+Transparency is kept, and the art's own colors are shown as-is. A missing or wrong-sized
+file falls back to the stock text, so a bad conversion can never break the boot. Loaded
+once per boot, on the game-enumeration thread
+([`patches/source/games.c`](../patches/source/games.c), `gm_load_cube_logo`).
+
 ## `force_widescreen`
 
 Renders the menu anamorphic for a 16:9 TV: the IPL's perspective and orthographic
