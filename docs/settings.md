@@ -208,7 +208,7 @@ cube_logo = /logo.raw
 ```
 
 The file is **raw RGBA8, exactly 352×40 px (56,320 bytes)** — not a PNG. Convert your
-image with the [cube logo converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — it opens as a
+image with the [cube logo converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — (refer to it's [doc](https://github.com/DarthMotzkus/cubiboot-new-ui/tree/main/tools/cube-logo-converter) for more) it opens as a
 page in any browser, nothing to install — or run
 [`png2cubelogo.py`](../tools/cube-logo-converter/) instead, then copy the resulting `.raw`
 to the card. For drawing the logo itself,
