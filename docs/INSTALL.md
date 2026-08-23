@@ -66,8 +66,11 @@ Works on Pico and Pico 2; details in [tools/flash-nuke](../tools/flash-nuke/READ
 disassembly. See [Updating](#updating) for which ones.
 
 1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before.
-2. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
-   [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2).
+2. Flash your Pico with the `.uf2` for the chip you actually have — they are different
+   boards, not two names for one thing: [PicoBoot](https://github.com/webhdx/PicoBoot) for a
+   PicoBoot install, or
+   [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2)
+   for a PicoLoader one.
 3. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    and copy it to the **root** of your SD card.
 4. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as

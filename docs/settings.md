@@ -273,6 +273,23 @@ at startup, so it costs nothing per press. A **FlippyDrive is not an ODE** -- it
 drive ribbon beside the optical drive -- so it keeps the disc screen: cubiboot switches the
 drive into bypass for the read and back out afterwards.
 
+> [!NOTE]
+> **Autobooting a disc straight from power-on is not a cubiboot feature, and is not planned.**
+> Cubiboot always comes up on its own menu; a disc is played from the disc screen (**Z**). The
+> console's own IPL is what autoboots a disc — power on with one in the drive and it boots
+> after the intro animation — and getting that behaviour back inside cubiboot is more
+> technical trouble than the convenience is worth, so the answer is to boot the stock BIOS
+> when that is what you want:
+>
+> - **With gekkoboot in the chain** (installation [Method 1](INSTALL.md#method-1-picoboot-or-picoloader-with-gekkoboot)):
+>   hold **D-Pad Left**, or hold the **reset button**, while powering the console on. Gekkoboot
+>   steps aside and hands the boot to the onboard IPL, which then plays the disc by itself.
+> - **A is not the shortcut for this.** Gekkoboot reads a held **A** as "load `/a.dol`", and
+>   with no such file on the card it falls straight back to `ipl.dol` — cubiboot again.
+> - **On a [Method 2](INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
+>   install** (cubiboot flashed in place of gekkoboot) there is no such bypass: the modchip has
+>   nothing else to hand the boot to. Reaching the stock BIOS there means reflashing.
+
 ## `device_order`
 
 Which storage cubiboot reads from, most wanted first. The first entry that mounts becomes

@@ -137,8 +137,9 @@ Elige el que corresponda a tu consola:
 **Recomendado.** Actualizar cubiboot después es solo reemplazar archivos en la tarjeta SD
 — sin desarmar nada. Mira [Actualizar](#actualizar) para saber cuáles.
 
-1. Flashea tu Pico con el `.uf2` de [PicoBoot](https://github.com/webhdx/PicoBoot) o
-   [PicoLoader](https://github.com/makeo/PicoLoader).
+1. Flashea tu Pico con el `.uf2` del chip que realmente tienes — son placas distintas, no dos
+   nombres para lo mismo: [PicoBoot](https://github.com/webhdx/PicoBoot) para una instalación
+   PicoBoot, o [PicoLoader](https://github.com/makeo/PicoLoader) para una PicoLoader.
 2. Descarga [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    y cópialo a la **raíz** de tu tarjeta SD.
 3. Pon [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) en la tarjeta como
@@ -671,6 +672,11 @@ falta de memoria.
 - Ni `ipl.dol` ni `cubiboot.iso` funcionan en **Dolphin**, ni con un IPL.bin configurado.
 - Los diseños con banners pueden fallar en carpetas de más de 128 archivos — mira
   [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners).
+- **El arranque automático de un disco al encender** no está implementado ni está previsto.
+  La BIOS original de la consola ya lo hace, así que con gekkoboot instalado puedes mantener
+  **la Cruceta a la Izquierda** (o el botón de reset) al encender para arrancar el IPL original
+  en lugar de cubiboot. Ojo: **A no sirve** para esto — gekkoboot lo lee como "carga
+  `/a.dol`" y, al no existir ese archivo, vuelve a `ipl.dol`, es decir a cubiboot.
 
 ## Compilación
 

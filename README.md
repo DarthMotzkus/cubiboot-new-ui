@@ -98,8 +98,11 @@ later is just swapping files on the card:
    of a **double boot**: leftovers of whatever was flashed before survive next to the new
    install, and the console boots through two loaders — or keeps loading the old one.
    Works on Pico and Pico 2; see [tools/flash-nuke](tools/flash-nuke/README.md).
-2. Flash your Pico with the `.uf2` from [PicoBoot](https://github.com/webhdx/PicoBoot) or
-   [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2).
+2. Flash your Pico with the `.uf2` for the chip you actually have — they are different
+   boards, not two names for one thing: [PicoBoot](https://github.com/webhdx/PicoBoot) for a
+   PicoBoot install, or
+   [PicoLoader+Gekkoboot](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader_gekkoboot.uf2)
+   for a PicoLoader one.
 3. Download [`ipl.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/ipl.dol)
    and copy it to the **root** of your SD card.
 4. Put [Swiss](https://github.com/emukidid/swiss-gc/releases/latest) on the card as
@@ -156,6 +159,10 @@ menu, the disc screen, large folders — is in **[docs/settings.md](docs/setting
 - Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin Emulator**, even with an IPL.bin set.
 - The banner layouts may crash in folders over 128 files — see
   [Large folders and the banner pool](docs/settings.md#large-folders-and-the-banner-pool).
+- **Autobooting a disc from power-on** is not implemented and is not planned. The console's
+  own BIOS already does it, so with gekkoboot installed you can hold **D-Pad Left** (or the
+  reset button) at power-on to boot the stock IPL instead of cubiboot — see
+  [`swiss_on_dvd_boot`](docs/settings.md#swiss_on_dvd_boot).
 
 ## Building
 
