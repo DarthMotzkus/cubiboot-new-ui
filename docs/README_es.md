@@ -67,7 +67,6 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
 | **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta dice "CUBIBOOT New UI". |
 | **Marca Cubiboot** | El banner de Cubiboot en el loader y en la intro de la BIOS del `.iso`, reemplazando el "Game Play" de gc-linux. |
-| **Releases automatizadas** | La CI recompila `apploader.img` (para que el reinicio en el juego vuelva a *esta* versión del loader, no a una vieja) y un `cubiboot_picoloader_payload.uf2` flasheable. |
 
 Lista completa de cambios frente al upstream: [docs/FORK_CHANGES.md](FORK_CHANGES.md).
 Cómo encaja todo (en inglés): [docs/ARCHITECTURE.md](ARCHITECTURE.md).

@@ -44,7 +44,6 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads your device names (e.g. SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
 | **Custom boot logo** | [`cube_logo`](docs/settings.md#cube_logo) swaps the "GAMECUBE" text in the boot animation for your own art. Draw it anywhere, then convert the PNG with the [cube logo converter](tools/cube-logo-converter/) — a browser page with live preview, nothing to install. |
 | **Cubiboot branding** | The Cubiboot banner on the loader and on the `.iso` BIOS intro, replacing the gc-linux "Game Play" one. |
-| **Automated releases** | CI rebuilds `apploader.img` (so In-Game Reset returns to *this* loader, not a stale one) and a flashable `cubiboot_picoloader_payload.uf2`. |
 
 ## Before you start
 
