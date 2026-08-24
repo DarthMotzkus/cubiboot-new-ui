@@ -19,6 +19,7 @@
 #include "flippy_sync.h"
 #include "gc_dvd.h"
 #include "games.h"
+#include "prompt.h"
 #include "emu/drive_probe.h"
 
 #include "video.h"
@@ -342,6 +343,12 @@ __attribute_used__ void pre_thread_init() {
     // later could land in the middle of one of its transfers. The result is cached, so the
     // disc screen's check costs nothing and never touches the bus.
     drive_probe();
+
+    // Correct the IPL's own bottom prompt bar. Ahead of menu_init on purpose: the IPL takes
+    // its own copy of the label strings in there, so a rename applied later moved the labels
+    // but left them reading Cancel and Menu Selection.
+    prompt_bar_init();
+    prompt_bar_layout();
 
     if (!start_passthrough_game) {
         // NULL = cold boot. The starting folder (last-played when remember_last_game is

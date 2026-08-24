@@ -36,6 +36,7 @@
 
 #include "emu/tweaks.h"
 #include "emu/drive_probe.h"
+#include "prompt.h"
 
 // for setup
 __attribute_reloc__ void (*menu_alpha_setup)();
@@ -107,6 +108,11 @@ __attribute_data__ static u32 stock_banner_pointer = 0;
 __attribute_data__ static u32 stock_banner_cached_ready = 0;
 __attribute_data__ static bool stock_disc_lid_opened = true;
 
+// Frames the cover has read open for, between reads. The cover register is not trustworthy
+// frame by frame (see stock_disc_tick), so an open only counts once it holds.
+#define LID_OPEN_FRAMES 8 // ~0.13s; a lid a hand opened stays open for far longer
+__attribute_data__ static int stock_disc_lid_frames = 0;
+
 // States the stock disc screen renders from. Cubiboot reports these itself instead of
 // running the IPL's disc machine, so the screen animates a read, then shows the banner --
 // with no apploader stage in between to load a game over Cubiboot's own memory.
@@ -133,6 +139,42 @@ __attribute_used__ u32 stock_disc_tick(void) {
             stock_disc_state = STOCK_DVD_STATE_NO_DISC;
             stock_disc_reading = false;
             gm_start_thread(game_enum_path[0] ? game_enum_path : NULL);
+        }
+    } else if (dvd_cover_status()) {
+        // Inserting or swapping a disc means opening the lid, so that is the event this
+        // screen watches -- but the cover register is only read BETWEEN reads, and an open
+        // only counts once it has held for LID_OPEN_FRAMES. Both halves are needed:
+        // disc_banner_start() resets the drive interface (dvd_reset), and a drive that has
+        // just been reset reports its cover as OPEN until it re-asserts the line. Sampling
+        // through a read therefore saw an open that never happened, took it for a disc
+        // swap, and started another read on the next closed frame -- forever. That loop
+        // also reset the drive every couple of seconds, which is why the disc was never
+        // recognised: it never got to finish spinning up.
+        if (++stock_disc_lid_frames >= LID_OPEN_FRAMES) stock_disc_lid_opened = true;
+    } else {
+        stock_disc_lid_frames = 0;
+
+        if (stock_disc_lid_opened) {
+            // The lid was opened and is closed again, so whatever the screen is showing
+            // belongs to the disc that was in there before. Read the new one, exactly as the
+            // Z press does. Without this the screen keeps the stale banner -- or stays on
+            // "Please insert a NINTENDO GAMECUBE DISC" with the disc already in the tray --
+            // until the user leaves and comes back: Cubiboot drives this screen itself, and
+            // the IPL's own disc machine, which is what used to watch the lid, is
+            // deliberately not running (see bs2tick).
+            stock_disc_lid_opened = false;
+
+            // Same handover as the Z press, and required for the same reason: the read takes
+            // the drive into bypass, which points the whole file layer at raw disc sectors,
+            // so the enumeration thread -- restarted above when the previous read finished
+            // -- has to be off the device first.
+            gm_deinit_thread();
+            disc_banner_start(&disc_banner);
+
+            *banner_ready = 0;
+            stock_banner_cached_ready = 0;
+            stock_disc_state = STOCK_DVD_STATE_READING;
+            stock_disc_reading = true;
         }
     }
 
@@ -592,26 +634,8 @@ void patch_anim_draw() {
 #define ZBTN_W     0x0316 // on-screen quad size; the 64x32 texture scales into it
 #define ZBTN_H     0x016b
 
-// One entry of a blob's element table, as the IPL dispatchers walk it
-// (16 bytes; field offsets read straight out of the BS2 disassembly).
-typedef struct {
-    u32 tag;
-    u16 base_x;
-    u16 base_y;
-    u16 width;
-    u16 height;
-    u16 tex_index;
-    u8  unk14;
-    u8  flags;
-} blob_element;
-
-static blob_element *blob_find_element(void *blob, u32 tag) {
-    blob_element *e = (blob_element*)((u8*)blob + *(u32*)((u8*)blob + 4));
-    u16 count = *(u16*)((u8*)blob + 0x10);
-    for (u16 i = 0; i < count; i++, e++)
-        if (e->tag == tag) return e;
-    return NULL;
-}
+// blob_element and blob_find_element are in prompt.h -- the bottom prompt bar reaches its
+// glyphs the same way.
 
 static void draw_z_button(u8 ui_alpha) {
     blob_element *e = blob_find_element(menu_blob, make_type('i','c','0','0'));
@@ -623,10 +647,9 @@ static void draw_z_button(u8 ui_alpha) {
     e->width  = ZBTN_W;
     e->height = ZBTN_H;
 
-    // pulse like the stock B pill: alpha swings, geometry stays put
-    f32 wave = fast_sin(anim_step * 45);
-    u8 pulse = (u8)(200 + (s32)(wave * 45.0f)); // ~155..245
-    GXColor tint = {0xFF, 0xFF, 0xFF, (u8)((pulse * ui_alpha) / 255)};
+    // Pulses off the IPL's own bar counter, which is what keeps it in step with the stock
+    // B pill instead of running at a rate of its own (visibly slower before).
+    GXColor tint = {0xFF, 0xFF, 0xFF, prompt_pulse_for_pill(ui_alpha)};
 
     setup_tex_draw(1, 0, 1);
     zbtn_texture.offset = (s32)((u32)&zbtn_tex_bin[0] - (u32)&zbtn_texture);
@@ -977,6 +1000,10 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
         draw_named_tex(make_type('a','r','a','d'), menu_blob, &white, 0x800 - 80, 0); // TODO: y pos anim
     }
 
+    // The list is a selection screen, so it gets the analog stick and the A button beside
+    // the B the stock bar already draws. Same texture phase as the arrows above.
+    prompt_bar_draw_glyphs(ui_alpha);
+
     // box
     GXColor top_color, bottom_color;
     theme_get_box_colors(&top_color, &bottom_color);
@@ -985,6 +1012,7 @@ __attribute_used__ void custom_gameselect_menu(u8 broken_alpha_0, u8 alpha_1, u8
     // the pill needs the same GX phase the info box renders in -- in the text
     // phase it comes out a bare rectangle.
     draw_z_button(ui_alpha);
+    prompt_bar_draw_labels(ui_alpha); // "Selection" and "Confirm" for the glyphs above
 
     gm_file_entry_t *entry = gm_get_game_entry(selected_slot);
     if (entry != NULL && selected_slot < game_backing_count) {
@@ -1149,12 +1177,16 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         // physical discs -- the same one 1.9.0 reaches from this button, which reads
         // out-of-region discs because nothing on it consults the console's region.
         if (pad_status->buttons_down & PAD_BUTTON_START) {
-            // Booting reads swiss-gc.dol through the file layer next, and on a
-            // FlippyDrive the banner read is holding the drive in bypass, where that
-            // layer is unreachable. Let the read finish first -- same reason B waits
-            // below. The stock screen is still on "Reading disc...", so START doing
-            // nothing here matches what the screen is saying.
-            if (stock_disc_reading) return MENU_GAMESELECT_ID;
+            // Only a disc that has actually been read boots, which is what the stock screen
+            // does too -- START is live on the banner and inert on the other two states:
+            //
+            // - "Reading disc...": booting reads swiss-gc.dol through the file layer next,
+            //   and on a FlippyDrive the banner read is holding the drive in bypass, where
+            //   that layer is unreachable. Let the read finish first -- same reason B waits
+            //   below.
+            // - "Please insert a NINTENDO GAMECUBE DISC": there is nothing to boot. The
+            //   passthrough would hand Swiss a drive with no readable disc in it.
+            if (stock_disc_state != STOCK_DVD_STATE_READY) return MENU_GAMESELECT_ID;
 
             Jac_StopSoundAll();
             Jac_PlaySe(SOUND_MENU_FINAL);
@@ -1164,10 +1196,21 @@ __attribute_used__ s32 handle_gameselect_inputs() {
         }
 
         if (pad_status->buttons_down & PAD_BUTTON_B) {
-            // Cancelling mid-read leaves the drive in bypass with a transfer possibly still
-            // in flight, so let the read finish its current step before leaving.
-            if (stock_disc_reading) return MENU_GAMESELECT_ID;
+            // B always leaves. Refusing while a read was in flight -- to avoid abandoning
+            // the drive in bypass mid-transfer -- meant B was dead for the whole of a read,
+            // which is up to 15s, and dead outright whenever a read kept being restarted.
+            // disc_banner_cancel() gives the drive back properly instead, and the
+            // enumeration thread has to be started again here: it was stopped for the read,
+            // and the read never got far enough to restart it itself.
+            if (stock_disc_reading) {
+                disc_banner_cancel();
+                stock_disc_reading = false;
+                stock_disc_state = STOCK_DVD_STATE_NO_DISC;
+                gm_start_thread(game_enum_path[0] ? game_enum_path : NULL);
+            }
 
+            stock_disc_lid_opened = false;
+            stock_disc_lid_frames = 0;
             stock_banner_cached_ready = *banner_ready;
             stock_disc_mode = 0;
             start_passthrough_game = 0;

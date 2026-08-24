@@ -107,3 +107,8 @@ pal12_EXIDeselect = 0x81367c6c;
 pal12_EXISync = 0x81367428;
 pal12_EXIImm = 0x81367040;
 pal12_EXIImmEx = 0x8136729c;
+
+pal12_prompt_pulse = 0x814af72e;
+pal12_prompt_slot_colors = 0x814af6e8;
+pal12_prompt_slot_color_off = 420;
+pal12_prompt_region = 2;

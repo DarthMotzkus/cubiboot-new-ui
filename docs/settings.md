@@ -267,6 +267,12 @@ Either way Swiss has to be reachable: `swiss-gc.dol` at the card root, except on
 FlippyDrive, where the copy in the drive's flash is used first and the card root is only the
 fallback.
 
+The screen reads the disc when it opens, and again whenever the lid is closed -- so a disc put
+in after pressing **Z** is picked up where it used to need leaving the screen and coming back.
+A drive that has been idle takes seconds to spin up and answers every command with an error
+until it is ready, so "Reading disc..." can stay up for a while before it gives an answer;
+**B** leaves at any point, and **START** boots only a disc the screen has actually read.
+
 None of this applies on a console with an ODE (GC Loader, CUBE-ODE): the ODE is what sits on
 the drive connector, so there is no optical drive to read and the disc screen does not open
 at all -- **Z** answers with the menu's error tone. The check is a single inquiry made once

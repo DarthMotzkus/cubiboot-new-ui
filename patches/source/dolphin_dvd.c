@@ -22,6 +22,7 @@
 #include "dolphin_os.h"
 #include "time.h" // udelay: settle time after the bypass reset
 #include "gc_dvd.h" // dvd_read_id / dvd_get_error: blocking wait for the drive
+#include "emu/drive_probe.h" // di_wait: the bounded TSTART spin every DI user shares
 
 #define DVD_FS_DUMP 1
 
@@ -207,7 +208,7 @@ static volatile u32 *const di = (volatile u32*)0xCC006000;
 #define DI_I_CR   7
 
 static int  dbr_step;
-static int  dbr_errors;
+static int  dbr_retry;
 static int  dbr_frames;
 static u32  dbr_offset;
 static BNR *dbr_out;
@@ -229,16 +230,32 @@ static void di_start_read(void *dst, u32 len, u32 offset) {
 static inline bool di_busy(void)  { return (di[DI_I_CR] & 1) != 0; }
 static inline bool di_failed(void) { return (di[DI_I_SR] & 0x4) != 0; }
 
+// ~15s at 60Hz, well past any spin-up, and the only bound on the read: an error from the
+// drive is not an answer (see case 1). DBR_RETRY_FRAMES paces the disc-ID attempts inside it.
+#define DBR_TIMEOUT_FRAMES 900
+#define DBR_RETRY_FRAMES   15  // ~0.25s
+
 static int dbr_fail(void) {
     dvd_custom_bypass_exit();
     dbr_step = -1;
     return -1;
 }
 
+// Give up on a read that is still in flight and hand the drive back, so the caller can leave
+// the screen without abandoning the drive in bypass with a transfer running. The wait is the
+// bounded one every DI user shares, so a drive that never answers cannot hang this.
+void disc_banner_cancel(void) {
+    if (dbr_step < 0 || dbr_step > 4) return; // nothing in flight
+
+    di_wait();
+    dvd_custom_bypass_exit();
+    dbr_step = -1;
+}
+
 void disc_banner_start(BNR *out) {
     dbr_out = out;
     dbr_step = 0;
-    dbr_errors = 0;
+    dbr_retry = 0;
     dbr_frames = 0;
     dbr_offset = 0;
 
@@ -249,10 +266,11 @@ void disc_banner_start(BNR *out) {
 
 // 0 = still working, 1 = banner read, -1 = no readable disc.
 int disc_banner_poll(void) {
-    if (++dbr_frames > 900) return dbr_fail(); // ~15s, well past any spin-up
+    if (++dbr_frames > DBR_TIMEOUT_FRAMES) return dbr_fail();
 
     switch (dbr_step) {
     case 0: // ask the drive for the disc ID; it answers once the disc is up to speed
+        if (dbr_retry > 0) { dbr_retry--; return 0; }
         di_start_read(dbr_scratch, 32, 0);
         dbr_step = 1;
         return 0;
@@ -260,8 +278,15 @@ int disc_banner_poll(void) {
     case 1:
         if (di_busy()) return 0;
         if (di_failed()) {
-            if (++dbr_errors > 40) return dbr_fail();
-            dbr_step = 0; // not ready yet -- ask again next frame
+            // Not an answer -- "not yet". A drive that is still spinning up fails every
+            // command it is given, and a tray that was just closed takes seconds to get
+            // past that, so only the timeout above ends this. Counting errors instead put
+            // a ~1.4s ceiling on the wait, which a freshly closed tray never made.
+            //
+            // The attempts are paced rather than issued every other frame: hammering the
+            // drive with commands through its own spin-up is what kept it from finishing.
+            dbr_retry = DBR_RETRY_FRAMES;
+            dbr_step = 0;
             return 0;
         }
         di_start_read(&dbr_header, sizeof(DiskHeader), 0);

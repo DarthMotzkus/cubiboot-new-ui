@@ -111,3 +111,8 @@ ntsc11_EXIDeselect = 0x8135b298;
 ntsc11_EXISync = 0x8135ab5c;
 ntsc11_EXIImm = 0x8135a774;
 ntsc11_EXIImmEx = 0x8135a9d0;
+
+ntsc11_prompt_pulse = 0x81481596;
+ntsc11_prompt_slot_colors = 0x81481550;
+ntsc11_prompt_slot_color_off = 420;
+ntsc11_prompt_region = 1;

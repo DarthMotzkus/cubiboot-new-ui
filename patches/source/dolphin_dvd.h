@@ -132,5 +132,6 @@ dolphin_game_into_t get_game_info(char *game_path);
 // start it once, then poll every frame until it answers 1 (read) or -1 (no readable disc).
 void disc_banner_start(BNR *out);
 int disc_banner_poll(void);
+void disc_banner_cancel(void);
 
 #endif

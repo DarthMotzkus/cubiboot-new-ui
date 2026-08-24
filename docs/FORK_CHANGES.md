@@ -26,6 +26,8 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | N | Faster game lists: per-file sector buffer + a sector cache | `cubeboot/source/emu/ffs/` |
 | O | Native FlippyDrive support | `cubeboot/source/emu/drive_probe.c`, `fldrv.c`, `flippy_emu.c` |
 | P | `cube_logo`: custom boot logo, revived without a PNG decoder | `patches/source/games.c`, `tools/cube-logo-converter/` |
+| Q | The disc screen reads a disc that arrives after it opens | `patches/source/menu.c`, `dolphin_dvd.c` |
+| R | The stock bottom prompt bar, corrected and reused | `patches/source/prompt.c` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -515,6 +517,71 @@ edge pixels where the page's premultiplied path is the more correct of the two.
 
 **Confirmed on hardware by the maintainer**: a custom logo loads and draws correctly on a
 NTSC-J IPL 1.1 console with an SD2SP2, alignment fix included.
+
+## Q. The disc screen reads a disc that arrives after it opens  (`patches/source/menu.c`, `dolphin_dvd.c`)
+
+The disc screen drives the drive itself (see the `disc_banner_*` state machine), and its read
+used to be one-shot: pressing **Z** started it, and whatever it concluded stood until the user
+left and came back. Putting a disc in while the screen was up therefore did nothing -- the
+screen kept saying "Please insert a NINTENDO GAMECUBE DISC" with the disc already in the tray.
+
+Three things were wrong, and they compounded:
+
+- **Nothing watched the lid.** The cover register was sampled only on the browser side of
+  `handle_gameselect_inputs`, which is unreachable in disc mode, and the two variables that
+  tracked it were written and never read. `stock_disc_tick()` now samples the cover between
+  reads and starts a fresh read on the lid closing.
+- **The cover register cannot be trusted through a read.** `disc_banner_start()` resets the
+  drive interface, and a drive that has just been reset reports its cover as OPEN until it
+  re-asserts the line. Sampling through the read saw an open that never happened and re-read
+  on the next closed frame, forever -- and each pass reset the drive before it could finish
+  spinning up, so the disc was never recognised. Hence: sampled only between reads, and an
+  open only counts after it has held for a few frames.
+- **An error from the drive was treated as an answer.** A 40-error cap put a ~1.4s ceiling on
+  the wait, which a tray that was just closed never makes; a drive still spinning up fails
+  every command it is given. Only the overall timeout ends the read now, and the disc-ID
+  attempts are paced rather than issued every other frame -- hammering the drive through its
+  own spin-up was itself keeping it from finishing.
+
+Also here: **START** only boots a disc the screen has actually read (the stock screen ignores
+it on the other two states, and the passthrough would otherwise hand Swiss a drive with no
+readable disc), and **B** always leaves -- `disc_banner_cancel()` waits out the transfer in
+flight on the shared bounded spin and hands the drive back, where before B was refused for the
+whole of a read.
+
+## R. The stock bottom prompt bar, corrected and reused  (`patches/source/prompt.c`)
+
+The row of button prompts along the bottom of every BIOS screen is IPL data: one `GLH0` group
+per language, holding an element table (the pills, the button glyphs, the animated analog
+stick, the "..." separators) and a label table. The group header describes all three tables, so
+one pointer reaches everything -- and it is found by shape rather than by seven addresses,
+since nothing else in the image is a `GLH0` whose element table starts with `bac1` and whose
+label table starts with `txt1`.
+
+What the fork does with it:
+
+- drops the `...` between every glyph and its label, and closes the labels up over the gap;
+- renames `Cancel` to `Back`. The strings the screens draw do not come from the group's own
+  pool -- that is only a default -- so every standalone `Cancel` in the image is rewritten,
+  terminator required so `Cancelar` on a PAL image is left alone;
+- puts **A before B** on every screen. The bar carries two A/B pairs, one drawn by the BIOS
+  cube screens and one by the sub-screens and Cubiboot's own; both are swapped, each within
+  its own span, so the rows stay where the IPL centred them;
+- gives the game list the analog stick and the A it never had, drawn from these same elements
+  at the positions the BIOS sub-screens use for theirs.
+
+Two things are read out of BS2 rather than reinvented, because inventing them is visible: the
+pulse is a triangle between 100 and 255 over 256 ticks of the IPL's own bar counter (so the A,
+the Z pill and the stock B breathe in step), and the stick walks eight states at 128 ticks
+each, **cross-fading the centre against one tilt** -- holding the centre at full alpha and
+swapping tilts under it blinks. The A's green is read from the colour the current screen tints
+its prompts with, at offset 420 in that struct on every revision but NTSC 1.0, which keeps it
+at 364.
+
+Placement is per revision where it has to be: the vertical trim carries between NTSC and PAL,
+the horizontal does not, and the A carries a trim of its own. Every one of these is a named
+constant, and `prompt_region` is 1 or 2 rather than 0 or 1 -- cubeboot's relocation walk reads
+a zero-valued symbol as a broken reloc and halts the boot.
 
 ## Re-applying onto a fresh makeo clone
 
