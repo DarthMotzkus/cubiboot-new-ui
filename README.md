@@ -78,7 +78,7 @@ Every tagged release (`v*`) publishes:
 |------|------------|
 | **`EXTRACT_TO_ROOT.zip`** | Everything that belongs on the SD card (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extract it to the root of the card — the easiest starting point. |
 | `ipl.dol` | The cubiboot loader (a GameCube IPL replacement). Booted via PicoBoot/PicoLoader + gekkoboot. |
-| `flippydrive.dol` | The loader for a **FlippyDrive** — same binary as `ipl.dol`. **Rename it to `cubeboot.dol`** and flash it into the drive; see [Method 4](docs/INSTALL.md#method-4-flippydrive). |
+| `flippydrive.dol` | The loader for a **FlippyDrive** — same binary as `ipl.dol`. **Rename it to `cubeboot.dol`** and flash it into the drive; see [Method 4](docs/INSTALL.md#method-4-flippydrive). Needs FlippyDrive firmware **1.4.6-pre-release or newer** — on older firmware games do not load. |
 | `cubiboot_picoloader_payload.uf2` | PicoLoader firmware with cubiboot **embedded** — flash it to the RP2040 Pico; no loader file needed on the card. |
 | `cubiboot_picoboot_payload.uf2` | The cubiboot payload for **PicoBoot** — flash it on top of the official [PicoBoot](https://github.com/webhdx/PicoBoot/releases) firmware (≥ v0.4; Pico 2 needs v0.5.0) and it replaces the stock gekkoboot in place; no `ipl.dol` or gekkoboot needed on the card. One file for both boards. |
 | `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and **CUBE-ODE**, branded with the Cubiboot banner. |
@@ -117,7 +117,7 @@ Every other path is in the **[install guide](docs/INSTALL.md)**:
 | PicoBoot / PicoLoader with gekkoboot (the steps above, in full) | [Method 1](docs/INSTALL.md#method-1-picoboot-or-picoloader-with-gekkoboot) |
 | cubiboot flashed **into** the modchip — no loader file on the card | [Method 2](docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) |
 | GC Loader or CUBE-ODE, no modchip | [Method 3](docs/INSTALL.md#method-3-gc-loader-and-cube-ode) |
-| FlippyDrive — the drive boots cubiboot itself | [Method 4](docs/INSTALL.md#method-4-flippydrive) |
+| FlippyDrive — the drive boots cubiboot itself (firmware **1.4.6-pre-release** or newer) | [Method 4](docs/INSTALL.md#method-4-flippydrive) |
 | **In-Game Reset** (Z + A + START back to the menu) | [Setup](docs/INSTALL.md#in-game-reset) |
 | **Updating** — which files to replace, and why both | [Updating](docs/INSTALL.md#updating) |
 
@@ -146,7 +146,7 @@ Releases ship a commented template with every option — it is
 | [`force_progressive`](docs/settings.md#force_progressive) | `on` · `off` | `off` | Menu in 480p — IPL 1.1/1.2 only, safely ignored on IPL 1.0 |
 | [`text_scroll`](docs/settings.md#text_scroll) | `on` · `off` · seconds | `on` (2 s) | Long titles scroll after this delay |
 | [`big_titles_scroll_speed`](docs/settings.md#big_titles_scroll_speed) | `1`–`255` | `10` | Marquee pace in frames per character (bigger = slower) |
-| [`swiss_on_dvd_boot`](docs/settings.md#swiss_on_dvd_boot) | `on` · `off` | `on` | Boot physical discs through Swiss, which is what carries IGR and the region bypass |
+| [`swiss_on_dvd_boot`](docs/settings.md#swiss_on_dvd_boot) | `on` · `off` | `on` | Boot physical discs through Swiss, which is what carries IGR and the region bypass. **Must be `off` on a FlippyDrive** — the Swiss disc boot does not work there |
 
 On/off switches take `on` or `off`; `1`/`0`, `yes`/`no` and `true`/`false` also work
 (`text_scroll` is the one exception — there a number means seconds). A value that is neither
@@ -159,6 +159,11 @@ menu, the disc screen, large folders — is in **[docs/settings.md](docs/setting
 
 - File loading is slow on FAT32 — use **exFAT**.
 - Neither `ipl.dol` nor `cubiboot.iso` runs in **Dolphin Emulator**, even with an IPL.bin set.
+- On a **FlippyDrive**, [`swiss_on_dvd_boot`](docs/settings.md#swiss_on_dvd_boot) does not
+  work — set it `off`, or booting a physical disc ends on a black screen. Discs still boot
+  (natively, and still region-free); games on the SD keep going through Swiss.
+- A **FlippyDrive** needs firmware **1.4.6-pre-release or newer** — on older firmware the
+  menu comes up but games do not load. See [Method 4](docs/INSTALL.md#method-4-flippydrive).
 - The banner layouts may crash in folders over 128 files — see
   [Large folders and the banner pool](docs/settings.md#large-folders-and-the-banner-pool).
 - **Autobooting a disc from power-on** is not implemented and is not planned. The console's

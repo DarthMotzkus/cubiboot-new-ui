@@ -254,14 +254,20 @@ which chainloads Swiss with `Autoload=dvd:/*.gcm`. Two things come with that:
 
 - **IGR** — the in-game reset combo returns to cubiboot instead of the stock IPL. This needs
   `apploader.img` (built alongside `IPL.dol`) copied to `/swiss/patches/apploader.img` on the
-  card; without it Swiss still boots the disc, but the reset combo does not come back. On a
-  **FlippyDrive** no `apploader.img` is involved: cubiboot passes `IGRType=Reboot` instead,
-  because the drive autoloads cubiboot from its flash on every reboot anyway.
+  card; without it Swiss still boots the disc, but the reset combo does not come back.
 - **Out-of-region discs boot.** Nothing on the Swiss path consults the console's region.
 
 Set it to `off` and the disc is handed to the console's own apploader instead -- the stock
 boot, without IGR and without the region bypass. Games on the card are unaffected either
 way: they always go through Swiss.
+
+> [!WARNING]
+> **On a FlippyDrive this switch must be `off` -- the Swiss disc boot does not work on that
+> hardware.** Swiss refuses to take over the optical drive while a FlippyDrive is present, so
+> with the switch on, pressing START on a disc ends on a permanent black screen. Put
+> `swiss_on_dvd_boot = off` in `config.ini` and physical discs boot through the console's own
+> apploader -- still region-free, since cubiboot's disc screen never consults the console's
+> region. Games on the SD card are unaffected: they keep going through Swiss, IGR included.
 
 Either way Swiss has to be reachable: `swiss-gc.dol` at the card root, except on a
 FlippyDrive, where the copy in the drive's flash is used first and the card root is only the
@@ -399,6 +405,10 @@ Pick option **2**, answer the title/author/description prompts, and it writes
 `output/<name>/opening.bnr`. Drop your `default.dol` beside that file and the folder is ready
 for the card. See [its README](../tools/banner-converter) for the sizing rules — the slot is
 96×32, so a wordmark that looks thin wants a *taller* source, not a wider one.
+
+Prefer the browser? The [GameCube Banner Editor & Converter](https://git2358.github.io/GameCube-Banner-Editor-Converter/)
+by [git2358](https://github.com/git2358) builds and edits `opening.bnr` files as a web page —
+nothing to install, recommended for a one-off banner.
 
 ## Launching Swiss from the menu
 

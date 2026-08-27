@@ -43,7 +43,9 @@ Your games can live anywhere, including subfolders — see
 > own in its **internal flash**, and cubiboot uses that copy **first** — `swiss-gc.dol` on the
 > card is only a precaution for a flash that lost its own. And `apploader.img` is not used at
 > all: In-Game Reset on a FlippyDrive goes through Swiss's **Reboot** option instead
-> ([details](#in-game-reset)).
+> ([details](#in-game-reset)). The `config.ini` also needs
+> [`swiss_on_dvd_boot = off`](settings.md#swiss_on_dvd_boot) there — see
+> [Method 4](#method-4-flippydrive).
 
 ## Wipe the Pico first (recommended)
 
@@ -138,6 +140,12 @@ A FlippyDrive boots its own loader from its **internal flash**, so cubiboot repl
 The drive loads it **by name**, so it has to end up called `cubeboot.dol`. Under any other
 name it is just another file sitting in flash.
 
+> [!IMPORTANT]
+> **Update the FlippyDrive firmware first: cubiboot needs 1.4.6-pre-release or newer.** On
+> older firmware the menu comes up but **games do not load**. Firmware updates live at
+> [flippydrive.com/updates](https://flippydrive.com/updates) — and since a firmware update
+> restores the stock `cubeboot`, do it **before** flashing cubiboot in, not after.
+
 **Get the file onto the drive's SD card:**
 
 1. Download [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
@@ -157,10 +165,12 @@ name it is just another file sitting in flash.
 8. Choose **FlippyDrive Flash** as the destination device, then its root as the destination
    folder. Confirm overwriting the `cubeboot.dol` already there.
 9. Reboot. The drive autoloads it and you land on the cubiboot menu.
-10. Put a [`config.ini`](settings.md) and your games on the SD card. `swiss-gc.dol` on the
-    card is **optional** here: cubiboot boots games with the Swiss already in the drive's
-    **flash**, and only falls back to a `swiss-gc.dol` at the card root if the flash copy is
-    missing. Keeping one there anyway is a cheap precaution.
+10. Put a [`config.ini`](settings.md) and your games on the SD card, and make sure it has
+    [`swiss_on_dvd_boot = off`](settings.md#swiss_on_dvd_boot) — the Swiss disc boot does not
+    work on a FlippyDrive, and with it on (the default) a physical disc boots to a black
+    screen. `swiss-gc.dol` on the card is **optional** here: cubiboot boots games with the
+    Swiss already in the drive's **flash**, and only falls back to a `swiss-gc.dol` at the
+    card root if the flash copy is missing. Keeping one there anyway is a cheap precaution.
 
 > [!IMPORTANT]
 > Step 3 is what makes step 8 possible, and it is the step people skip. Booting normally
@@ -181,6 +191,11 @@ the drive autoloads cubiboot from flash on every reboot, so a plain reboot alrea
 on the menu. Set Swiss's **In-Game Reset** to **`Reboot`** (Settings → Global Game Settings) —
 cubiboot passes that automatically for games it boots, so the setting only matters for games
 you start from inside Swiss yourself.
+
+**Physical discs are the one exception**: on a FlippyDrive they boot natively, not through
+Swiss. Keep [`swiss_on_dvd_boot = off`](settings.md#swiss_on_dvd_boot) in `config.ini` — with
+it on, pressing START on a disc ends on a black screen, because Swiss refuses to take over
+the optical drive while a FlippyDrive is present. The native boot is still region-free.
 
 > [!NOTE]
 > The drive's bootloader menu also has a **`remote`** entry that serves the drive over FTP/SMB.

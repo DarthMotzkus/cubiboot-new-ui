@@ -11,6 +11,11 @@ It builds either of two things, picked from a menu when you run it:
 | **1** | `.bmp` | Importing into an existing `opening.bnr` with **GCRebuilder** |
 | **2** | `opening.bnr` | A complete banner file, for an app folder that ships its own |
 
+Prefer the browser? The [GameCube Banner Editor & Converter](https://git2358.github.io/GameCube-Banner-Editor-Converter/)
+by [git2358](https://github.com/git2358) does the same job as a web page — nothing to
+install, good for a one-off banner. This script is the way to batch a catalog from the
+command line.
+
 ## Usage
 
 ```sh

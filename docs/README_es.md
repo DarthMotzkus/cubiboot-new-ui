@@ -103,7 +103,8 @@ Tus juegos pueden estar donde quieras, incluso en subcarpetas — mira
 > Swiss en su **flash interna**, y cubiboot usa esa copia **primero** — el `swiss-gc.dol` de
 > la tarjeta es solo una precaución por si la copia de la flash falta. Y `apploader.img` no
 > se usa en absoluto: el reinicio en el juego en una FlippyDrive va por la opción **Reboot**
-> de Swiss ([detalles](#reinicio-en-el-juego)).
+> de Swiss ([detalles](#reinicio-en-el-juego)). El `config.ini` también necesita
+> `swiss_on_dvd_boot = off` ahí — mira el [Método 4](#método-4-flippydrive).
 
 ## Descargas
 
@@ -113,7 +114,7 @@ Cada release etiquetada (`v*`) publica:
 |---------|--------|
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
-| `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). |
+| `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). Necesita firmware de FlippyDrive **1.4.6-pre-release o superior** — con firmware más antiguo los juegos no cargan. |
 | `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. No se usa en una **FlippyDrive**, que consigue el reinicio con la opción **Reboot** de Swiss. |
@@ -130,7 +131,7 @@ Elige el que corresponda a tu consola:
 | Modchip PicoBoot o PicoLoader | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) — recomendado, se actualiza cambiando archivos en la SD |
 | PicoLoader, y no quieres archivos del loader en la tarjeta | [Método 2](#método-2-picoloader-con-cubiboot-integrado) |
 | GC Loader u otro ODE, sin modchip | [Método 3](#método-3-gc-loader-y-otros-ode) |
-| FlippyDrive | [Método 4](#método-4-flippydrive) — la unidad arranca cubiboot por sí misma |
+| FlippyDrive | [Método 4](#método-4-flippydrive) — la unidad arranca cubiboot por sí misma (firmware **1.4.6-pre-release** o superior) |
 
 ### Método 1: PicoBoot o PicoLoader con gekkoboot
 
@@ -186,6 +187,13 @@ como siempre.
 La unidad lo carga **por su nombre**, así que tiene que acabar llamándose `cubeboot.dol`. Con
 cualquier otro nombre es solo un archivo más dentro de la flash.
 
+> [!IMPORTANT]
+> **Actualiza primero el firmware de la FlippyDrive: cubiboot necesita 1.4.6-pre-release o
+> superior.** Con firmware más antiguo el menú aparece pero **los juegos no cargan**. Las
+> actualizaciones están en [flippydrive.com/updates](https://flippydrive.com/updates) — y como
+> actualizar el firmware restaura el `cubeboot` original, hazlo **antes** de flashear
+> cubiboot, no después.
+
 **Pon el archivo en la tarjeta SD de la unidad:**
 
 1. Descarga [`flippydrive.dol`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/flippydrive.dol)
@@ -206,10 +214,13 @@ cualquier otro nombre es solo un archivo más dentro de la flash.
 8. Elige **FlippyDrive Flash** como dispositivo de destino, y su raíz como carpeta de destino.
    Confirma sobrescribir el `cubeboot.dol` que ya está ahí.
 9. Reinicia. La unidad lo carga automáticamente y llegas al menú de cubiboot.
-10. Pon un [`config.ini`](#configuración) y tus juegos en la tarjeta SD. El `swiss-gc.dol` en
-    la tarjeta es **opcional** aquí: cubiboot arranca los juegos con el Swiss que ya está en
-    la **flash** de la unidad, y solo recurre a un `swiss-gc.dol` en la raíz de la tarjeta si
-    la copia de la flash falta. Dejar uno de todas formas es una precaución barata.
+10. Pon un [`config.ini`](#configuración) y tus juegos en la tarjeta SD, y asegúrate de que
+    tenga `swiss_on_dvd_boot = off` — el arranque de discos a través de Swiss no funciona en
+    una FlippyDrive, y con la opción activada (el valor por defecto) un disco físico arranca
+    a una pantalla negra. El `swiss-gc.dol` en la tarjeta es **opcional** aquí: cubiboot
+    arranca los juegos con el Swiss que ya está en la **flash** de la unidad, y solo recurre
+    a un `swiss-gc.dol` en la raíz de la tarjeta si la copia de la flash falta. Dejar uno de
+    todas formas es una precaución barata.
 
 > [!IMPORTANT]
 > El paso 3 es lo que hace posible el paso 8, y es el que la gente se salta. Arrancar
@@ -231,6 +242,12 @@ reinicio, así que un reinicio normal ya vuelve al menú. Pon el **In-Game Reset
 **`Reboot`** (Settings → Global Game Settings) — cubiboot lo pasa automáticamente para los
 juegos que arranca él, así que ese ajuste solo importa para juegos que inicies desde el
 propio Swiss.
+
+**Los discos físicos son la excepción**: en una FlippyDrive arrancan de forma nativa, no a
+través de Swiss. Mantén [`swiss_on_dvd_boot = off`](#iniciar-swiss-desde-el-menú) en el
+`config.ini` — con la opción activada, pulsar START sobre un disco acaba en una pantalla
+negra, porque Swiss se niega a tomar el control del lector óptico mientras hay una
+FlippyDrive presente. El arranque nativo sigue siendo libre de región.
 
 > [!NOTE]
 > El menú del bootloader de la unidad también tiene una entrada **`remote`** que la sirve por
@@ -377,7 +394,7 @@ remember_last_game = off
 | `preboot_delay_ms` | milisegundos | `0` | Espera antes de la animación de arranque, para que la TV sincronice |
 | `postboot_delay_ms` | milisegundos | `0` | Mantiene el último fotograma tras elegir un juego, antes de arrancarlo |
 | [`cube_logo`](#logo-de-arranque-personalizado) | ruta a un `.raw` | texto original | Tu imagen en lugar del texto "GAMECUBE" del arranque |
-| [`swiss_on_dvd_boot`](#iniciar-swiss-desde-el-menú) | `on` · `off` | `on` | Si un disco físico arranca a través de Swiss (lo que mantiene el IGR) |
+| [`swiss_on_dvd_boot`](#iniciar-swiss-desde-el-menú) | `on` · `off` | `on` | Si un disco físico arranca a través de Swiss (lo que mantiene el IGR). **Debe estar `off` en una FlippyDrive** — ahí el arranque de discos vía Swiss no funciona |
 | `force_widescreen` | `on` · `off` | `off` | Menú anamórfico para una TV en 16:9 |
 | `force_progressive` | `on` · `off` | `off` | Renderiza el menú en 480p (escaneo progresivo) |
 
@@ -527,6 +544,10 @@ lista para la tarjeta. Mira [su README](../tools/banner-converter) para las regl
 el hueco es de 96×32, así que un logotipo que se ve delgado necesita una fuente más alta, no
 más ancha.
 
+¿Prefieres el navegador? El [GameCube Banner Editor & Converter](https://git2358.github.io/GameCube-Banner-Editor-Converter/)
+de [git2358](https://github.com/git2358) crea y edita archivos `opening.bnr` como página
+web — nada que instalar, recomendado para un banner suelto.
+
 ### Iniciar Swiss desde el menú
 
 Cubiboot arranca los juegos encadenando Swiss. Eso convierte a Swiss en un caso especial:
@@ -671,6 +692,11 @@ falta de memoria.
 
 - La carga de archivos es lenta en FAT32 — usa **exFAT**.
 - Ni `ipl.dol` ni `cubiboot.iso` funcionan en **Dolphin**, ni con un IPL.bin configurado.
+- En una **FlippyDrive**, `swiss_on_dvd_boot` no funciona — ponlo en `off`, o arrancar un
+  disco físico acaba en pantalla negra. Los discos siguen arrancando (de forma nativa, y
+  libre de región); los juegos de la SD siguen pasando por Swiss.
+- Una **FlippyDrive** necesita firmware **1.4.6-pre-release o superior** — con firmware más
+  antiguo el menú aparece pero los juegos no cargan. Mira el [Método 4](#método-4-flippydrive).
 - Los diseños con banners pueden fallar en carpetas de más de 128 archivos — mira
   [Carpetas grandes y el pool de banners](#carpetas-grandes-y-el-pool-de-banners).
 - **El arranque automático de un disco al encender** no está implementado ni está previsto.
