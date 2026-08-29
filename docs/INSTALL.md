@@ -111,9 +111,12 @@ on the card.
 4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
 
 > [!NOTE]
-> On PicoLoader the console's stock boot animation plays once **before** cubiboot's own —
-> two animations back to back. That is how PicoLoader works (the stock IPL runs and boots
-> the payload like a disc), not a flashing problem, so re-flashing won't change it.
+> PicoLoader boots the payload through the stock IPL (like a disc), which used to add the
+> factory boot animation before cubiboot's own — two animations back to back. The payload
+> now patches the factory animation out, so a **single** (cubiboot) animation is the
+> expected boot. Holding **A** at power-on shows the factory animation instead; on an IPL
+> revision the patch does not know, both animations still play — harmless, but worth
+> reporting.
 
 **Either way:** put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
 [`config.ini`](settings.md) and your games.

@@ -56,7 +56,8 @@ jobs:
 
       # cubiboot.iso: bootable GameCube disc image for GC Loader (El-Torito ISO9660
       # built from cubeboot-tools' gbi.hdr re-branded to the Cubiboot banner + the
-      # freshly built cubeboot loader .dol).
+      # freshly built cubeboot loader .dol). Also writes cubiboot-noipl.iso (same disc,
+      # no-animation boot header) for the PicoLoader uf2 step below.
       - name: Build cubiboot.iso
         run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.sh'
 
@@ -81,13 +82,17 @@ jobs:
           cp EXTRACT_TO_ROOT.zip dist/EXTRACT_TO_ROOT.zip
           ls -la dist dist/swiss/patches
 
-      # cubiboot_picoloader_payload.uf2: PicoLoader firmware with cubiboot.iso embedded as
+      # cubiboot_picoloader_payload.uf2: PicoLoader firmware with cubiboot embedded as
       # the payload (replicates makeo's PicoLoader converter). Flash directly to the Pico.
+      # Uses cubiboot-noipl.iso — same disc as cubiboot.iso, but its boot header's
+      # apploader (.ci/noipl/) suppresses the stock IPL animation, so the console shows a
+      # single boot animation instead of two. Only this uf2 consumes that iso; every
+      # other artifact, cubiboot.iso included, is untouched by it.
       - name: Build cubiboot_picoloader_payload.uf2
         run: |
           set -e
           curl -fsSL -o picoloader.uf2 https://makeo.github.io/PicoLoader/fw/picoloader.uf2
-          python3 .ci/make_picoloader_uf2.py picoloader.uf2 dist/cubiboot.iso dist/cubiboot_picoloader_payload.uf2
+          python3 .ci/make_picoloader_uf2.py picoloader.uf2 cubiboot-noipl.iso dist/cubiboot_picoloader_payload.uf2
           ls -la dist/cubiboot_picoloader_payload.uf2
 
       # cubiboot_picoboot_payload.uf2: payload-only update for PicoBoot (webhdx). The

@@ -115,7 +115,7 @@ Cada release etiquetada (`v*`) publica:
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
 | `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). Necesita firmware de FlippyDrive **1.4.6-pre-release o superior** — con firmware más antiguo los juegos no cargan. |
-| `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado**, en un solo archivo — flashea solo este en la RP2040 Pico (nada que flashear antes); no hace falta ningún archivo del loader en la tarjeta. |
+| `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado**, en un solo archivo — flashea solo este en la RP2040 Pico (nada que flashear antes); no hace falta ningún archivo del loader en la tarjeta. Arranca con **una sola** animación: la de fábrica queda parcheada (mantén **A** al encender para verla). |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. No se usa en una **FlippyDrive**, que consigue el reinicio con la opción **Reboot** de Swiss. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
@@ -163,10 +163,12 @@ Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta
    [`config.ini`](#configuración) y tus juegos.
 
 > [!NOTE]
-> Con PicoLoader la animación de arranque original de la consola se reproduce una vez
-> **antes** de la de cubiboot — dos animaciones seguidas. Es el funcionamiento normal de
-> PicoLoader (la IPL original arranca y bota el payload como si fuera un disco), no un
-> problema de flasheo: volver a flashear no lo cambia.
+> PicoLoader arranca el payload a través de la IPL original (como un disco), lo que antes
+> añadía la animación de fábrica delante de la de cubiboot — dos animaciones seguidas. El
+> payload ahora parchea la animación de fábrica, así que lo esperado es **una sola**
+> animación (la de cubiboot). Mantener **A** al encender muestra la animación de fábrica;
+> en una revisión de IPL que el parche no conozca, siguen saliendo las dos — inofensivo,
+> pero vale la pena reportarlo.
 
 > [!WARNING]
 > Con este método, cada actualización de cubiboot implica abrir la consola y volver a

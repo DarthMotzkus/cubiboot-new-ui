@@ -14,10 +14,11 @@ there. We overwrite, in place:
                                       whatever brand_opening.py stamped and there is
                                       no second copy of the strings to keep in step
 
-Offsets are fixed by mkgbi's layout (verified against the shipped gbi.hdr):
-  BNR1 magic   @ 0x43C0
-  pixelData    @ 0x43E0  (96*32*2 = 6144 bytes)
-  desc[0]      @ 0x5BE0  (BNRDesc, BNR1 = single language)
+mkgbi places the banner right after the apploader, so its absolute offset moves with
+the apploader's size (0x43C0 in the classic gbi.hdr, 0x4CA0 in the PATCH_IPL=3
+no-animation header). The BNR1 magic is therefore located by search; the pixelData
+(+0x20, 96*32*2 = 6144 bytes) and desc[0] (+0x1820) offsets are fixed relative to it
+by the opening.bnr format itself.
 
 The banner source may be either:
   * a full opening.bnr (BNR1/BNR2) — e.g. patches/data/default_opening.bin — whose
@@ -31,10 +32,8 @@ Usage: brand_gbi.py <in_gbi.hdr> <banner_src.bnr|dol_tex.bin> <out_gbi.hdr>
 """
 import sys
 
-PIXELDATA_OFF = 0x43E0
 PIXELDATA_LEN = 96 * 32 * 2          # 6144
 BNR_PIXEL_OFF = 0x20                 # pixelData offset inside an opening.bnr
-DESC_OFF      = 0x5BE0               # desc[0]
 
 BNR_DESC_OFF  = 0x1820               # desc[0] offset inside an opening.bnr
 DESC_LEN      = 0x140                # one BNRDesc
@@ -70,7 +69,7 @@ def build_banner(src: bytes) -> bytes:
     return bytes(banner)
 
 
-def patch_desc(buf: bytearray, src: bytes):
+def patch_desc(buf: bytearray, desc_off: int, src: bytes):
     """Copy the banner's own text across, rather than restating it here.
 
     The strings used to be duplicated between this script and brand_opening.py, which
@@ -80,7 +79,7 @@ def patch_desc(buf: bytearray, src: bytes):
     if len(src) < BNR_DESC_OFF + DESC_LEN:
         raise SystemExit("banner source has no BNRDesc to copy — pass an opening.bnr")
 
-    buf[DESC_OFF:DESC_OFF + DESC_LEN] = src[BNR_DESC_OFF:BNR_DESC_OFF + DESC_LEN]
+    buf[desc_off:desc_off + DESC_LEN] = src[BNR_DESC_OFF:BNR_DESC_OFF + DESC_LEN]
 
 
 def main():
@@ -89,15 +88,18 @@ def main():
     in_gbi, banner_src_path, out_gbi = sys.argv[1:4]
 
     buf = bytearray(open(in_gbi, "rb").read())
-    if buf[0x43C0:0x43C4] != b"BNR1":
-        raise SystemExit("BNR1 magic not at 0x43C0 — gbi.hdr layout unexpected, aborting")
+    bnr_off = buf.find(b"BNR1")
+    if bnr_off < 0 or len(buf) < bnr_off + BNR_DESC_OFF + DESC_LEN:
+        raise SystemExit("no complete BNR1 banner found — gbi.hdr layout unexpected, aborting")
+    pixel_off = bnr_off + BNR_PIXEL_OFF
+    desc_off = bnr_off + BNR_DESC_OFF
 
     banner_src = open(banner_src_path, "rb").read()
-    buf[PIXELDATA_OFF:PIXELDATA_OFF + PIXELDATA_LEN] = build_banner(banner_src)
-    patch_desc(buf, banner_src)
+    buf[pixel_off:pixel_off + PIXELDATA_LEN] = build_banner(banner_src)
+    patch_desc(buf, desc_off, banner_src)
 
-    line1 = buf[DESC_OFF:DESC_OFF + 0x20].split(b"\x00")[0].decode("latin-1")
-    line2 = buf[DESC_OFF + 0x20:DESC_OFF + 0x40].split(b"\x00")[0].decode("latin-1")
+    line1 = buf[desc_off:desc_off + 0x20].split(b"\x00")[0].decode("latin-1")
+    line2 = buf[desc_off + 0x20:desc_off + 0x40].split(b"\x00")[0].decode("latin-1")
     open(out_gbi, "wb").write(buf)
     print(f">> wrote {out_gbi} ({len(buf)} bytes): banner + '{line1}' / '{line2}' branded")
 

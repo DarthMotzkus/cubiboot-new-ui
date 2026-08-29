@@ -38,3 +38,20 @@ genisoimage -R -J \
     "$WORK/disc"
 
 echo ">> wrote $REPO/cubiboot.iso ($(stat -c%s "$REPO/cubiboot.iso") bytes)"
+
+# cubiboot-noipl.iso: same disc, but the boot header's apploader (cubeboot-tools with
+# PATCH_IPL=3, vendored in .ci/noipl/) suppresses the stock IPL boot animation. Used
+# ONLY inside cubiboot_picoloader_payload.uf2, where the stock IPL really runs before
+# cubiboot and would otherwise add a second animation. Not a release file of its own;
+# cubiboot.iso above stays the Method 3 artifact, byte-for-byte unaffected.
+NOIPL_HDR="$REPO/.ci/noipl/gbi_noipl.hdr"
+BRANDED_NOIPL_HDR="$WORK/gbi.noipl.hdr"
+python3 "$REPO/.ci/brand_gbi.py" "$NOIPL_HDR" "$REPO/patches/data/default_opening.bin" "$BRANDED_NOIPL_HDR"
+
+genisoimage -R -J \
+    -G "$BRANDED_NOIPL_HDR" \
+    -no-emul-boot -boot-load-seg 0 -b cubeboot.dol \
+    -o "$REPO/cubiboot-noipl.iso" \
+    "$WORK/disc"
+
+echo ">> wrote $REPO/cubiboot-noipl.iso ($(stat -c%s "$REPO/cubiboot-noipl.iso") bytes)"
