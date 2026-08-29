@@ -279,7 +279,7 @@ A drive that has been idle takes seconds to spin up and answers every command wi
 until it is ready, so "Reading disc..." can stay up for a while before it gives an answer;
 **B** leaves at any point, and **START** boots only a disc the screen has actually read.
 
-None of this applies on a console with an ODE (GC Loader, CUBE-ODE): the ODE is what sits on
+None of this applies on a console with an ODE (GC Loader): the ODE is what sits on
 the drive connector, so there is no optical drive to read and the disc screen does not open
 at all -- **Z** answers with the menu's error tone. The check is a single inquiry made once
 at startup, so it costs nothing per press. A **FlippyDrive is not an ODE** -- it rides the
@@ -313,7 +313,7 @@ the volume everything comes off: the IPL dump, `swiss-gc.dol`, banners and the g
 | `sd2sp2` (or `sdc`) | Serial Port 2 — an **SD2SP2** |
 | `slot_b` (or `sdb`) | Memory card **slot B** — an SD Gecko |
 | `slot_a` (or `sda`) | Memory card **slot A** — an SD Gecko |
-| `ode` (or `gcloader`, `gcldr`) | The SD card **inside an ODE** — a [GC Loader](https://gcloaderhq.com/), a CUBE-ODE, or anything answering the same drive commands |
+| `ode` (or `gcloader`, `gcldr`) | The SD card **inside an ODE** — a [GC Loader](https://gcloaderhq.com/) |
 | `flippy`, `flippydrive` (or `fldrv`) | The SD card **inside a FlippyDrive** |
 
 Separate the names with commas or spaces; case does not matter. Unknown names are reported
@@ -323,8 +323,8 @@ and skipped. Default when the key is absent:
 device_order = sd2sp2, slot_b, slot_a, ode, flippy
 ```
 
-`ode` names the drive **replacements** — a GC Loader and a CUBE-ODE speak the same commands,
-so one entry covers both. A FlippyDrive is deliberately **not** under it: it is not an ODE
+`ode` names the drive **replacements** — the GC Loader. A FlippyDrive is deliberately
+**not** under it: it is not an ODE
 (it rides the drive ribbon beside the optical drive rather than taking the drive's place),
 it speaks its own protocol, and it has its own entry. The two still cannot coexist — an ODE
 and a FlippyDrive want the same attachment point — which is why both being in the default

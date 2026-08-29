@@ -273,7 +273,7 @@ a drive-interface device only reaches the drive inquiry after everything else ha
 out. That one string is both the bootstrap's search order and the default for `device_order`.
 config.ini also accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`,
 `flippy`, `flippydrive`) which resolve onto the same volumes — `ode` is a plain alias for
-`gcldr`, covering the GC Loader and the CUBE-ODE, which speak the same commands. A FlippyDrive
+`gcldr`, the GC Loader. A FlippyDrive
 is deliberately **not** an ODE spelling: it does not replace the drive (it rides the drive
 ribbon beside it), it speaks its own protocol, and it answers to its own names.
 

@@ -435,8 +435,8 @@ side owns the current device.
 
 The name is Swiss's, not a choice: `emu/loader.c` builds `Autoload=<dev>:<path>` and hands
 that string to Swiss, so an invented spelling would need translating there. `flippy` and
-`flippydrive` are config spellings for it. `ode` is a static alias for `gcldr` and covers
-the GC Loader and the CUBE-ODE, which speak the same commands; a FlippyDrive is deliberately
+`flippydrive` are config spellings for it. `ode` is a static alias for `gcldr`, the
+GC Loader; a FlippyDrive is deliberately
 not under it, because it is not an ODE -- it rides the drive ribbon beside the optical drive
 instead of replacing it, which is also why it keeps the disc screen (Z) that a real ODE
 refuses, and why cubiboot brackets that screen's disc read with the drive's bypass

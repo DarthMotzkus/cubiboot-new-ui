@@ -8,7 +8,7 @@
 
 Un fork de [makeo/cubiboot](https://github.com/makeo/cubiboot) — que a su vez es un fork de
 [cubeboot](https://github.com/OffBroadway/cubeboot) de [TeamOffBroadway](https://github.com/OffBroadway) —
-con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares.
+con soporte para SD2SP2, SD Gecko, GC Loader, FlippyDrive y adaptadores SD similares.
 
 [English](../README.md) · **Español**
 
@@ -33,7 +33,7 @@ con soporte para SD2SP2, SD Gecko, GC Loader/CUBE ODE y adaptadores SD similares
 - [Instalación](#instalación)
   - [Método 1: PicoBoot o PicoLoader con gekkoboot](#método-1-picoboot-o-picoloader-con-gekkoboot)
   - [Método 2: PicoLoader con cubiboot integrado](#método-2-picoloader-con-cubiboot-integrado)
-  - [Método 3: GC Loader y otros ODE](#método-3-gc-loader-y-otros-ode)
+  - [Método 3: GC Loader](#método-3-gc-loader)
   - [Método 4: FlippyDrive](#método-4-flippydrive)
   - [Reinicio en el juego](#reinicio-en-el-juego)
 - [Actualizar](#actualizar)
@@ -64,7 +64,7 @@ Lo que este fork añade sobre [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Nombres de archivo reales** | La lista muestra el **nombre del archivo** `.iso` en lugar del nombre interno del juego, y carga el banner correcto de cada disco en juegos multidisco (por ejemplo Resident Evil 0 Disco 1 / Disco 2). |
 | **Apps homebrew con banner** | Una carpeta con `default.dol` junto a `opening.bnr` aparece como una aplicación lanzable con su propio banner, en vez de una carpeta que hay que abrir. Mira [Apps homebrew](#apps-homebrew). |
 | **Recordar el último jugado** | [`remember_last_game = on`](#recordar-el-último-jugado) abre el menú en la carpeta del último juego o app que arrancaste, ya resaltado — pulsas **A** y listo. |
-| **Juegos desde la SD del ODE / FlippyDrive** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un ODE tipo GC Loader/CUBE-ODE o de una FlippyDrive, así el menú lista lo que ya hay en ella sin un segundo lector. |
+| **Juegos desde la SD del ODE / FlippyDrive** | [`device_order`](#de-dónde-se-leen-los-juegos) puede apuntar cubiboot a la tarjeta SD que está dentro de un GC Loader o de una FlippyDrive, así el menú lista lo que ya hay en ella sin un segundo lector. |
 | **Arreglo de banners en arranque en frío** | Los pools de banners viven en memoria baja que PicoBoot no limpia en arranque en frío, así que flags de "en uso" obsoletos solapaban búferes (corrupción) o los dejaban sin ninguno (en blanco) — peor cuanto más fría la consola. Ahora los pools se ponen a cero al inicio y los banners quedan residentes en MRAM. |
 | **Nombre de la carpeta en el encabezado** | El encabezado del menú nombra la carpeta que estás navegando; en la raíz de la tarjeta muestra el nombre de tu dispositivo (por ejemplo SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
 | **Texto que se desplaza** | Un título más largo que el cuadro de info [se desplaza solo](#todas-las-opciones); la descripción se desplaza con **L**/**R**. |
@@ -116,7 +116,7 @@ Cada release etiquetada (`v*`) publica:
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
 | `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). Necesita firmware de FlippyDrive **1.4.6-pre-release o superior** — con firmware más antiguo los juegos no cargan. |
 | `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado**, en un solo archivo — flashea solo este en la RP2040 Pico (nada que flashear antes); no hace falta ningún archivo del loader en la tarjeta. Arranca con **una sola** animación: la de fábrica queda parcheada (mantén **A** al encender para verla). |
-| `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
+| `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader**, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. No se usa en una **FlippyDrive**, que consigue el reinicio con la opción **Reboot** de Swiss. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
 
@@ -130,7 +130,7 @@ Elige el que corresponda a tu consola:
 |---|---|
 | Modchip PicoBoot o PicoLoader | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) — recomendado, se actualiza cambiando archivos en la SD |
 | PicoLoader, y no quieres archivos del loader en la tarjeta | [Método 2](#método-2-picoloader-con-cubiboot-integrado) |
-| GC Loader u otro ODE, sin modchip | [Método 3](#método-3-gc-loader-y-otros-ode) |
+| GC Loader, sin modchip | [Método 3](#método-3-gc-loader) |
 | FlippyDrive | [Método 4](#método-4-flippydrive) — la unidad arranca cubiboot por sí misma (firmware **1.4.6-pre-release** o superior) |
 
 ### Método 1: PicoBoot o PicoLoader con gekkoboot
@@ -174,7 +174,7 @@ Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta
 > Con este método, cada actualización de cubiboot implica abrir la consola y volver a
 > flashear la Pico. El método 1 es más cómodo de mantener.
 
-### Método 3: GC Loader y otros ODE
+### Método 3: GC Loader
 
 `cubiboot.iso` es una imagen de disco GameCube arrancable que sencillamente *es* el loader
 cubiboot — sin modchip.
@@ -204,7 +204,9 @@ cualquier otro nombre es solo un archivo más dentro de la flash.
 > superior.** Con firmware más antiguo el menú aparece pero **los juegos no cargan**. Las
 > actualizaciones están en [flippydrive.com/updates](https://flippydrive.com/updates) — y como
 > actualizar el firmware restaura el `cubeboot` original, hazlo **antes** de flashear
-> cubiboot, no después.
+> cubiboot, no después. El firmware también trae un **build antiguo de Swiss** en su flash —
+> aprovecha y reemplázalo por el [último Swiss](https://github.com/emukidid/swiss-gc/releases/latest),
+> igual que `cubeboot.dol` en los pasos 3–8 (con el nombre `swiss-gc.dol`).
 
 **Pon el archivo en la tarjeta SD de la unidad:**
 
@@ -309,7 +311,7 @@ unidad.
 |---|---|
 | [Método 1](#método-1-picoboot-o-picoloader-con-gekkoboot) | `ipl.dol` **y** `swiss/patches/apploader.img` |
 | [Método 2](#método-2-picoloader-con-cubiboot-integrado) | vuelve a flashear `cubiboot_picoloader_payload.uf2` **y** reemplaza `swiss/patches/apploader.img` en la tarjeta |
-| [Método 3](#método-3-gc-loader-y-otros-ode) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
+| [Método 3](#método-3-gc-loader) | `cubiboot.iso` **y** `swiss/patches/apploader.img` |
 | [Método 4](#método-4-flippydrive) | vuelve a flashear el loader **dentro de la unidad** (pasos más abajo) — sin `apploader.img` |
 
 Los dos archivos salen de la misma release — mezclar un `apploader.img` de una release con un
@@ -382,7 +384,7 @@ menu_grid_type = small_banners
 remember_last_game = off
 
 ; De qué almacenamiento leer los juegos, el preferido primero: sd2sp2, slot_b, slot_a,
-; ode (GC Loader / CUBE-ODE) y flippy (FlippyDrive). Los nombres de volumen de FatFs
+; ode (GC Loader) y flippy (FlippyDrive). Los nombres de volumen de FatFs
 ; (sdc, sdb, sda, gcldr, fldrv) también funcionan.
 ; Deja comentado para usar el valor por defecto.
 ; device_order = sd2sp2, slot_b, slot_a, ode, flippy
@@ -487,7 +489,7 @@ primera entrada que monte se convierte en el volumen del que sale todo: el volca
 | `sd2sp2` (o `sdc`) | Puerto serie 2 — un **SD2SP2** |
 | `slot_b` (o `sdb`) | **Ranura B** de memory card — un SD Gecko |
 | `slot_a` (o `sda`) | **Ranura A** de memory card — un SD Gecko |
-| `ode` (o `gcloader`, `gcldr`) | La tarjeta SD **dentro de un ODE** — un [GC Loader](https://gcloaderhq.com/), un CUBE-ODE, o cualquiera que responda a los mismos comandos de unidad |
+| `ode` (o `gcloader`, `gcldr`) | La tarjeta SD **dentro de un ODE** — un [GC Loader](https://gcloaderhq.com/) |
 | `flippy`, `flippydrive` (o `fldrv`) | La tarjeta SD **dentro de una FlippyDrive** — no es un ODE: va en el cable de la unidad óptica, al lado de ella, en vez de reemplazarla |
 
 El valor por defecto, cuando la clave no está:

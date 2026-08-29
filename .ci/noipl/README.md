@@ -8,7 +8,7 @@ one artifact only — `cubiboot_picoloader_payload.uf2` — where the stock IPL 
 runs before cubiboot (PicoLoader boots the payload like a disc), so without this header
 the console shows two boot animations back to back: the factory one, then cubiboot's.
 
-`cubiboot.iso` (GC Loader / CUBE-ODE, Method 3) keeps being built from the classic
+`cubiboot.iso` (GC Loader, Method 3) keeps being built from the classic
 `gbi.hdr` and is byte-for-byte unaffected; there the disc is booted from an ODE menu
 (Swiss), no stock IPL is present at those addresses, and the patch would be a no-op
 anyway — the same fail-safe that protects unknown IPL revisions (see below).

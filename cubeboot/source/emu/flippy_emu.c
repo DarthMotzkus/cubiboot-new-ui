@@ -88,10 +88,9 @@ static const struct { const char* alias; const char* volume; } emu_device_aliase
 	{ "slot_b",      "sdb"   },
 	{ "slot_a",      "sda"   },
 	{ "gcloader",    "gcldr" },
-	// "ode" covers the drive replacements -- GC Loader and CUBE-ODE speak the same
-	// commands, so one volume serves both. A FlippyDrive is NOT one of them: it rides
-	// the drive ribbon beside a possible real drive instead of replacing it, and it
-	// has its own names below.
+	// "ode" covers the drive replacements -- the GC Loader. A FlippyDrive is NOT one
+	// of them: it rides the drive ribbon beside a possible real drive instead of
+	// replacing it, and it has its own names below.
 	{ "ode",         "gcldr" },
 	{ "flippy",      "fldrv" },
 	{ "flippydrive", "fldrv" },
