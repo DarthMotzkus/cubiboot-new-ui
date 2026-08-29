@@ -4,8 +4,11 @@
 Replicates makeo's PicoLoader web converter
 (https://makeo.github.io/PicoLoader/converter/): the payload is written as UF2 blocks
 at flash address 0x10031000 (PicoLoader's PAYLOAD region) for BOTH the RP2040
-(0xe48bff56) and RP2350 (0xe48bff59) family ids, then concatenated with the PicoLoader
-firmware .uf2 and the block numbers are reindexed per family.
+(0xe48bff56) and RP2350 (0xe48bff59) family ids, then combined with the PicoLoader
+firmware .uf2 and the block numbers are reindexed per family. One deliberate departure
+from the converter: the two families are interleaved through the file rather than
+grouped (see interleave_families), so flashing doesn't abort the host's copy ~2 MB
+early when the RP2040 bootrom finishes its own set and reboots.
 
 Usage: make_picoloader_uf2.py <firmware.uf2> <payload.iso|.dol> <out.uf2>
 """
@@ -46,7 +49,30 @@ def make_payload_blocks(payload):
     return blocks
 
 
+def interleave_families(blocks):
+    """Round-robin the families so each one's final block sits at the END of the file.
+
+    Grouped output (all RP2040 blocks, then all RP2350) makes the RP2040 bootrom finish
+    its set ~2 MB before the file ends; it reboots on the spot, the USB drive vanishes
+    mid-copy and the host reports a failed copy that actually succeeded. Interleaving —
+    the same layout PicoBoot's universal payloads use — keeps every family's last block
+    within one sector of the file's end, so the copy completes before the reboot lands.
+    Per-family block order (and therefore flash content) is unchanged.
+    """
+    per_fam = {}
+    for b in blocks:
+        per_fam.setdefault(b["fam"], []).append(b)
+    lanes = list(per_fam.values())
+    out = []
+    for i in range(max(len(l) for l in lanes)):
+        for lane in lanes:
+            if i < len(lane):
+                out.append(lane[i])
+    return out
+
+
 def emit(blocks):
+    blocks = interleave_families(blocks)
     counts = {}
     for b in blocks:
         counts[b["fam"]] = counts.get(b["fam"], 0) + 1
