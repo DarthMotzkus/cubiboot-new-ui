@@ -115,7 +115,7 @@ Cada release etiquetada (`v*`) publica:
 | **`EXTRACT_TO_ROOT.zip`** | Todo lo que va en la tarjeta SD (`ipl.dol`, `config.ini`, `swiss/patches/apploader.img`). Extráelo en la raíz de la tarjeta — el punto de partida más fácil. |
 | `ipl.dol` | El loader cubiboot (un reemplazo del IPL de GameCube). Se arranca vía PicoBoot/PicoLoader + gekkoboot. |
 | `flippydrive.dol` | El loader para una **FlippyDrive** — el mismo binario que `ipl.dol`. **Renómbralo a `cubeboot.dol`** y flashéalo dentro de la unidad; mira el [Método 4](#método-4-flippydrive). Necesita firmware de FlippyDrive **1.4.6-pre-release o superior** — con firmware más antiguo los juegos no cargan. |
-| `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado** — flashéalo en la RP2040 Pico; no hace falta ningún archivo del loader en la tarjeta. |
+| `cubiboot_picoloader_payload.uf2` | Firmware de PicoLoader con cubiboot **integrado**, en un solo archivo — flashea solo este en la RP2040 Pico (nada que flashear antes); no hace falta ningún archivo del loader en la tarjeta. |
 | `cubiboot.iso` | Imagen de disco GameCube arrancable para **GC Loader** y otros ODE, con la marca Cubiboot. |
 | `apploader.img` | El redirector de **reinicio en el juego** de Swiss. Incrusta el loader de *esta* compilación, así la combinación de reinicio vuelve a este menú — por eso hay que reemplazarlo en cada [actualización](#actualizar). Va en `SD:/swiss/patches/`. No se usa en una **FlippyDrive**, que consigue el reinicio con la opción **Reboot** de Swiss. |
 | `config.ini` | Configuración de ejemplo mínima (`menu_grid_type = small_banners`). Va en la raíz de la tarjeta. |
@@ -151,12 +151,22 @@ Elige el que corresponda a tu consola:
 Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta los juegos y
 `swiss-gc.dol`.
 
-1. Flashea tu Pico con el `.uf2` de [PicoLoader](https://github.com/makeo/PicoLoader).
-2. Descarga [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
+1. (Recomendado) Si la Pico ya fue flasheada antes, límpiala primero: en modo BOOTSEL,
+   copia [`universal_flash_nuke.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/raw/main/tools/flash-nuke/universal_flash_nuke.uf2)
+   para que restos de una instalación anterior no interfieran con la nueva.
+2. Descarga [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2)
+   — ya incluye el firmware completo de [PicoLoader](https://github.com/makeo/PicoLoader)
+   con cubiboot integrado como payload, así que no hay que flashear nada antes.
 3. Mantén pulsado el botón de la RP2040 Pico mientras la conectas al PC.
 4. Copia el `.uf2` a la unidad USB que aparece; la Pico se reinicia ejecutando cubiboot.
 5. Pon Swiss en tu tarjeta SD2SP2 / SD Gecko como `swiss-gc.dol`, junto con un
    [`config.ini`](#configuración) y tus juegos.
+
+> [!NOTE]
+> Con PicoLoader la animación de arranque original de la consola se reproduce una vez
+> **antes** de la de cubiboot — dos animaciones seguidas. Es el funcionamiento normal de
+> PicoLoader (la IPL original arranca y bota el payload como si fuera un disco), no un
+> problema de flasheo: volver a flashear no lo cambia.
 
 > [!WARNING]
 > Con este método, cada actualización de cubiboot implica abrir la consola y volver a

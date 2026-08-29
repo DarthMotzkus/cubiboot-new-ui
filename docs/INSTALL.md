@@ -102,12 +102,18 @@ on the card.
 
 **PicoLoader:**
 
-1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before —
-   leftovers of a previous install are what cause a double boot.
-2. Flash your Pico with the `.uf2` from [PicoLoader](https://github.com/makeo/PicoLoader/releases/download/v1.3/picoloader.uf2).
-3. Download [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2).
-4. Hold the button on the RP2040 Pico while plugging it into your PC.
-5. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
+1. [Wipe the Pico](#wipe-the-pico-first-recommended) if it has ever been flashed before, so
+   leftovers of a previous install can't shadow the new one.
+2. Download [`cubiboot_picoloader_payload.uf2`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot_picoloader_payload.uf2)
+   — it already contains the full [PicoLoader](https://github.com/makeo/PicoLoader)
+   firmware with cubiboot embedded as the payload, so there is nothing to flash before it.
+3. Hold the button on the RP2040 Pico while plugging it into your PC.
+4. Copy the `.uf2` to the USB drive that appears; the Pico reboots running cubiboot.
+
+> [!NOTE]
+> On PicoLoader the console's stock boot animation plays once **before** cubiboot's own —
+> two animations back to back. That is how PicoLoader works (the stock IPL runs and boots
+> the payload like a disc), not a flashing problem, so re-flashing won't change it.
 
 **Either way:** put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
 [`config.ini`](settings.md) and your games.
