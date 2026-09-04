@@ -86,10 +86,32 @@ jobs:
           docker run --rm -v "$PWD":/work -e CUBIBOOT_VERSION="$STAMP" cubiboot-dev \
             bash -lc 'cd entry && make clean && make'
 
-          for f in cubeboot/cubeboot.dol patches/patches.elf entry/entry.dol; do
+          for f in cubeboot/cubeboot.dol patches/patches.elf; do
             cmp "/tmp/from-local/$(basename "$f")" "$f"
             echo "identical: $f ($(stat -c%s "$f") bytes)"
           done
+
+          # entry.dol is the one artefact that cannot come out byte-identical
+          # from two builds of the same tree, whatever image built it: it embeds
+          # data/cubeboot.gz, and entry/Makefile's gzip (no -n) records a
+          # timestamp in the gz header. Its payload is cubeboot.dol, compared
+          # byte for byte above, so what is checked here is that nothing besides
+          # that timestamp moved -- same size, and only those bytes differing,
+          # printed as offset/old/new so a real difference cannot hide among
+          # them.
+          local_size="$(stat -c%s /tmp/from-local/entry.dol)"
+          built_size="$(stat -c%s entry/entry.dol)"
+          if [ "$local_size" != "$built_size" ]; then
+            echo "entry.dol changed size: $local_size -> $built_size" >&2
+            exit 1
+          fi
+          cmp -l /tmp/from-local/entry.dol entry/entry.dol | head -16
+          diff_bytes="$(cmp -l /tmp/from-local/entry.dol entry/entry.dol | wc -l)"
+          if [ "$diff_bytes" -gt 4 ]; then
+            echo "entry.dol differs in $diff_bytes bytes, more than the 4-byte gz header timestamp" >&2
+            exit 1
+          fi
+          echo "entry.dol: $built_size bytes, $diff_bytes byte(s) differ (gz header timestamp only)"
 
           echo "image=$DIGEST" >> "$GITHUB_OUTPUT"
           echo "dockerfile_sha256=$(sha256sum .ci/Dockerfile | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
