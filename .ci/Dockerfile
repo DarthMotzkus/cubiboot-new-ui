@@ -4,13 +4,23 @@
 FROM devkitpro/devkitppc:20231110
 
 # Debian 11 (bullseye) reached end of life on 2026-08-31, so the live mirrors are
-# being purged while their indexes still advertise the packages: apt resolves
-# python3-setuptools 52.0.0-4+deb11u2 and then gets a 404 on the .deb, which fails
-# the image build (and is not transient, so the workflow's 5 retries all fail).
-# The live mirror is still tried first -- when it is intact this behaves exactly as
-# before -- and only on failure does the suite get repointed at archive.debian.org,
+# being purged while their indexes still advertise the packages: apt resolves a
+# version and then gets a 404 on the .deb. It is rolling, not a fixed list -- the
+# first failure seen was python3-setuptools 52.0.0-4+deb11u2, the next run got
+# that one and 404ed on xz-utils instead -- and it is not transient, so the
+# workflow's five docker build retries all fail on it.
+#
+# The live mirror is still tried first, so this behaves exactly as before while it
+# is intact, and only on failure is the suite repointed at archive.debian.org,
 # which is frozen and complete. Check-Valid-Until is off because the archived
 # Release files are past their expiry date by design.
+#
+# bullseye-security is asked for but not required: the archive takes the security
+# suite some time after EOL and until then its Release file 404s, which makes apt
+# reject the whole update. So a failed update drops that line and retries against
+# the plain bullseye suite (the 11.11 point release), which carries every package
+# this image installs. The line starts working by itself once Debian archives the
+# suite -- nothing here needs revisiting for that.
 RUN set -eux; \
     PKGS="genisoimage git golang nodejs build-essential gcc-arm-none-eabi \
           python3-pip python3-distutils python3-setuptools curl xz-utils zip"; \
@@ -26,7 +36,15 @@ RUN set -eux; \
             [ -f "$f" ] || continue; \
             sed -i -E 's,https?://(deb|security)\.debian\.org/debian-security,http://archive.debian.org/debian-security,g; s,https?://deb\.debian\.org/debian,http://archive.debian.org/debian,g' "$f"; \
         done; \
-        apt-get update; \
+        apt-get update || { \
+            echo "archive.debian.org has no bullseye-security yet; dropping it" >&2; \
+            sed -i '/debian-security/d' /etc/apt/sources.list; \
+            for f in /etc/apt/sources.list.d/*.list; do \
+                [ -f "$f" ] || continue; \
+                sed -i '/debian-security/d' "$f"; \
+            done; \
+            apt-get update; \
+        }; \
         apt-get install -y $PKGS; \
     fi; \
     rm -rf /var/lib/apt/lists/*
