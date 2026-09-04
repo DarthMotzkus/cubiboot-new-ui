@@ -1,0 +1,125 @@
+name: Toolchain image
+
+# Publishes the cubiboot-dev build image to GHCR so ci.yml can pull one frozen
+# toolchain instead of assembling it on every push: 367 MB of apt plus a
+# libogc2/libfat compile, against mirrors that are being purged now that Debian
+# 11 is end of life. That assembly is what took CI down; a pinned image takes
+# it off the critical path of every build and every release.
+#
+# Nothing switches over by itself. ci.yml keeps building the image locally until
+# .ci/toolchain.digest exists, so publishing an image changes no build on its
+# own -- adopting it is a separate, one-line commit, and deleting that file is a
+# complete rollback.
+#
+# main only: publishing writes a package under the repo owner's namespace, and
+# main is where releases are cut, so it is not something a topic branch does as
+# a side effect.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .ci/Dockerfile
+      - .github/workflows/toolchain.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the image from .ci/Dockerfile
+        run: |
+          for i in 1 2 3 4 5; do
+            docker build -t cubiboot-dev - < .ci/Dockerfile && exit 0
+            echo "docker build attempt $i failed; retrying in 20s..." >&2
+            sleep 20
+          done
+          echo "docker build failed after 5 attempts" >&2
+          exit 1
+
+      # Build the loader and the menu in the image as built here, keep the
+      # binaries, then throw the local tags away, pull the image back by the
+      # digest ci.yml would pin, and build again. The two sets of binaries must
+      # match byte for byte.
+      #
+      # Being honest about what this proves: the pinned image is this image, so
+      # equal output is expected -- what is under test is the mechanism ci.yml
+      # will depend on (digest resolves, pull works, retag works, the project
+      # actually compiles in the pulled image), before any of it is adopted.
+      # It is also a real check that this image builds the project at all,
+      # which is the thing you do not want to discover on a tag push.
+      - name: Build in the image, then in the same image pulled back by digest
+        id: verify
+        run: |
+          set -e
+          IMAGE="ghcr.io/$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')/cubiboot-dev"
+          TAG="$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
+          STAMP="$(git rev-parse --short HEAD)"
+
+          docker tag cubiboot-dev "$IMAGE:$TAG"
+          docker push "$IMAGE:$TAG"
+          DIGEST="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$TAG")"
+          echo ">> published $DIGEST"
+
+          python3 .ci/brand_opening.py patches/data/default_opening.bin "$STAMP"
+          docker run --rm -v "$PWD":/work -e CUBIBOOT_VERSION="$STAMP" cubiboot-dev \
+            bash -lc 'cd entry && make clean && make'
+          mkdir -p /tmp/from-local
+          cp cubeboot/cubeboot.dol patches/patches.elf entry/entry.dol /tmp/from-local/
+
+          # Drop every local reference, including the digest one `docker push`
+          # leaves behind, so the pull below really comes from GHCR instead of
+          # finding the layers still on the runner.
+          docker rmi -f cubiboot-dev "$IMAGE:$TAG" "$DIGEST" || true
+          docker image prune -af
+          docker pull "$DIGEST"
+          docker tag "$DIGEST" cubiboot-dev
+          docker run --rm -v "$PWD":/work -e CUBIBOOT_VERSION="$STAMP" cubiboot-dev \
+            bash -lc 'cd entry && make clean && make'
+
+          for f in cubeboot/cubeboot.dol patches/patches.elf entry/entry.dol; do
+            cmp "/tmp/from-local/$(basename "$f")" "$f"
+            echo "identical: $f ($(stat -c%s "$f") bytes)"
+          done
+
+          echo "image=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "dockerfile_sha256=$(sha256sum .ci/Dockerfile | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      # The two lines to commit as .ci/toolchain.digest to make ci.yml pull this
+      # image. Printed rather than committed: the switch stays a human decision,
+      # and the commit that makes it is the one to revert to undo it.
+      - name: Print the digest to adopt
+        run: |
+          {
+            echo '## Toolchain image published'
+            echo
+            echo 'Binaries verified identical across the push/pull round trip. To make'
+            echo '`ci.yml` pull this image, commit these two lines as `.ci/toolchain.digest`:'
+            echo
+            echo '```'
+            echo 'image=${{ steps.verify.outputs.image }}'
+            echo 'dockerfile_sha256=${{ steps.verify.outputs.dockerfile_sha256 }}'
+            echo '```'
+            echo
+            echo 'Until that file exists, every build keeps assembling the image from'
+            echo '`.ci/Dockerfile` exactly as before. Deleting it later is a full rollback.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf 'image=%s\ndockerfile_sha256=%s\n' \
+            '${{ steps.verify.outputs.image }}' \
+            '${{ steps.verify.outputs.dockerfile_sha256 }}' \
+            | tee toolchain.digest
+
+      - name: Upload the digest file
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolchain-digest
+          path: toolchain.digest

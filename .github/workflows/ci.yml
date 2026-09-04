@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write   # needed to create Releases on tag pushes
+  packages: read    # to pull the prebuilt toolchain image (see .ci/toolchain_image.sh)
 
 jobs:
   build:
@@ -16,17 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build the reproducible toolchain image (devkitPPC + pinned libogc2/libfat).
-      # Retry: the Docker Hub base-image pull can hit transient i/o timeouts on runners.
-      - name: Build cubiboot-dev image
+      # The prebuilt toolchain image, when there is one, is published under the
+      # repo owner's namespace, so the pull needs a login. Not fatal: without it
+      # the next step just builds the image from .ci/Dockerfile, as always.
+      - name: Log in to GHCR
         run: |
-          for i in 1 2 3 4 5; do
-            docker build -t cubiboot-dev - < .ci/Dockerfile && exit 0
-            echo "docker build attempt $i failed; retrying in 20s..." >&2
-            sleep 20
-          done
-          echo "docker build failed after 5 attempts" >&2
-          exit 1
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin \
+            || echo "::warning::ghcr.io login failed; the toolchain image will be built locally"
+
+      # Provide the reproducible toolchain image (devkitPPC + pinned libogc2/libfat):
+      # pull the pinned prebuilt one if .ci/toolchain.digest says so and it still
+      # matches .ci/Dockerfile, otherwise build it here exactly as CI always did.
+      # Every step below runs `docker run ... cubiboot-dev` either way.
+      - name: Provide the cubiboot-dev image
+        run: bash .ci/toolchain_image.sh
 
       # The version shown under the banner, on the menu cube and on the .iso BIOS intro.
       # Stamped from the tag being built so a release cannot ship the previous version's

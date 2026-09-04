@@ -74,6 +74,14 @@ picking up your edits is the classic failure here.
 
 CI runs the same steps from `.ci/` on every branch — see `.github/workflows/ci.yml`.
 
+The toolchain container comes from `.ci/toolchain_image.sh`: it pulls the prebuilt image
+pinned in `.ci/toolchain.digest` (published by `.github/workflows/toolchain.yml`), and
+builds from `.ci/Dockerfile` instead whenever that file is absent, the pull fails, or
+`.ci/Dockerfile` has changed since the image was published — so **editing the Dockerfile
+never silently builds against the old toolchain**, it just makes the run slower and prints
+a warning. After changing `.ci/Dockerfile`, re-run the *Toolchain image* workflow and commit
+the two lines it prints; deleting `.ci/toolchain.digest` reverts to building every time.
+
 ## Hard rules
 
 - **Never mask the build's exit code** with `| tail`, `| head` or `; echo`. Redirect to a
