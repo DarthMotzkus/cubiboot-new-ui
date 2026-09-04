@@ -2,7 +2,8 @@
 
 # cubiboot-new-ui
 
-**A GameCube IPL replacement that boots your games from a grid of banners, and much more!**
+**A GameCube IPL replacement that boots your games from a grid of banners, and much more!
+(FOR REAL HARDWARE ONLY and will never work on emulators).**
 
 <img width="320" height="240" alt="cubiboot menu" src="https://github.com/user-attachments/assets/eb1d6fc9-f0eb-4a38-8f93-20daa4a0af19" />
 
