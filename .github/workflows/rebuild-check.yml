@@ -1,0 +1,160 @@
+name: Rebuild check
+
+# Answers one question with bytes instead of reasoning: does the toolchain in
+# use today produce the binaries that were actually shipped?
+#
+# Two comparisons against the published assets of a release tag:
+#
+#   A. release  vs  the artifact of the latest successful CI run on main
+#      (what a fresh build of today's tree gives -- expected to differ wherever
+#      the tree or the version stamp differs, so it is context, not a verdict);
+#
+#   B. release  vs  the tag's own commit rebuilt right now with the pinned
+#      toolchain image, stamped with the tag name exactly as the release run
+#      stamped it. Same source, same stamp: whatever differs here is the
+#      toolchain, the build's own non-determinism (gzip/ISO timestamps), or an
+#      unpinned input such as the Swiss checkout in build_apploader.sh.
+#
+# Both tables land in the job summary. Read-only: nothing is published,
+# nothing is written to the repo.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to compare against (empty = latest release)
+        required: false
+        default: ""
+      run_id:
+        description: CI run whose artifact to compare in A (empty = latest successful run on main)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: read
+  actions: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout main (toolchain script and pin)
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin \
+            || echo "::warning::ghcr.io login failed; the toolchain image will be built locally"
+
+      - name: Provide the cubiboot-dev image
+        run: bash .ci/toolchain_image.sh
+
+      - name: Resolve the release tag and download its assets
+        id: rel
+        run: |
+          set -e
+          TAG='${{ inputs.tag }}'
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          mkdir -p cmp/release
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -D cmp/release
+          ls -la cmp/release
+
+      - name: Download the latest main CI artifact (comparison A)
+        id: latest
+        run: |
+          set -e
+          RUN='${{ inputs.run_id }}'
+          if [ -z "$RUN" ]; then
+            RUN="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --status success -L 1 --json databaseId -q '.[0].databaseId')"
+          fi
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+          mkdir -p cmp/latest
+          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" -n cubiboot -D cmp/latest
+          # The artifact keeps dist/'s layout; flatten apploader.img to sit beside the rest.
+          [ -f cmp/latest/swiss/patches/apploader.img ] && cp cmp/latest/swiss/patches/apploader.img cmp/latest/apploader.img
+          ls -la cmp/latest
+
+      # The tag's tree is built with the tag's own .ci/ scripts (they define
+      # what the release was), inside today's image, stamped with the tag name
+      # -- the same three inputs the release run had, minus the toolchain
+      # assembled on that day.
+      - name: Rebuild the tag with the pinned toolchain (comparison B)
+        run: |
+          set -e
+          TAG='${{ steps.rel.outputs.tag }}'
+          git fetch --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
+          git worktree add tagsrc "refs/tags/$TAG"
+          python3 tagsrc/.ci/brand_opening.py tagsrc/patches/data/default_opening.bin "$TAG"
+          docker run --rm -v "$PWD/tagsrc":/work -e CUBIBOOT_VERSION="$TAG" cubiboot-dev bash -lc 'cd entry && make clean && make'
+          docker run --rm -v "$PWD/tagsrc":/work cubiboot-dev bash -lc 'bash /work/.ci/build_apploader.sh'
+          docker run --rm -v "$PWD/tagsrc":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.sh'
+          mkdir -p cmp/rebuild
+          cp tagsrc/cubeboot/cubeboot.dol cmp/rebuild/ipl.dol
+          cp tagsrc/cubeboot/cubeboot.dol cmp/rebuild/flippydrive.dol
+          cp tagsrc/apploader.img         cmp/rebuild/apploader.img
+          cp tagsrc/cubiboot.iso          cmp/rebuild/cubiboot.iso
+          cp tagsrc/.ci/config.ini        cmp/rebuild/config.ini
+          curl -fsSL -o picoloader.uf2 https://makeo.github.io/PicoLoader/fw/picoloader.uf2
+          python3 tagsrc/.ci/make_picoloader_uf2.py picoloader.uf2 tagsrc/cubiboot-noipl.iso cmp/rebuild/cubiboot_picoloader_payload.uf2
+          python3 tagsrc/.ci/make_picoboot_uf2.py tagsrc/entry/entry.dol cmp/rebuild/
+          ls -la cmp/rebuild
+
+      - name: Compare
+        run: |
+          set -e
+          TAG='${{ steps.rel.outputs.tag }}'
+          RUN='${{ steps.latest.outputs.run }}'
+          FILES="ipl.dol flippydrive.dol apploader.img config.ini cubiboot.iso cubiboot_picoloader_payload.uf2 cubiboot_picoboot_payload.uf2"
+
+          # one row per file: sizes, whether sha256 matches, and for same-size
+          # files the number of differing bytes plus the first few offsets
+          # (cmp -l is 1-indexed), so a timestamp field can be told from a
+          # real change without downloading anything.
+          row() { # $1 label-dir  $2 file
+            local a="cmp/release/$2" b="$1/$2"
+            if [ ! -f "$a" ] || [ ! -f "$b" ]; then
+              printf '| `%s` | %s | %s | missing | |\n' "$2" "$( [ -f "$a" ] && stat -c%s "$a" || echo -)" "$( [ -f "$b" ] && stat -c%s "$b" || echo -)"
+              return
+            fi
+            local sa sb ha hb
+            sa=$(stat -c%s "$a"); sb=$(stat -c%s "$b")
+            ha=$(sha256sum "$a" | cut -c1-12); hb=$(sha256sum "$b" | cut -c1-12)
+            if [ "$ha" = "$hb" ]; then
+              printf '| `%s` | %s | %s | **identical** | |\n' "$2" "$sa" "$sb"
+            elif [ "$sa" != "$sb" ]; then
+              printf '| `%s` | %s | %s | differs | size changed (%+d bytes) |\n' "$2" "$sa" "$sb" "$((sb - sa))"
+            else
+              local n first
+              n=$(cmp -l "$a" "$b" | wc -l)
+              first=$(cmp -l "$a" "$b" | head -6 | awk '{printf "%s ", $1}')
+              printf '| `%s` | %s | %s | differs | %s byte(s): offsets %s%s |\n' "$2" "$sa" "$sb" "$n" "$first" "$( [ "$n" -gt 6 ] && echo '…' )"
+            fi
+          }
+          table() { # $1 title  $2 dir
+            echo "### $1"
+            echo
+            echo '| file | release bytes | other bytes | result | detail |'
+            echo '|---|---|---|---|---|'
+            for f in $FILES; do row "$2" "$f"; done
+            echo
+          }
+          {
+            echo "## Rebuild check against release \`$TAG\`"
+            echo
+            echo "Toolchain image: \`$(sed -n 's/^image=//p' .ci/toolchain.digest 2>/dev/null || echo 'built from .ci/Dockerfile')\`"
+            echo
+            table "A. release \`$TAG\` vs latest main CI artifact (run $RUN)" cmp/latest
+            table "B. release \`$TAG\` vs the tag rebuilt now with the pinned toolchain" cmp/rebuild
+            echo '`EXTRACT_TO_ROOT.zip` is not compared as a container (zip carries timestamps); its contents are `ipl.dol`, `config.ini` and `apploader.img`, all listed above.'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload everything that was compared
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebuild-check-${{ steps.rel.outputs.tag }}
+          path: cmp/
