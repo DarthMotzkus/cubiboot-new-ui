@@ -24,5 +24,7 @@ patches/tests
 # entry/Makefile copies cubeboot/source/emu -> patches/source/emu at build time
 patches/source/emu/
 apploader.img
+apploader.swiss-commit
+release-body.md
 .localbuild/
 .claude/

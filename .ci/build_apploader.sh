@@ -22,6 +22,14 @@ trap 'rm -rf "$WORK"' EXIT
 # 1) fetch only the swiss-gc packer
 git clone --depth 1 --filter=blob:none --sparse https://github.com/emukidid/swiss-gc.git "$WORK/swiss-gc"
 git -C "$WORK/swiss-gc" sparse-checkout set cube/packer
+# The checkout above is deliberately unpinned: the IGR stub has to follow Swiss.
+# The price is that two builds of the same cubiboot commit can embed different
+# stubs, so record which one this was -- in the log, and in a file beside the
+# output for ci.yml to put in the job summary and the release notes. It is what
+# makes an "In-Game Reset stopped working" report traceable to a Swiss commit.
+SWISS_COMMIT="$(git -C "$WORK/swiss-gc" rev-parse HEAD)"
+echo ">> swiss-gc packer at $SWISS_COMMIT (https://github.com/emukidid/swiss-gc/commit/$SWISS_COMMIT)"
+echo "$SWISS_COMMIT" > "$REPO/apploader.swiss-commit"
 
 # 2) payload = the cubeboot loader ELF (packer reads ../swiss/swiss.elf)
 mkdir -p "$WORK/swiss-gc/cube/swiss"
