@@ -130,9 +130,15 @@ jobs:
               printf '| `%s` | %s | %s | differs | size changed (%+d bytes) |\n' "$2" "$sa" "$sb" "$((sb - sa))"
             else
               local n first
-              n=$(cmp -l "$a" "$b" | wc -l)
-              first=$(cmp -l "$a" "$b" | head -6 | awk '{printf "%s ", $1}')
-              printf '| `%s` | %s | %s | differs | %s byte(s): offsets %s%s |\n' "$2" "$sa" "$sb" "$n" "$first" "$( [ "$n" -gt 6 ] && echo '…' )"
+              n=$(cmp -l "$a" "$b" 2>/dev/null | wc -l)
+              if [ "$n" -le 16 ]; then
+                # small enough to show in full: offset:release>other, values in octal as cmp prints them
+                first=$(cmp -l "$a" "$b" 2>/dev/null | awk '{printf "%s:%s>%s ", $1, $2, $3}')
+                printf '| `%s` | %s | %s | differs | %s byte(s), offset:old>new (octal): %s |\n' "$2" "$sa" "$sb" "$n" "$first"
+              else
+                first=$(cmp -l "$a" "$b" 2>/dev/null | head -6 | awk '{printf "%s ", $1}')
+                printf '| `%s` | %s | %s | differs | %s byte(s): offsets %s… |\n' "$2" "$sa" "$sb" "$n" "$first"
+              fi
             fi
           }
           table() { # $1 title  $2 dir

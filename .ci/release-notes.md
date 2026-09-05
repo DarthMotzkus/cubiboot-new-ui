@@ -13,6 +13,10 @@ headline and pushed the actual news below the fold. As a closing notice it stays
 without stealing the release.
 
 Only the "What's new" notes and the compare link get rewritten each release.
+
+The "**Build:**" line (swiss-gc commit behind apploader.img, toolchain image) is NOT in this
+file: ci.yml generates it at release time and inserts it just before the standing block.
+Do not add it by hand.
 -->
 
 ## What's new in v1.11.3

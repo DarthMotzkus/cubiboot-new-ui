@@ -58,6 +58,19 @@ jobs:
       - name: Build apploader.img
         run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_apploader.sh'
 
+      # build_apploader.sh takes the Swiss packer from swiss-gc's HEAD on purpose
+      # (the IGR stub has to follow Swiss), so every build says which commit that
+      # was: here in the log and the job summary, and on a tag in the release notes
+      # below. A report of "In-Game Reset stopped working" then names a Swiss commit
+      # instead of a date.
+      - name: Record the swiss-gc commit behind apploader.img
+        run: |
+          set -e
+          SWISS="$(cat apploader.swiss-commit)"
+          echo "swiss-gc packer commit: $SWISS"
+          echo "SWISS_COMMIT=$SWISS" >> "$GITHUB_ENV"
+          echo "\`apploader.img\` embeds the swiss-gc packer at [\`${SWISS:0:7}\`](https://github.com/emukidid/swiss-gc/commit/$SWISS)." >> "$GITHUB_STEP_SUMMARY"
+
       # cubiboot.iso: bootable GameCube disc image for GC Loader (El-Torito ISO9660
       # built from cubeboot-tools' gbi.hdr re-branded to the Cubiboot banner + the
       # freshly built cubeboot loader .dol). Also writes cubiboot-noipl.iso (same disc,
@@ -132,11 +145,32 @@ jobs:
       # what actually changed under every "chore: refresh the banner artwork", and adds
       # contributor and PR lists nobody asked for. It also silently ignores the tag's own
       # annotation, so writing notes there does nothing.
+      # The body is .ci/release-notes.md plus one generated provenance line: the
+      # swiss-gc commit apploader.img embeds and the toolchain image that built
+      # everything. It goes in before the standing ">>" block, which that file
+      # requires to stay last; the file itself is not modified.
+      - name: Release notes with build provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -e
+          LINE="**Build:** \`apploader.img\` embeds the swiss-gc packer at [\`${SWISS_COMMIT:0:7}\`](https://github.com/emukidid/swiss-gc/commit/$SWISS_COMMIT)"
+          IMAGE="$(sed -n 's/^image=//p' .ci/toolchain.digest 2>/dev/null || true)"
+          if [ -n "$IMAGE" ]; then
+            LINE="$LINE; built with toolchain image \`$(printf '%s' "${IMAGE#*@}" | cut -c1-19)\`"
+          fi
+          LINE="$LINE."
+          LINE="$LINE" awk '
+            !done && /^>>/ { print ENVIRON["LINE"]; print ""; done = 1 }
+            { print }
+            END { if (!done) { print ""; print ENVIRON["LINE"] } }
+          ' .ci/release-notes.md > release-body.md
+          echo "--- release body, last lines:"; tail -n 6 release-body.md
+
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          body_path: .ci/release-notes.md
+          body_path: release-body.md
           files: |
             dist/ipl.dol
             dist/flippydrive.dol
