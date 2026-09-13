@@ -2,17 +2,13 @@
 
 # cubiboot-new-ui
 
-**A GameCube IPL replacement that boots your games from a grid of banners, and much more!
-(FOR REAL HARDWARE ONLY and will never work on emulators like Dolphin).**
+**A GameCube IPL replacement that list titles on a grid of banners, and a bunch of new features!
+It Supports Picoloader/Picoboot, FlippyDrive and GCLoader, and use Swiss to boot your games.
+(FOR REAL HARDWARE ONLY and will never work on emulators like Dolphin)**
 
 <img width="320" height="286" alt="cube" src="https://github.com/user-attachments/assets/8772fe6a-3933-420a-9418-a6b2a03dd83a" />
 
-**Hello there! Welcome. FIRST OF ALL: This is not a simple frontend as the original cubeboot/cubiboot. It's support too many devices, settings and customizations... You HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use. Use AI to a faster Q&A, it will read the /docs folder for a much faster support for your questions.**   
-
-A fork of [makeo/cubiboot](https://github.com/makeo/cubiboot) — itself a fork of
-[cubeboot](https://github.com/OffBroadway/cubeboot) by [TeamOffBroadway](https://github.com/OffBroadway) —
-with support for SD2SP2, SD Gecko, GC Loader, FlippyDrive and similar SD adapters.
-
+**Hello there! Welcome. FIRST OF ALL: This is not a simple frontend as the original cubeboot/cubiboot. It's support too many devices, settings and customizations... You HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use. Use AI to a faster Q&A, it will read the /docs folder for a much faster support for your questions.**
 </div>
 
 ---
