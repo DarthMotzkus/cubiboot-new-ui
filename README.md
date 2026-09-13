@@ -3,7 +3,7 @@
 # cubiboot-new-ui
 
 **A GameCube IPL replacement that list titles on a grid of banners, and a bunch of new features!
-It Supports Picoloader/Picoboot, FlippyDrive and GCLoader, and use Swiss to boot your games.
+It Supports Picoloader/Picoboot, FlippyDrive, GCLoader, and use Swiss to boot your games.
 (FOR REAL HARDWARE ONLY and will never work on emulators like Dolphin)**
 
 <img width="320" height="286" alt="cube" src="https://github.com/user-attachments/assets/8772fe6a-3933-420a-9418-a6b2a03dd83a" />
