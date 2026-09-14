@@ -132,6 +132,18 @@ multi-disc set displayed the same title and the list gave no way to tell them ap
 its extension stripped — the same thing Swiss shows. `Resident Evil 0 Disc 2.iso` reads as
 `Resident Evil 0 Disc 2`.
 
+A `.nkit` left behind by an NKit-compressed image is stripped in a second pass, so
+`Game.nkit.iso` reads as `Game` rather than `Game.nkit`. Only a `.nkit` sitting immediately
+before the real extension is taken — `Ver.1.2.iso` keeps its `.2` — and a name that is
+*nothing but* the suffix is left alone instead of blanking the title. The tail is compared
+with `strcasecmp()` against the NUL the first pass writes, because `patches/` has no
+`strncasecmp` to link (the same constraint the `Recent_` parser notes).
+
+This is display only. Which files enter the list is decided by `gm_get_file_type()` against
+`valid_game_exts[]`, which already matched `.nkit.iso` on its `.iso` tail; sorting is by
+path, banner lookup by `(game_id, disc_num, disc_ver)`, and booting opens `entry->path`.
+None of them see the title.
+
 There is no in-code truncation: a title longer than the box (~28 chars) is clipped at draw
 time, which is why the README asks for short filenames.
 
