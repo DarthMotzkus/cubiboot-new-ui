@@ -19,15 +19,15 @@ file: ci.yml generates it at release time and inserts it just before the standin
 Do not add it by hand.
 -->
 
-## What's new in v1.11.3
+## What's new in v1.12.0
 
-**Who needs to update: only [Method 2](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) installs with cubiboot flashed directly into the Pico as the PicoLoader payload `.uf2`** — and even there only if the double animation bothers you; it is purely cosmetic. **Method 1 (gekkoboot + `ipl.dol`), PicoBoot in either method, GC Loader and FlippyDrive are not affected** — no other file changed in this release, so there is nothing to update on those setups.
+**Who needs to update: anyone whose card holds NKit-compressed games (`*.nkit.iso`).** The fix is in the menu itself, which ships inside every artifact, so all install methods get it the same way — [Method 1](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md) and [Method 2](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) alike, PicoBoot, PicoLoader, GC Loader and FlippyDrive included. If none of your games are NKit images, this release changes nothing you can see.
 
-* **PicoLoader flash install: one boot animation instead of two.** The payload now skips the factory boot animation, so the console goes straight to cubiboot's own. Holding **A** at power-on still shows the factory one; on an IPL revision the patch does not know, both animations play as before. Hardware-validated.
+* **NKit games no longer carry `.nkit` in their title.** `Resident Evil 4.nkit.iso` showed up in the grid as `Resident Evil 4.nkit`, while the very same game as a plain `.iso` showed as `Resident Evil 4`. The leftover suffix is now stripped, so both read the same. Only a `.nkit` sitting immediately before the real extension is taken — a name like `Ver.1.2.iso` keeps its `.2`, and a file called nothing but the suffix keeps its title rather than going blank. This is **display only**: which files show up in the grid, how they are sorted, which banner each one gets and what actually boots are all untouched.
 
-* **Flashing the PicoLoader payload no longer aborts the copy midway.** The file carries data for both Pico models, and the old layout made a Pico 1 reboot when the copy was only about half through — the host then reported a failed copy that had actually succeeded, which looked like a broken flash. The file is now laid out so the copy completes before the Pico reboots, on Pico 1 and Pico 2 alike. What ends up in the Pico's flash is unchanged.
+* **Under the hood: the release build is now pinned and checkable.** Every artifact here is built from a toolchain image pinned by digest instead of one assembled fresh on each run, and the **Build:** line just below records which swiss-gc commit `apploader.img` embeds. A new CI job can rebuild any published tag with that same pinned toolchain and diff the result against the files attached to the release — so "does this download match the source" is answered with bytes. Nothing about how the artifacts behave on the console changed.
 
-**Full Changelog:** [v1.11.0...v1.11.3](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.11.0...v1.11.3)
+**Full Changelog:** [v1.11.3...v1.12.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.11.3...v1.12.0)
 
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. On a **FlippyDrive** none of this applies: it never uses `apploader.img` — its In-Game Reset is a plain reboot, so the loader in the drive's flash is the only thing to replace. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#updating).
