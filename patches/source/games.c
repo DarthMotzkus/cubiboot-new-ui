@@ -624,6 +624,11 @@ void gm_sort_files(int path_count) {
     OSReport("Sort took=%f\n", runtime);
     (void)runtime;
 }
+// Left over on an NKit-compressed image once the real extension comes off:
+// "Game.nkit.iso" -> "Game.nkit" -> "Game".
+#define GM_NKIT_SUFFIX     ".nkit"
+#define GM_NKIT_SUFFIX_LEN (sizeof(GM_NKIT_SUFFIX) - 1)
+
 // Title is the .iso/.gcm filename with the extension stripped (matching Swiss), so
 // multi-disc games are told apart by the "Disc N" in their filename. Names are expected
 // to fit the title box (~28 chars); a longer one is just clipped by the box at draw time
@@ -640,6 +645,18 @@ static void gm_set_title_from_path(gm_file_entry_t *entry) {
 
     memcpy(out, base, len);
     out[len] = '\0';
+
+    // Second pass for NKit images. patches/ has no strncasecmp to link (see the Recent_
+    // parser further down), so the tail is compared as a whole string against the NUL
+    // just written. Only a ".nkit" sitting immediately before the real extension is
+    // taken, which is why a name like "Ver.1.2.iso" keeps its ".2". The strict > leaves
+    // a name that is nothing but the suffix alone rather than blanking the title.
+    // Always derived from the path, never from the previous title, so the repeated calls
+    // on the >128 scroll path cannot eat into the name.
+    if (len > (int)GM_NKIT_SUFFIX_LEN &&
+        strcasecmp(out + len - GM_NKIT_SUFFIX_LEN, GM_NKIT_SUFFIX) == 0) {
+        out[len - GM_NKIT_SUFFIX_LEN] = '\0';
+    }
 }
 
 // returns amount of space used in aram
