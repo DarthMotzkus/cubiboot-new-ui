@@ -119,7 +119,10 @@ on the card.
 > reporting.
 
 **Either way:** put Swiss on your SD2SP2 / SD Gecko card as `swiss-gc.dol`, along with a
-[`config.ini`](settings.md) and your games.
+[`config.ini`](settings.md) and your games. The card is not optional here — the Pico holds
+cubiboot itself but none of your settings or games, so powering on with no SD reader
+attached stops at a raw `Exception (DSI) occurred!` register dump instead of reaching the
+menu.
 
 > [!WARNING]
 > With this method every cubiboot update means opening the console and re-flashing the Pico.
