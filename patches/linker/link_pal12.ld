@@ -54,6 +54,7 @@ pal12_stock_gameselect_draw_skip = 0x81328000;
 pal12_setup_cube_anim = 0x81329dd8;
 pal12_draw_box = 0x81309a88;
 pal12_draw_start_info = 0x81327bfc;
+pal12_draw_menu_banner_info = 0x8131320c;
 pal12_draw_blob_fixed = 0x8130ab28;
 pal12_draw_blob_text = 0x8130a89c;
 pal12_draw_blob_text_long = 0x8130a924;

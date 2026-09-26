@@ -54,6 +54,7 @@ ntsc11_draw_partial = 0x81305248;
 ntsc11_change_model = 0x8130418c;
 ntsc11_draw_box = 0x81309a30;
 ntsc11_draw_start_info = 0x813270e8;
+ntsc11_draw_menu_banner_info = 0x813127dc;
 ntsc11_draw_start_anim = 0x8132fa28;
 ntsc11_draw_blob_fixed = 0x8130aad0;
 ntsc11_draw_blob_text = 0x8130a844;

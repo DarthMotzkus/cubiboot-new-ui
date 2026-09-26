@@ -67,6 +67,7 @@ __attribute_reloc__ void (*change_model)(model* m);
 __attribute_reloc__ void (*draw_grid)(Mtx position, u8 alpha);
 __attribute_reloc__ void (*draw_box)(u32 index, box_draw_group* header, GXColor* texa, int inside_x, int inside_y, int inside_width, int inside_height);
 __attribute_reloc__ void (*draw_start_info)(u8 alpha);
+__attribute_reloc__ void (*draw_menu_banner_info)(void *blob, u8 alpha);
 __attribute_reloc__ void (*draw_start_anim)(u8 alpha);
 __attribute_reloc__ void (*draw_blob_fixed)(void *blob_ptr, void *blob_a, void *blob_b, GXColor *color);
 __attribute_reloc__ void (*draw_blob_text)(u32 type, void *blob, GXColor *color, char *str, s32 len);
@@ -181,19 +182,37 @@ __attribute_used__ u32 stock_disc_tick(void) {
     return stock_disc_state;
 }
 
-// Replaces the stock Game Play renderer's call to draw_start_info, the one function that
-// draws the banner's title, maker and description (see patch.s). The IPL only decodes
-// Shift-JIS while its language is Japanese, and Cubiboot forces English on NTSC, so a
-// Japanese disc's text came out as Latin-1 garbage. Only this call switches: the screen's
-// own strings ("Game Play", PRESS START) keep the menu's font.
+// The stock IPL has two functions that draw banner text, both patched to call through the
+// wrappers below (see patch.s): draw_start_info, the Game Play screen's title, maker and
+// description, and draw_menu_banner_info, the short name and maker on the main menu's
+// Game Play panel -- which is what the boot-out animation after START passes through. The
+// IPL only decodes Shift-JIS while its language is Japanese, and Cubiboot forces English on
+// NTSC, so a Japanese disc's text came out as Latin-1 garbage. Only these calls switch: the
+// screens' own strings ("Game Play", PRESS START) keep the menu's font.
+static bool stock_banner_sjis(void) {
+    // The panel also draws Cubiboot's default banner, which is plain ASCII.
+    return *banner_pointer == (u32)&disc_banner && disc_banner_sjis();
+}
+
 __attribute_used__ void stock_draw_start_info(u8 alpha) {
-    if (!disc_banner_sjis()) {
+    if (!stock_banner_sjis()) {
         draw_start_info(alpha);
         return;
     }
 
     switch_lang_jpn();
     draw_start_info(alpha);
+    switch_lang_orig();
+}
+
+__attribute_used__ void stock_draw_menu_banner_info(void *blob, u8 alpha) {
+    if (!stock_banner_sjis()) {
+        draw_menu_banner_info(blob, alpha);
+        return;
+    }
+
+    switch_lang_jpn();
+    draw_menu_banner_info(blob, alpha);
     switch_lang_orig();
 }
 
