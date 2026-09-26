@@ -134,4 +134,8 @@ void disc_banner_start(BNR *out);
 int disc_banner_poll(void);
 void disc_banner_cancel(void);
 
+// True while the banner last read by disc_banner_poll() belongs to a Japanese disc, whose
+// title, maker and description are Shift-JIS.
+bool disc_banner_sjis(void);
+
 #endif

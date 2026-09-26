@@ -66,7 +66,7 @@ __attribute_reloc__ void (*change_model)(model* m);
 // for menu elements
 __attribute_reloc__ void (*draw_grid)(Mtx position, u8 alpha);
 __attribute_reloc__ void (*draw_box)(u32 index, box_draw_group* header, GXColor* texa, int inside_x, int inside_y, int inside_width, int inside_height);
-// __attribute_reloc__ void (*draw_start_info)(u8 alpha);
+__attribute_reloc__ void (*draw_start_info)(u8 alpha);
 __attribute_reloc__ void (*draw_start_anim)(u8 alpha);
 __attribute_reloc__ void (*draw_blob_fixed)(void *blob_ptr, void *blob_a, void *blob_b, GXColor *color);
 __attribute_reloc__ void (*draw_blob_text)(u32 type, void *blob, GXColor *color, char *str, s32 len);
@@ -179,6 +179,22 @@ __attribute_used__ u32 stock_disc_tick(void) {
     }
 
     return stock_disc_state;
+}
+
+// Replaces the stock Game Play renderer's call to draw_start_info, the one function that
+// draws the banner's title, maker and description (see patch.s). The IPL only decodes
+// Shift-JIS while its language is Japanese, and Cubiboot forces English on NTSC, so a
+// Japanese disc's text came out as Latin-1 garbage. Only this call switches: the screen's
+// own strings ("Game Play", PRESS START) keep the menu's font.
+__attribute_used__ void stock_draw_start_info(u8 alpha) {
+    if (!disc_banner_sjis()) {
+        draw_start_info(alpha);
+        return;
+    }
+
+    switch_lang_jpn();
+    draw_start_info(alpha);
+    switch_lang_orig();
 }
 
 typedef struct {
