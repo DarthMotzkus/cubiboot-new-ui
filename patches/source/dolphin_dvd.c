@@ -264,6 +264,13 @@ void disc_banner_start(BNR *out) {
     dvd_custom_bypass_enter();
 }
 
+// Step 5 is only reached by a completed read and left by the next start, so this describes
+// exactly the banner the stock screen is showing. Region J is Shift-JIS, the same test the
+// grid makes on a game ID.
+bool disc_banner_sjis(void) {
+    return dbr_step == 5 && dbr_header.CountryCode == 'J';
+}
+
 // 0 = still working, 1 = banner read, -1 = no readable disc.
 int disc_banner_poll(void) {
     if (++dbr_frames > DBR_TIMEOUT_FRAMES) return dbr_fail();

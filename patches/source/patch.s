@@ -70,6 +70,16 @@ patch_inst_pal "_gameselect_replace_input" 0x81327968 0x81326ec0 0x81327aa8 bl h
 patch_inst_ntsc "_gameselect_draw_helper" 0x81326c14 0x81327430 0x813277c8 0x813277e0 b gameselect_draw_dispatch
 patch_inst_pal "_gameselect_draw_helper" 0x81327e04 0x8132735c 0x81327f44 b gameselect_draw_dispatch
 
+// The two stock functions that draw banner text, each at its only call site. Wrapped so a
+// Japanese disc is drawn in the Shift-JIS font (see stock_banner_sjis in menu.c).
+// draw_start_info: the Game Play screen, inside the renderer resumed above (always
+// _gameselect_draw_helper + 0x10).
+patch_inst_ntsc "_stock_start_info_font" 0x81326c24 0x81327440 0x813277d8 0x813277f0 bl stock_draw_start_info
+patch_inst_pal "_stock_start_info_font" 0x81327e14 0x8132736c 0x81327f54 bl stock_draw_start_info
+// draw_menu_banner_info: the main menu's Game Play panel, seen during the boot-out animation.
+patch_inst_ntsc "_menu_banner_info_font" 0x81312960 0x81312c78 0x81313010 0x81313028 bl stock_draw_menu_banner_info
+patch_inst_pal "_menu_banner_info_font" 0x81313568 0x81312ba4 0x813136a8 bl stock_draw_menu_banner_info
+
 // Region-free disc boot. In BS2's DVDStep, once the apploader has loaded the disc's bi2,
 // a gate decides whether the stock Game Play screen reads on (banner + PRESS START) or
 // drops to "The disc could not be read": `bne <proceed>` taken when the region-check

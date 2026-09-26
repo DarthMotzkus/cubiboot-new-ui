@@ -66,7 +66,8 @@ __attribute_reloc__ void (*change_model)(model* m);
 // for menu elements
 __attribute_reloc__ void (*draw_grid)(Mtx position, u8 alpha);
 __attribute_reloc__ void (*draw_box)(u32 index, box_draw_group* header, GXColor* texa, int inside_x, int inside_y, int inside_width, int inside_height);
-// __attribute_reloc__ void (*draw_start_info)(u8 alpha);
+__attribute_reloc__ void (*draw_start_info)(u8 alpha);
+__attribute_reloc__ void (*draw_menu_banner_info)(void *blob, u8 alpha);
 __attribute_reloc__ void (*draw_start_anim)(u8 alpha);
 __attribute_reloc__ void (*draw_blob_fixed)(void *blob_ptr, void *blob_a, void *blob_b, GXColor *color);
 __attribute_reloc__ void (*draw_blob_text)(u32 type, void *blob, GXColor *color, char *str, s32 len);
@@ -179,6 +180,45 @@ __attribute_used__ u32 stock_disc_tick(void) {
     }
 
     return stock_disc_state;
+}
+
+// The stock IPL has two functions that draw banner text, both patched to call through the
+// wrappers below (see patch.s): draw_start_info, the Game Play screen's title, maker and
+// description, and draw_menu_banner_info, the short name and maker on the main menu's
+// Game Play panel -- which is what the boot-out animation after START passes through. The
+// IPL only decodes Shift-JIS while its language is Japanese, and Cubiboot forces English on
+// NTSC, so a Japanese disc's text came out as Latin-1 garbage. Only these calls switch: the
+// screens' own strings ("Game Play", PRESS START) keep the menu's font.
+static bool stock_banner_sjis(void) {
+    // The panel also draws Cubiboot's default banner, which is plain ASCII. BNR1 only: a
+    // BNR2 banner's text is picked per language, and on PAL 1.0/1.2 that index is
+    // current_lang - 4, which LANG_JPN would send 640 bytes before the text. Japanese
+    // discs ship BNR1, and BNR2 has no Japanese block anyway.
+    return *banner_pointer == (u32)&disc_banner &&
+           *(u32 *)disc_banner.magic == BANNER_MAGIC_1 &&
+           disc_banner_sjis();
+}
+
+__attribute_used__ void stock_draw_start_info(u8 alpha) {
+    if (!stock_banner_sjis()) {
+        draw_start_info(alpha);
+        return;
+    }
+
+    switch_lang_jpn();
+    draw_start_info(alpha);
+    switch_lang_orig();
+}
+
+__attribute_used__ void stock_draw_menu_banner_info(void *blob, u8 alpha) {
+    if (!stock_banner_sjis()) {
+        draw_menu_banner_info(blob, alpha);
+        return;
+    }
+
+    switch_lang_jpn();
+    draw_menu_banner_info(blob, alpha);
+    switch_lang_orig();
 }
 
 typedef struct {

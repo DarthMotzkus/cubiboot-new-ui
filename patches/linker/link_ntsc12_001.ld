@@ -53,6 +53,7 @@ ntsc12_001_stock_gameselect_draw_skip = 0x81327884;
 ntsc12_001_setup_cube_anim = 0x81328fb8;
 ntsc12_001_draw_box = 0x81309da4;
 ntsc12_001_draw_start_info = 0x81327480;
+ntsc12_001_draw_menu_banner_info = 0x81312b74;
 ntsc12_001_draw_blob_fixed = 0x8130ae44;
 ntsc12_001_draw_blob_text = 0x8130abb8;
 ntsc12_001_draw_blob_text_long = 0x8130ac40;
