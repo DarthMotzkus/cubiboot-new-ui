@@ -8,7 +8,7 @@ It Supports Picoloader/Picoboot, FlippyDrive, GCLoader, and use Swiss to boot yo
 
 <img width="320" height="286" alt="cube" src="https://github.com/user-attachments/assets/8772fe6a-3933-420a-9418-a6b2a03dd83a" />
 
-**Hello there! Welcome. FIRST OF ALL: This is not a simple frontend as the original cubeboot/cubiboot. It's support too many devices, settings and customizations... You HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use. Use AI to a faster Q&A, it will read the /docs folder for a much faster support for your questions.**
+**Hello there! Welcome. FIRST OF ALL: This is not a simple frontend as the original cubeboot/cubiboot. It's support too many devices, settings and customizations... You HAVE to read this README bellow AND the docs about the [settings](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/settings.md) you want to use.**
 </div>
 
 ---
