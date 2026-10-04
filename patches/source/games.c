@@ -55,6 +55,12 @@ OSMutex *game_enum_mutex = &game_enum_mutex_obj;
 
 char game_enum_path[128] = {0};
 bool game_enum_running = false;
+// Set by the enum thread: gm_scan_stopped when gm_deinit_thread cut a scan short (it polls
+// the mutex between entries), gm_scan_complete at the end of a scan that was not cut. A
+// complete list for the folder we are already in is kept by gm_start_thread instead of
+// being freed and rebuilt.
+static bool gm_scan_stopped = false;
+static bool gm_scan_complete = false;
 
 int assets_per_page;
 int assets_initial_count;
@@ -669,13 +675,15 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
     if (entry->asset.banner.state == GM_LOAD_STATE_LOADED) return true;
 
     __attribute_aligned_data_lowmem__ static BNR banner_buffer;
-    // An app's banner is keyed by nothing -- it has no game id, disc number or version --
-    // so the cache has no key to work with and is skipped.
-    if (entry->extra.standalone_bnr) use_cache = false;
-
+    // The cache is keyed by the file's path (bnr_cache_key), never by the disc header: two
+    // files with the same game id, disc number and version -- a game and a ROM hack of it --
+    // have their own banners and used to come back with the same one. An app's path is as
+    // good a key as a disc's, so apps go through the cache too.
+    //
     // use_cache keeps makeo's bnr_cache for the resident (<=128) path; the >128 scroll
     // re-reads pass use_cache=false so they read straight from disc and never touch ARAM.
-    if (use_cache && bnr_cache_get(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer))
+    u32 cache_key = use_cache ? bnr_cache_key(entry->path) : 0;
+    if (use_cache && bnr_cache_get(cache_key, &banner_buffer))
         goto cached;
 
     // load the banner
@@ -713,7 +721,7 @@ static int gm_load_banner(gm_file_entry_t *entry, u32 aram_offset, bool force_un
         entry->extra.dvd_bnr_type = banner_buffer.magic[3] == '2' ? 1 : 0;
     }
 
-    if (use_cache) bnr_cache_put(entry->extra.game_id, entry->extra.disc_num, entry->extra.disc_ver, &banner_buffer);
+    if (use_cache) bnr_cache_put(cache_key, &banner_buffer);
     cached:
 
     entry->asset.banner.state = GM_LOAD_STATE_LOADING;
@@ -833,6 +841,7 @@ void gm_check_files(int path_count) {
 
         if (!OSTryLockMutex(game_enum_mutex)) {
             OSReport("STOPPING GAME LOADING\n");
+            gm_scan_stopped = true;
             break;
         }
         OSUnlockMutex(game_enum_mutex);
@@ -1307,7 +1316,10 @@ static void gm_bg_load_last_played(int target_slot) {
     // mutex each line so gm_deinit_thread (boot/navigation) can stop us promptly.
     for (int l = 0; l < number_of_lines; l++) {
         if (l >= first && l <= last) continue;            // window already loaded
-        if (!OSTryLockMutex(game_enum_mutex)) return;     // stop requested
+        if (!OSTryLockMutex(game_enum_mutex)) {           // stop requested
+            gm_scan_stopped = true;
+            return;
+        }
         OSUnlockMutex(game_enum_mutex);
         gm_bg_load_line(l, resident);
     }
@@ -1434,6 +1446,8 @@ static void gm_load_cube_logo(void) {
 }
 
 void *gm_thread_worker(void* param) {
+    gm_scan_stopped = false;
+    gm_scan_complete = false;
     gm_load_cube_logo();
 
     if (gm_cold_boot_resolve) {
@@ -1483,6 +1497,7 @@ void *gm_thread_worker(void* param) {
         gm_bg_load_last_played(gm_pending_last_played_slot);
     }
 
+    gm_scan_complete = !gm_scan_stopped;
     game_enum_running = false;
     // DCBlockStore((void*)OSRoundDown32B((u32)&game_enum_running));
     DCFlushRange((void*)OSRoundDown32B((u32)&game_enum_running), 4);
@@ -1503,6 +1518,11 @@ void gm_start_thread(const char *target) {
         OSReport("ERROR: game enum thread is already running\n");
         return;
     }
+
+    // The folder shown right now, taken before the ".." case below rewrites
+    // game_enum_path in place; the same-folder test further down compares against this.
+    char previous_path[128];
+    strcpy(previous_path, game_enum_path);
 
     // NULL is the cold-boot start: the real folder is resolved on the worker (see
     // gm_cold_boot_resolve above). "/" is only what the header shows until then.
@@ -1538,6 +1558,16 @@ void gm_start_thread(const char *target) {
         strcat(path, "/");
     }
 
+    // Same folder, list already complete: keep it. Leaving for the disc screen (Z) and
+    // coming back, or a lid event, restarts enumeration on the folder we never left, and
+    // freeing and rescanning it re-opened every ISO twice (header + banner) for a list that
+    // had not changed. A scan that was cut short (gm_deinit_thread mid-way) is not complete
+    // and is redone, as before.
+    if (gm_scan_complete && gm_entry_count > 0 && strcmp(path, previous_path) == 0) {
+        OSReport("Same folder %s, keeping the list\n", path);
+        return;
+    }
+
     OSReport("Starting game thread %s\n", path);
     strcpy(game_enum_path, path);
 
@@ -1549,16 +1579,22 @@ void gm_start_thread(const char *target) {
     if (gm_entry_count > 0) {
         for (int i = 0; i < gm_entry_count; i++) {
             gm_file_entry_t *entry = gm_entry_backing[i];
-            if (entry->type == GM_FILE_TYPE_GAME) {
-                gm_icon_free(&entry->asset.icon);
+            // Games AND apps hold a banner buffer (gm_check_files gives apps one too). The
+            // old GAME-only test leaked every app's slot on each folder change, until the
+            // 128-slot pool was all leaks and no banner could load any more.
+            gm_icon_free(&entry->asset.icon);
+            if (entry->type == GM_FILE_TYPE_GAME || entry->type == GM_FILE_TYPE_APP)
                 gm_banner_free(&entry->asset.banner);
-            } else {
-                gm_icon_free(&entry->asset.icon);
-            }
             gm_free(entry);
         }
         gm_entry_count = 0;
     }
+
+    // Every entry is gone, so nothing can own a pool slot now: reset the pools outright
+    // rather than trust the per-entry frees. A slot that slipped through (a schedule_free
+    // nobody services, a free path missing a type) would otherwise be lost for the session.
+    memset(gm_banner_pool, 0, sizeof(gm_banner_pool));
+    memset(gm_icon_pool, 0, sizeof(gm_icon_pool));
 
     number_of_lines = 0;
     DCBlockStore((void*)OSRoundDown32B((u32)&number_of_lines));

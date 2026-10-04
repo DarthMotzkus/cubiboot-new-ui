@@ -73,12 +73,32 @@ bool emu_has_dvd() {
 }
 
 
+// ---- banner cache (ARAM) ----------------------------------------------------------------
+//
+// Keyed by the FILE, not by the disc header. The header identity (game id + disc number +
+// version) is shared by a game and every ROM hack, translation or re-bannered dump of it,
+// and all of those used to come back with whichever banner was cached first. Swiss shows
+// each file its own banner; so does this now. The key is a hash of the entry's path: unique
+// per file and stable for the session. The cache lives in RAM only, so a file replaced on
+// the card between boots can never be a stale hit.
+//
+// The DMA waits are bounded. The busy flag is cleared by the ARQ callback, i.e. by the
+// DSP/ARAM interrupt of the stock BIOS. Spinning on it without a limit was the one wait in
+// the menu that could never end, and the enum thread stuck in it -- with the menu thread
+// then blocking in OSJoinThread -- looks exactly like a frozen list. On a timeout the cache
+// is switched off for the rest of the session (a late callback would otherwise race the
+// next request's flag) and every banner is simply read from the card instead.
+
+#define BNR_CACHE_DMA_TIMEOUT_MS 500
+
+static bool bnr_cache_broken = false;
+
 static volatile bool bnr_store_bsy = false;
 static void bnr_cache_store_cb(u32 arq_request_ptr) {
     bnr_store_bsy = false;
 }
 
-void bnr_cache_store(BNR* bnr, u32 aram_offset) {
+static bool bnr_cache_store(BNR* bnr, u32 aram_offset) {
     custom_OSReport("Store banner at: 0x%x\n", aram_offset);
     static ARQRequest req;
     u32 owner = make_type('I', 'X', 'X', 'S');
@@ -91,8 +111,16 @@ void bnr_cache_store(BNR* bnr, u32 aram_offset) {
     bnr_store_bsy = true;
     DCFlushRange(bnr, sizeof(BNR));
     dolphin_ARQPostRequest(&req, owner, type, priority, source, dest, length, &bnr_cache_store_cb);
-    while (bnr_store_bsy)
+    u64 start = gettime();
+    while (bnr_store_bsy) {
+        if (diff_msec(start, gettime()) > BNR_CACHE_DMA_TIMEOUT_MS) {
+            custom_OSReport("ERROR: banner cache store timed out, cache disabled\n");
+            bnr_cache_broken = true;
+            return false;
+        }
         OSYieldThread();
+    }
+    return true;
 }
 
 static volatile bool bnr_load_bsy = false;
@@ -100,7 +128,7 @@ static void bnr_cache_load_cb(u32 arq_request_ptr) {
     bnr_load_bsy = false;
 }
 
-void bnr_cache_load(BNR* bnr, u32 aram_offset) {
+static bool bnr_cache_load(BNR* bnr, u32 aram_offset) {
     custom_OSReport("Load banner from: 0x%x\n", aram_offset);
     static ARQRequest req;
     u32 owner = make_type('I', 'X', 'X', 'L');
@@ -112,20 +140,23 @@ void bnr_cache_load(BNR* bnr, u32 aram_offset) {
 
     bnr_load_bsy = true;
     dolphin_ARQPostRequest(&req, owner, type, priority, source, dest, length, &bnr_cache_load_cb);
-    while (bnr_load_bsy)
+    u64 start = gettime();
+    while (bnr_load_bsy) {
+        if (diff_msec(start, gettime()) > BNR_CACHE_DMA_TIMEOUT_MS) {
+            custom_OSReport("ERROR: banner cache load timed out, cache disabled\n");
+            bnr_cache_broken = true;
+            return false;
+        }
         OSYieldThread();
+    }
     DCFlushRange(bnr, sizeof(BNR));
+    return true;
 }
 
 #define BNR_CACHE_SIZE 1024
 
 typedef struct {
-    u8 game_id[6];
-    // Multi-disc games share the same game_id (game code + maker code); only the disc
-    // number (header 0x06) and version differ. Key on the full disc identity so disc 2+
-    // gets its own banner/description instead of aliasing disc 1's cached entry.
-    u8 disc_num;
-    u8 disc_ver;
+    u32 key; // bnr_cache_key(path)
     u32 aram_offset;
     bool valid;
 } bnr_cache_entry_t;
@@ -133,40 +164,47 @@ typedef struct {
 static bnr_cache_entry_t bnr_cache[BNR_CACHE_SIZE] = {0};
 static u32 bnr_cache_next_index = 0;
 
-static inline bool bnr_cache_entry_matches(const bnr_cache_entry_t* e, u8 game_id[6], u8 disc_num, u8 disc_ver) {
-    return e->valid
-        && memcmp(e->game_id, game_id, 6) == 0
-        && e->disc_num == disc_num
-        && e->disc_ver == disc_ver;
+// FNV-1a over the path. 32 bits is plenty for a few thousand files; a collision would
+// only show the wrong banner for the session, never corrupt anything.
+u32 bnr_cache_key(const char *path) {
+    u32 h = 2166136261u;
+    while (*path) {
+        h ^= (u8)*path++;
+        h *= 16777619u;
+    }
+    return h;
 }
 
-bool bnr_cache_get(u8 game_id[6], u8 disc_num, u8 disc_ver, BNR* bnr) {
+static inline bool bnr_cache_entry_matches(const bnr_cache_entry_t* e, u32 key) {
+    return e->valid && e->key == key;
+}
+
+bool bnr_cache_get(u32 key, BNR* bnr) {
+    if (bnr_cache_broken) return false;
     for (int i = 0; i < BNR_CACHE_SIZE; i++) {
-        if (bnr_cache_entry_matches(&bnr_cache[i], game_id, disc_num, disc_ver)) {
-            bnr_cache_load(bnr, bnr_cache[i].aram_offset);
-            return true;
+        if (bnr_cache_entry_matches(&bnr_cache[i], key)) {
+            return bnr_cache_load(bnr, bnr_cache[i].aram_offset);
         }
     }
 
     return false;
 }
 
-void bnr_cache_put(u8 game_id[6], u8 disc_num, u8 disc_ver, BNR* bnr) {
+void bnr_cache_put(u32 key, BNR* bnr) {
+    if (bnr_cache_broken) return;
     for (int i = 0; i < BNR_CACHE_SIZE; i++) {
-        if (bnr_cache_entry_matches(&bnr_cache[i], game_id, disc_num, disc_ver)) {
+        if (bnr_cache_entry_matches(&bnr_cache[i], key)) {
             return;
         }
     }
 
     bnr_cache_entry_t* entry = &bnr_cache[bnr_cache_next_index];
     entry->valid = false;
-    memcpy(entry->game_id, game_id, 6);
-    entry->disc_num = disc_num;
-    entry->disc_ver = disc_ver;
+    entry->key = key;
     entry->aram_offset = (16 * 1024 * 1024) - (sizeof(BNR) * (bnr_cache_next_index + 1));
-    bnr_cache_store(bnr, entry->aram_offset);
+    if (!bnr_cache_store(bnr, entry->aram_offset)) return;
     entry->valid = true;
-    
+
     bnr_cache_next_index = (bnr_cache_next_index + 1) % BNR_CACHE_SIZE;
 }
 

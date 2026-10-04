@@ -75,7 +75,16 @@ unchanged). When a folder has **more** than 128, a sliding window engages:
 - While true: `gm_line_free` releases off-screen lines and `gm_line_load` re-reads
   on-screen lines from disc via `gm_load_banner(entry, 0, false, /*use_cache=*/false)`.
 - The `use_cache=false` re-reads **bypass makeo's `bnr_cache`** so scroll re-reads never
-  touch ARAM (ARAM is the corruption path). `bnr_cache` is kept intact for the ≤128 path.
+  touch ARAM (ARAM is the corruption path). `bnr_cache` is kept intact for the ≤128 path,
+  with its two DMA waits bounded (`BNR_CACHE_DMA_TIMEOUT_MS`): a callback that never comes
+  switches the cache off for the session instead of hanging the enum thread, and with it
+  the menu thread joining it.
+- A folder change frees the banner of **apps** as well as games, then zeroes both pools.
+  Freeing games only leaked one slot per app on every folder change, until the 128 slots
+  were all leaks and the list stopped showing banners.
+- `gm_start_thread` keeps a complete list when it is asked for the folder already shown,
+  which is what leaving the disc screen (Z) and a lid event do. The old path freed and
+  rescanned it, re-opening every ISO twice. A scan cut short is still redone.
 - `gm_load_banner` guards against re-loading an already-LOADED banner (no buffer leak), and
   `gm_line_changed` frees before it loads so the window always has a pool buffer.
 
@@ -141,14 +150,17 @@ with `strcasecmp()` against the NUL the first pass writes, because `patches/` ha
 
 This is display only. Which files enter the list is decided by `gm_get_file_type()` against
 `valid_game_exts[]`, which already matched `.nkit.iso` on its `.iso` tail; sorting is by
-path, banner lookup by `(game_id, disc_num, disc_ver)`, and booting opens `entry->path`.
+path, banner lookup by a hash of `entry->path`, and booting opens `entry->path`.
 None of them see the title.
 
 There is no in-code truncation: a title longer than the box (~28 chars) is clipped at draw
 time, which is why the README asks for short filenames.
 
-Banner lookup is keyed on `(game_id, disc_num, disc_ver)` rather than `game_id` alone
-(`bnr_cache_get`/`bnr_cache_put`), so disc 2 gets disc 2's banner instead of disc 1's.
+The banner cache (`bnr_cache_get`/`bnr_cache_put`) is keyed on the file, by an FNV-1a hash
+of `entry->path` (`bnr_cache_key`). It used to be keyed on the disc header,
+`(game_id, disc_num, disc_ver)`, which a game shares with every ROM hack, translation or
+re-bannered dump of it, so all of them showed whichever banner was cached first. Swiss reads
+each file's own banner; keying on the path does the same and still gives disc 2 its own.
 `gm_check_files` pairs entries that share a game id but differ in `disc_num`.
 
 ## G. `default_folder`  (`patches/source/main.c`)
