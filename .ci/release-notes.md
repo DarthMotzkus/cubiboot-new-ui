@@ -19,13 +19,17 @@ file: ci.yml generates it at release time and inserts it just before the standin
 Do not add it by hand.
 -->
 
-## What's new in v1.12.2
+## What's new in v1.12.4
 
-**Who needs to update: anyone who plays Japanese discs from the disc screen (press Z).** The fix is in the menu itself, which ships inside every artifact, so all install methods get it the same way — [Method 1](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md) and [Method 2](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) alike. On a GC Loader style ODE there is no disc screen, and if you never boot Japanese discs from the drive, this release changes nothing you can see.
+* **Games that share a game ID now show their own banners.** A ROM hack, a translation or a re-bannered dump keeps the game ID of the original disc. In the grid, all of them showed whichever banner loaded first. The banner cache was keyed on the disc header, which these files share. It is now keyed on the file itself, so every file shows the banner inside it, just like Swiss. The name, maker and description shown under the grid follow the right banner too.
 
-* **Japanese disc names now read correctly on the disc screen.** A Japanese disc showed its name, maker and description as garbage (`ƒoƒ‹ƒ…`) on the Game Play screen, and again on the main-menu panel the boot animation passes through after START — while the very same names read fine in the grid. Both screens are drawn by the console's own BIOS, which cubiboot runs in English on every NTSC console, Japanese ones included, and the BIOS only decodes Japanese text while its language is Japanese. Cubiboot now switches to the Japanese font for just that banner text, the same switch the grid has always made. The screens' own labels ("Game Play", PRESS START) keep the menu's font, discs from other regions are untouched, and all seven IPL revisions, NTSC and PAL, are covered.
+* **Banners no longer disappear after browsing for a while.** Each app folder (`default.dol` + `opening.bnr`) kept one of the menu's 128 banner slots every time you left the folder it sits in. Opening the disc screen with Z counted as leaving too. After enough round trips no slot was left: banners came up blank, or never filled in while scrolling, until the console was restarted. Leaving a folder now frees every banner it loaded, and the slots are reset on every folder change.
 
-**Full Changelog:** [v1.12.0...v1.12.2](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.12.0...v1.12.2)
+* **Coming back from the disc screen is instant.** Pressing Z and then B used to throw away the folder you were in and read every game on the card again, which took a long time on large folders. The list is now kept as it was. Going into a folder or up to its parent still reads it fresh.
+
+* **Fixed a way for the game list to freeze.** The menu keeps a copy of each banner in the console's audio RAM and waited without any limit for each copy to finish. If one copy never reported back, the list froze and so did the menu. The wait now gives up after half a second. The menu then stops using that copy for the rest of the session and reads banners straight from the card.
+
+**Full Changelog:** [v1.12.2...v1.12.4](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.12.2...v1.12.4)
 
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. On a **FlippyDrive** none of this applies: it never uses `apploader.img` — its In-Game Reset is a plain reboot, so the loader in the drive's flash is the only thing to replace. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#updating).
