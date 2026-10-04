@@ -7,7 +7,7 @@ Every way of getting cubiboot onto a console, in full detail. The
 - [Wipe the Pico first (recommended)](#wipe-the-pico-first-recommended)
 - [Method 1: PicoBoot or PicoLoader with gekkoboot](#method-1-picoboot-or-picoloader-with-gekkoboot)
 - [Method 2: cubiboot flashed into the modchip (PicoBoot or PicoLoader)](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader)
-- [Method 3: GC Loader](#method-3-gc-loader)
+- [Method 3: GC Loader or Cube ODE](#method-3-gc-loader-or-cube-ode)
 - [Method 4: FlippyDrive](#method-4-flippydrive)
 - [In-Game Reset](#in-game-reset)
 - [Updating](#updating)
@@ -18,7 +18,7 @@ Pick the method that matches your console:
 |---|---|
 | PicoBoot or PicoLoader modchip | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) — recommended, updates by swapping files on the SD card |
 | PicoBoot or PicoLoader, and you want no loader file on the card | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) |
-| GC Loader, no modchip | [Method 3](#method-3-gc-loader) |
+| GC Loader or Cube ODE, no modchip | [Method 3](#method-3-gc-loader-or-cube-ode) |
 | FlippyDrive | [Method 4](#method-4-flippydrive) — the drive boots cubiboot itself |
 
 ## Files on the card
@@ -128,21 +128,45 @@ menu.
 > With this method every cubiboot update means opening the console and re-flashing the Pico.
 > Method 1 is easier to live with.
 
-## Method 3: GC Loader
+## Method 3: GC Loader or Cube ODE
 
 `cubiboot.iso` is a bootable GameCube disc image that simply *is* the cubiboot loader — no
 modchip needed.
 
 1. Download [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso)
-   and copy it onto your [GC Loader](https://gcloaderhq.com/)'s storage, in the folder you
-   boot images from.
-2. Boot `cubiboot.iso` from the GC Loader menu — it lands on the cubiboot menu.
+   and copy it onto your [GC Loader](https://gcloaderhq.com/)'s (or Cube ODE's) storage, in
+   the folder you boot images from.
+2. Boot `cubiboot.iso` from the ODE's menu — it lands on the cubiboot menu. To have the
+   console start straight into cubiboot at power-on, rename it **`boot.iso`** at the root
+   of the ODE's card instead (the ODE loads that file automatically).
 3. Choose where the games come from:
    - **The ODE's own SD card** (no second reader): put `swiss-gc.dol` and a `config.ini`
      containing `device_order = gcldr` in the **root of that same card**. See
      [`device_order`](settings.md#device_order).
    - **An SD card adapter** (SD2SP2 / SD Gecko): nothing to set — card readers come first by
      default. Set the adapter's card up as usual.
+
+> [!NOTE]
+> The console's own IPL always runs before a GC Loader or Cube ODE loads a disc, so it used
+> to play the factory boot animation and then cubiboot's — two animations back to back.
+> Releases after v1.12.2 ship a disc that patches the factory animation out, so a **single**
+> (cubiboot) animation is the expected boot. Holding **A** at power-on shows the factory
+> animation instead.
+
+> [!NOTE]
+> Up to v1.12.2, every game or program picked from the grid went to a **black screen** when
+> the games lived on the ODE's own card (`device_order = ode`), while the menu itself
+> worked. That is fixed: the loader now makes sure the program it just read
+> off the ODE's card is fully in memory before starting it. SD2SP2, SD Gecko and FlippyDrive
+> setups never had the problem and take exactly the path they always did.
+
+> [!NOTE]
+> A **Cube ODE** speaks the same drive protocol as a GC Loader and is installed the same way.
+> Swiss lists it as "GC Loader compatible". On a Cube ODE, Swiss can stop with **"Failed to
+> read FST"** on a game whose file is fragmented on the card
+> ([swiss-gc#954](https://github.com/emukidid/swiss-gc/issues/954)) — that is between Swiss
+> and the device, not cubiboot. Copying the games onto a freshly formatted card keeps each
+> file in one piece.
 
 ## Method 4: FlippyDrive
 
@@ -261,7 +285,7 @@ reboot, so on that hardware the loader in the drive's flash is the only thing to
 | [Method 1](#method-1-picoboot-or-picoloader-with-gekkoboot) | `ipl.dol` **and** `swiss/patches/apploader.img` |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoBoot) | re-flash `cubiboot_picoboot_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
 | [Method 2](#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) (PicoLoader) | re-flash `cubiboot_picoloader_payload.uf2`, **and** replace `swiss/patches/apploader.img` on the card |
-| [Method 3](#method-3-gc-loader) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
+| [Method 3](#method-3-gc-loader-or-cube-ode) | `cubiboot.iso` **and** `swiss/patches/apploader.img` |
 | [Method 4](#method-4-flippydrive) | re-flash the loader **inside the drive** (steps below) — no `apploader.img` involved |
 
 Both files come from the same release — mixing an `apploader.img` from one release with a

@@ -22,7 +22,7 @@ For user-facing docs see the [README](../README.md); for the diff against upstre
 ## Boot chain
 
 ```
-PicoBoot / PicoLoader / gekkoboot        GC Loader / ODE
+PicoBoot / PicoLoader / gekkoboot     GC Loader / Cube ODE
             |                                  |
             v                                  v
         ipl.dol  ( = entry.dol )          cubiboot.iso
@@ -273,7 +273,7 @@ a drive-interface device only reaches the drive inquiry after everything else ha
 out. That one string is both the bootstrap's search order and the default for `device_order`.
 config.ini also accepts hardware spellings (`sd2sp2`, `slot_a`, `slot_b`, `ode`, `gcloader`,
 `flippy`, `flippydrive`) which resolve onto the same volumes — `ode` is a plain alias for
-`gcldr`, the GC Loader. A FlippyDrive
+`gcldr`, the GC Loader (and the Cube ODE, which speaks its protocol). A FlippyDrive
 is deliberately **not** an ODE spelling: it does not replace the drive (it rides the drive
 ribbon beside it), it speaks its own protocol, and it answers to its own names.
 
@@ -312,8 +312,13 @@ The menu never probes: it mounts exactly `device_prio[emu_sd_device]`.
 
 This is the same detection and the same command libogc2 uses in `DVD_LowGcodeRead`, which is
 what Swiss's GC Loader device driver goes through. Practical consequence: **if Swiss lists the
-ODE as a GC Loader, cubiboot will read it too.** FlippyDrive uses a different command set
-(`0xB5` file API) and is not covered.
+ODE as a GC Loader, cubiboot will read it too.** That includes the Cube ODE: it answers the
+same inquiry and read command, but not the GC Loader's own ID query (`0xB0`), which is why
+Swiss shows it as "GC Loader compatible" -- cubiboot never sends that query. FlippyDrive
+uses a different command set (`0xB5` file API) and is not covered.
+
+One consequence of reads arriving by DMA: a program loaded off this card must be flushed out
+of the data cache before it runs. See [FORK_CHANGES.md §S](FORK_CHANGES.md).
 
 ## Memory map
 

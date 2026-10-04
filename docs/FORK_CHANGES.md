@@ -28,6 +28,7 @@ reach the menu — see [ARCHITECTURE.md](ARCHITECTURE.md).
 | P | `cube_logo`: custom boot logo, revived without a PNG decoder | `patches/source/games.c`, `tools/cube-logo-converter/` |
 | Q | The disc screen reads a disc that arrives after it opens | `patches/source/menu.c`, `dolphin_dvd.c` |
 | R | The stock bottom prompt bar, corrected and reused | `patches/source/prompt.c` |
+| S | GC Loader / Cube ODE as the boot device: one animation, programs that start | `.ci/build_iso.sh`, `patches/source/boot.c` |
 
 ## A. custom-loader-menu banner layout (cherry-picked)
 
@@ -270,7 +271,8 @@ did plus what it could not: excluding a card reader, reordering slots, or naming
 does not exist yet.
 
 Scope: this is the **GC Loader protocol**, not "any ODE". If Swiss lists the drive as a GC
-Loader, cubiboot reads it too. FlippyDrive uses a different command set and is not covered
+Loader, cubiboot reads it too -- including the Cube ODE, which answers the same inquiry and
+read command and which Swiss lists as "GC Loader compatible". FlippyDrive uses a different command set and is not covered
 by this driver — section O adds it natively.
 
 ## K. Homebrew apps as banner entries  (`patches/source/games.c`)
@@ -594,6 +596,46 @@ Placement is per revision where it has to be: the vertical trim carries between 
 the horizontal does not, and the A carries a trim of its own. Every one of these is a named
 constant, and `prompt_region` is 1 or 2 rather than 0 or 1 -- cubeboot's relocation walk reads
 a zero-valued symbol as a broken reloc and halts the boot.
+
+## S. GC Loader / Cube ODE as the boot device: one animation, and programs that start  (`.ci/build_iso.sh`, `patches/source/boot.c`)
+
+Two reports from GC Loader (HW2) owners running `cubiboot.iso` as `boot.iso` with games on
+the GC Loader's own card: the boot animation played twice, and every game or program chosen
+in the grid went to a black screen, while Swiss alone as `boot.iso` worked. Cube ODE owners
+had reported the same black screen; it speaks the same protocol and takes the same path, so
+the same fix applies. Neither problem was specific to HW2: nothing in either GC Loader
+firmware changelog touches booting.
+
+**Two animations.** A GC Loader or Cube ODE is a drive replacement, so the console's own IPL always runs
+first, plays its animation and only then loads the disc. `cubiboot.iso` was built from
+cubeboot-tools' classic `gbi.hdr`, whose apploader never suppresses that animation; the
+no-animation header in `.ci/noipl/` was reserved for the PicoLoader payload on the
+assumption that a GC Loader disc is only ever started from Swiss. The release ISO now uses
+the `.ci/noipl/` header too (`cubiboot-noipl.iso` is kept as an identical copy for the uf2
+step). Started from Swiss, the IPL patch is a no-op, as for an unknown IPL revision.
+
+**Black screen on every launch.** `load_dol()` read each DOL section straight into place
+and `run()` only invalidated the instruction cache. A section rarely starts on a sector
+boundary -- Swiss's `.text` sits at file offset 0x100 and its entry point is its first
+instruction -- so FatFs serves the head and tail of the section out of its window buffer
+with `memcpy`: CPU stores that sit dirty in the data cache while RAM keeps the old bytes.
+On the ODE path the whole sectors in between arrive by DMA, never through the cache,
+so nothing ever evicts those few dirty lines, and the CPU fetched the entry point from
+stale RAM. An EXI card reader (SD2SP2, SD Gecko) hid the bug by accident: every byte goes
+through the cache there, and ~800 KB of traffic writes the head back long before the jump.
+A FlippyDrive never had the bug either: the drive serves a section from any byte offset in
+one DMA transfer and the cache is invalidated after it, so there is no copied head at all.
+`load_dol()` now flushes each section from the data cache and invalidates it from the
+instruction cache, as `load_stub()` now does too -- **only while the active device is the
+ODE's card** (`emu_get_device()` is `gcldr`, which every `ode`/`gcloader` spelling resolves
+to); the EXI card readers and the FlippyDrive take exactly the path they always did. The
+check is the same device lookup `chainload_swiss_game()` already makes on every launch. It
+is a runtime check rather than an ISO-only build on purpose: In-Game Reset reloads the menu
+from `apploader.img`, which carries the ordinary loader, and a PicoBoot/PicoLoader console
+can also read its games off an ODE card -- both would have kept the bug. The same fix, with the same diagnosis,
+is in silverstee1/cubiboot. Verified by reading the Swiss DOL header and the FatFs read
+path, not on hardware; the ack of DI interrupt bits that fork also adds before the jump
+was examined and is not needed -- libogc's handler discards a stale transfer-complete bit.
 
 ## Re-applying onto a fresh makeo clone
 

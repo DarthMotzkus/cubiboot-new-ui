@@ -17,12 +17,23 @@
 #include "dolphin_dvd.h"
 #include "gc_dvd.h"
 
+#include "emu/tweaks.h"
+
 #define SYS_VIDEO_NTSC   0
 #define SYS_VIDEO_PAL    1
 #define SYS_VIDEO_MPAL   2
 
 #define TB_BUS_CLOCK     162000000u
 #define TB_CORE_CLOCK    486000000u
+
+// True when files are being read off the card inside a GC Loader style ODE. That is the
+// one device whose reads are DMA'd straight into RAM over the drive interface, and the
+// only one that needs the cache maintenance below; every other path -- EXI card readers,
+// a FlippyDrive -- is left exactly as it was.
+static bool loads_over_gcode(void) {
+    const char *dev = emu_get_device();
+    return dev != NULL && strcmp(dev, "gcldr") == 0;
+}
 
 void load_stub() {
     custom_OSReport("Loading stub...\n");
@@ -38,6 +49,8 @@ void load_stub() {
     file_size &= 0xffffffe0;
 
     dvd_read((void*)STUB_ADDR, file_size, 0, file_status->fd);
+    if (loads_over_gcode())
+        DCFlushRange((void*)STUB_ADDR, file_size); // same head/tail-in-cache issue as load_dol()
     ICInvalidateRange((void*)STUB_ADDR, file_size);
 
     dvd_custom_close(file_status->fd);
@@ -48,6 +61,8 @@ __attribute__((aligned(32))) static DOLHEADER dol_hdr;
 static dol_info_t load_dol(uint64_t offset, uint8_t fd) {
     DOLHEADER *hdr = &dol_hdr;
     dvd_read(hdr, sizeof(DOLHEADER), offset, fd);
+
+    bool gcode = loads_over_gcode();
 
     // The sector cache keeps its pages low in RAM, and a DOL is free to put its BSS
     // anywhere -- including on top of them. Unlike the wipe in bs2start() this is a
@@ -71,6 +86,23 @@ static dol_info_t load_dol(uint64_t offset, uint8_t fd) {
     for (int i = 0; i < MAXTEXTSECTION; i++) {
         if (hdr->textAddress[i] && hdr->textLength[i]) {
             dvd_read_data((void*)hdr->textAddress[i], hdr->textLength[i], offset + hdr->textOffset[i], fd);
+
+            if (!gcode)
+                continue;
+
+            // GC Loader card only. Make what was just loaded visible to instruction fetch. A section rarely
+            // starts on a sector boundary (Swiss's .text sits at file offset 0x100), so
+            // FatFs serves its head and tail out of its window buffer with memcpy: CPU
+            // stores that sit dirty in the data cache while RAM still holds whatever was
+            // there before. Whole sectors in between arrive by DMA on the GC Loader path,
+            // straight into RAM and never through the cache -- so nothing ever evicts those
+            // few dirty lines, and run() only invalidates the instruction cache. The entry
+            // point is the first instruction of .text, i.e. inside that dirty head: the
+            // CPU fetched stale RAM and crashed before the program ran. An EXI card reader
+            // hides this by accident, because there every byte goes through the cache and
+            // ~800 KB of traffic has long since written the head back.
+            DCFlushRange((void*)hdr->textAddress[i], hdr->textLength[i]);
+            ICInvalidateRange((void*)hdr->textAddress[i], hdr->textLength[i]);
         }
     }
 
@@ -78,6 +110,8 @@ static dol_info_t load_dol(uint64_t offset, uint8_t fd) {
     for (int i = 0; i < MAXDATASECTION; i++) {
         if (hdr->dataAddress[i] && hdr->dataLength[i]) {
             dvd_read_data((void*)hdr->dataAddress[i], hdr->dataLength[i], offset + hdr->dataOffset[i], fd);
+            if (gcode)
+                DCFlushRange((void*)hdr->dataAddress[i], hdr->dataLength[i]);
         }
     }
 

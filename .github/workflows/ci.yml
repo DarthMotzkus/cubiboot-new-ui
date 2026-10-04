@@ -71,10 +71,12 @@ jobs:
           echo "SWISS_COMMIT=$SWISS" >> "$GITHUB_ENV"
           echo "\`apploader.img\` embeds the swiss-gc packer at [\`${SWISS:0:7}\`](https://github.com/emukidid/swiss-gc/commit/$SWISS)." >> "$GITHUB_STEP_SUMMARY"
 
-      # cubiboot.iso: bootable GameCube disc image for GC Loader (El-Torito ISO9660
-      # built from cubeboot-tools' gbi.hdr re-branded to the Cubiboot banner + the
-      # freshly built cubeboot loader .dol). Also writes cubiboot-noipl.iso (same disc,
-      # no-animation boot header) for the PicoLoader uf2 step below.
+      # cubiboot.iso: bootable GameCube disc image for GC Loader / Cube ODE (El-Torito
+      # ISO9660 built from the .ci/noipl/ boot header re-branded to the Cubiboot banner +
+      # the freshly built cubeboot loader .dol). That header's apploader patches the
+      # factory boot animation out of the stock IPL, which always runs before an ODE boots
+      # the disc. Also writes cubiboot-noipl.iso, an identical copy, for the PicoLoader
+      # uf2 step below.
       - name: Build cubiboot.iso
         run: docker run --rm -v "$PWD":/work cubiboot-dev bash -lc 'bash /work/.ci/build_iso.sh'
 
@@ -101,10 +103,9 @@ jobs:
 
       # cubiboot_picoloader_payload.uf2: PicoLoader firmware with cubiboot embedded as
       # the payload (replicates makeo's PicoLoader converter). Flash directly to the Pico.
-      # Uses cubiboot-noipl.iso — same disc as cubiboot.iso, but its boot header's
-      # apploader (.ci/noipl/) suppresses the stock IPL animation, so the console shows a
-      # single boot animation instead of two. Only this uf2 consumes that iso; every
-      # other artifact, cubiboot.iso included, is untouched by it.
+      # Uses cubiboot-noipl.iso, an identical copy of cubiboot.iso (both carry the
+      # .ci/noipl/ boot header that suppresses the stock IPL animation, so the console
+      # shows a single boot animation instead of two).
       - name: Build cubiboot_picoloader_payload.uf2
         run: |
           set -e

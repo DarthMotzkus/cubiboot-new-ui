@@ -1,17 +1,20 @@
-# gbi_noipl.hdr — no-animation boot header (PicoLoader payload only)
+# gbi_noipl.hdr — no-animation boot header (cubiboot.iso and the PicoLoader payload)
 
 A prebuilt GameCube "generic boot image" header, identical in role to the classic
-`gbi.hdr` from cubeboot-tools that `cubiboot.iso` is built with, except its embedded
-apploader is compiled with **`PATCH_IPL=3`**: after loading the boot DOL it patches the
-running stock IPL in RAM to **skip and hide the factory boot animation**. It exists for
-one artifact only — `cubiboot_picoloader_payload.uf2` — where the stock IPL actually
-runs before cubiboot (PicoLoader boots the payload like a disc), so without this header
-the console shows two boot animations back to back: the factory one, then cubiboot's.
+`gbi.hdr` from cubeboot-tools, except its embedded apploader is compiled with
+**`PATCH_IPL=3`**: after loading the boot DOL it patches the running stock IPL in RAM to
+**skip and hide the factory boot animation**. It is the header behind both disc-shaped
+artifacts: `cubiboot.iso` (GC Loader / Cube ODE, Method 3) and
+`cubiboot_picoloader_payload.uf2`.
 
-`cubiboot.iso` (GC Loader, Method 3) keeps being built from the classic
-`gbi.hdr` and is byte-for-byte unaffected; there the disc is booted from an ODE menu
-(Swiss), no stock IPL is present at those addresses, and the patch would be a no-op
-anyway — the same fail-safe that protects unknown IPL revisions (see below).
+Both need it for the same reason. A GC Loader or Cube ODE is a drive replacement and
+PicoLoader serves the payload like a disc, so in both cases the console's own IPL runs first,
+plays its animation, and only then loads cubiboot -- which plays its own. Two animations back to
+back, as GC Loader users running `cubiboot.iso` as `boot.iso` reported (releases up to
+v1.12.2 built the ISO from the classic header, on the mistaken assumption that a GC Loader
+disc is only ever started from Swiss, where the stock IPL is not in RAM). Started from
+Swiss the patch is simply a no-op -- the same fail-safe that protects unknown IPL
+revisions (see below) -- so the one header serves every way the disc is started.
 
 ## Behavior
 
