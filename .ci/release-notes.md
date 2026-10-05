@@ -19,17 +19,17 @@ file: ci.yml generates it at release time and inserts it just before the standin
 Do not add it by hand.
 -->
 
-## What's new in v1.12.4
+## What's new in v1.13.0
 
-* **Games that share a game ID now show their own banners.** A ROM hack, a translation or a re-bannered dump keeps the game ID of the original disc. In the grid, all of them showed whichever banner loaded first. The banner cache was keyed on the disc header, which these files share. It is now keyed on the file itself, so every file shows the banner inside it, just like Swiss. The name, maker and description shown under the grid follow the right banner too.
+* **GC Loader and Cube ODE work again as the boot device.** With `cubiboot.iso` as `boot.iso` and the games on the ODE's own card, the menu came up fine, but every game or program picked in the grid went to a black screen. The loader jumped into the program before the last bytes it had read off the ODE's card had actually reached memory. It now makes sure they have before starting anything. SD2SP2, SD Gecko and FlippyDrive setups never had the problem, and they take exactly the path they always did.
 
-* **Banners no longer disappear after browsing for a while.** Each app folder (`default.dol` + `opening.bnr`) kept one of the menu's 128 banner slots every time you left the folder it sits in. Opening the disc screen with Z counted as leaving too. After enough round trips no slot was left: banners came up blank, or never filled in while scrolling, until the console was restarted. Leaving a folder now frees every banner it loaded, and the slots are reset on every folder change.
+* **One boot animation on a GC Loader or Cube ODE.** The console's own IPL always runs before an ODE loads a disc, so the factory animation played first and then cubiboot's. `cubiboot.iso` now carries the same no-animation boot header the PicoLoader payload already ships, so only cubiboot's animation plays. Holding **A** at power-on shows the factory animation instead.
 
-* **Coming back from the disc screen is instant.** Pressing Z and then B used to throw away the folder you were in and read every game on the card again, which took a long time on large folders. The list is now kept as it was. Going into a folder or up to its parent still reads it fresh.
+* **The disc stops spinning after an In-Game Reset.** After an In-Game Reset from a disc game booted through Swiss, the drive kept spinning through the menu and through any game started from the card. It only stopped when you opened the disc screen or the lid. The menu now stops the motor as soon as it comes up. Only a stock optical drive gets this, and playing a disc works exactly as before.
 
-* **Fixed a way for the game list to freeze.** The menu keeps a copy of each banner in the console's audio RAM and waited without any limit for each copy to finish. If one copy never reported back, the list froze and so did the menu. The wait now gives up after half a second. The menu then stops using that copy for the rest of the session and reads banners straight from the card.
+A Cube ODE speaks the same protocol as a GC Loader and is set up the same way ([Method 3](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#method-3-gc-loader-or-cube-ode)). On a Cube ODE, Swiss itself can stop with "Failed to read FST" on a game whose file is fragmented on the card ([swiss-gc#954](https://github.com/emukidid/swiss-gc/issues/954)). Copying the games onto a freshly formatted card keeps each file in one piece.
 
-**Full Changelog:** [v1.12.2...v1.12.4](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.12.2...v1.12.4)
+**Full Changelog:** [v1.12.4...v1.13.0](https://github.com/DarthMotzkus/cubiboot-new-ui/compare/v1.12.4...v1.13.0)
 
 >>## Updating from an earlier release?
 >>`apploader.img` carries its own complete copy of the loader. If you set up **In-Game Reset**, replace `swiss/patches/apploader.img` as well as the loader itself, both from this release — otherwise a cold boot lands on the new menu while In-Game Reset keeps returning to the old one, with nothing to warn you. If you never installed it, replace the loader and you are done. On a **FlippyDrive** none of this applies: it never uses `apploader.img` — its In-Game Reset is a plain reboot, so the loader in the drive's flash is the only thing to replace. Details: [Updating](https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/docs/INSTALL.md#updating).
