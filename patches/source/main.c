@@ -342,7 +342,22 @@ __attribute_used__ void pre_thread_init() {
     // enumeration thread below reads files over that same interface, so an inquiry raised
     // later could land in the middle of one of its transfers. The result is cached, so the
     // disc screen's check costs nothing and never touches the bus.
-    drive_probe();
+    drive_id_t drive = drive_probe();
+
+    // A disc left spinning by the game we came back from would otherwise never stop. An
+    // In-Game Reset through Swiss jumps back here without resetting the drive, and nothing
+    // on the menu side sends it a command: the IPL's own disc machine is not run (see
+    // bs2tick), and a game booted from the card goes through Swiss, which leaves the real
+    // drive alone. Only entering the disc screen (its exit sends this same command) or
+    // opening the lid stopped it.
+    //
+    // Only a stock optical drive gets it -- a GC Loader or a FlippyDrive on its file API
+    // is left alone -- and never with a passthrough boot already pending, so that path is
+    // exactly as before. Every disc boot starts from a stopped motor anyway: the disc
+    // screen stops it on exit before START, and the boot paths reset the drive and wait
+    // out the spin-up. On a drive that is already stopped this does nothing.
+    if (drive == DRIVE_ID_UNKNOWN && !start_passthrough_game)
+        dvd_stop_motor();
 
     // Correct the IPL's own bottom prompt bar. Ahead of menu_init on purpose: the IPL takes
     // its own copy of the label strings in there, so a rename applied later moved the labels

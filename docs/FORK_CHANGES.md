@@ -607,6 +607,21 @@ the horizontal does not, and the A carries a trim of its own. Every one of these
 constant, and `prompt_region` is 1 or 2 rather than 0 or 1 -- cubeboot's relocation walk reads
 a zero-valued symbol as a broken reloc and halts the boot.
 
+## S. The drive stops after an In-Game Reset  (`patches/source/main.c`)
+
+A disc booted through Swiss kept spinning after an In-Game Reset, through the menu and through
+any game started from the card afterwards. Only entering the disc screen or opening the lid
+stopped it. The Apploader IGR jumps back into cubiboot without resetting the drive, and nothing
+on the menu side sends it a command: the IPL's own disc machine is not run (see `bs2tick`), and
+a game booted from the card goes through Swiss, which leaves the real drive alone.
+
+`pre_thread_init` now sends the stop-motor command once, right after `drive_probe()`, while the
+drive interface is still idle. It goes only to a stock optical drive (`DRIVE_ID_UNKNOWN`), so a
+GC Loader or a FlippyDrive on its file API never sees it, and never with a passthrough boot
+already pending. Disc boots are unaffected: the disc screen already stops the motor on exit
+before START, and the boot paths reset the drive and wait out the spin-up. A FlippyDrive's IGR
+is a plain reboot, which resets the drive anyway.
+
 ## Re-applying onto a fresh makeo clone
 
 1. `git clone https://github.com/makeo/cubiboot && cd cubiboot`
