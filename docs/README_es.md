@@ -179,12 +179,15 @@ Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta
 `cubiboot.iso` es una imagen de disco GameCube arrancable que sencillamente *es* el loader
 cubiboot — sin modchip.
 
-1. Descarga [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso)
-   y cópialo al almacenamiento de tu [GC Loader](https://gcloaderhq.com/) (o de tu Cube ODE),
-   en la carpeta desde la que arrancas imágenes.
-2. Arranca `cubiboot.iso` desde el menú del ODE — cae directo en el menú de cubiboot. Para que
-   la consola entre directo en cubiboot al encender, renómbralo a **`boot.iso`** en la raíz de
-   la tarjeta del ODE (el ODE carga ese archivo automáticamente).
+1. Descarga [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso).
+2. Ponlo en la tarjeta de tu [GC Loader](https://gcloaderhq.com/) (o de tu Cube ODE), de una
+   de estas dos formas:
+   - **Arrancar directo en cubiboot al encender:** renombra el archivo a
+     **`boot.iso`** y ponlo en la **raíz** de la tarjeta del ODE. El ODE carga `boot.iso`
+     automáticamente, así que la consola va directo al menú de cubiboot cada vez que la
+     enciendes.
+   - **Abrirlo desde el menú del ODE:** deja el nombre `cubiboot.iso`, cópialo a la carpeta
+     desde la que arrancas imágenes y elígelo en el menú del ODE cuando quieras usar cubiboot.
 3. Elige de dónde salen los juegos:
    - **De la propia tarjeta SD del ODE** (sin segundo lector): pon `swiss-gc.dol` y un
      `config.ini` con `device_order = gcldr` en la **raíz de esa misma tarjeta**. Mira

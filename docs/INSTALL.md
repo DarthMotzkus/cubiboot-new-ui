@@ -133,12 +133,15 @@ menu.
 `cubiboot.iso` is a bootable GameCube disc image that simply *is* the cubiboot loader — no
 modchip needed.
 
-1. Download [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso)
-   and copy it onto your [GC Loader](https://gcloaderhq.com/)'s (or Cube ODE's) storage, in
-   the folder you boot images from.
-2. Boot `cubiboot.iso` from the ODE's menu — it lands on the cubiboot menu. To have the
-   console start straight into cubiboot at power-on, rename it **`boot.iso`** at the root
-   of the ODE's card instead (the ODE loads that file automatically).
+1. Download [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso).
+2. Put it on your [GC Loader](https://gcloaderhq.com/)'s (or Cube ODE's) card, in one of two
+   ways:
+   - **Boot straight into cubiboot at power-on:** rename the file to
+     **`boot.iso`** and put it in the **root** of the ODE's card. The ODE loads `boot.iso`
+     automatically, so the console goes straight to the cubiboot menu every time it is turned
+     on.
+   - **Launch it from the ODE's menu:** keep the name `cubiboot.iso` and copy it into the
+     folder you boot images from, then pick it in the ODE's menu whenever you want cubiboot.
 3. Choose where the games come from:
    - **The ODE's own SD card** (no second reader): put `swiss-gc.dol` and a `config.ini`
      containing `device_order = gcldr` in the **root of that same card**. See
