@@ -180,14 +180,15 @@ Cubiboot vive en el firmware de la Pico, así que en la tarjeta solo hacen falta
 cubiboot — sin modchip.
 
 1. Descarga [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso).
-2. Ponlo en la tarjeta de tu [GC Loader](https://gcloaderhq.com/) (o de tu Cube ODE), de una
-   de estas dos formas:
-   - **Arrancar directo en cubiboot al encender:** renombra el archivo a
-     **`boot.iso`** y ponlo en la **raíz** de la tarjeta del ODE. El ODE carga `boot.iso`
-     automáticamente, así que la consola va directo al menú de cubiboot cada vez que la
-     enciendes.
-   - **Abrirlo desde el menú del ODE:** deja el nombre `cubiboot.iso`, cópialo a la carpeta
-     desde la que arrancas imágenes y elígelo en el menú del ODE cuando quieras usar cubiboot.
+2. Ponlo en la tarjeta de tu [GC Loader](https://gcloaderhq.com/) (o de tu Cube ODE). El ODE
+   no tiene menú propio: al encender monta como disco el **`boot.iso`** de la raíz de su
+   tarjeta, y la consola lo arranca como cualquier disco de juego. Así que hay dos formas:
+   - **Arrancar directo en cubiboot:** renombra el archivo a **`boot.iso`** y ponlo en la
+     **raíz** de la tarjeta del ODE, en lugar del `boot.iso` que hubiera. La consola entra
+     directo en el menú de cubiboot cada vez que la enciendes.
+   - **Dejar Swiss como `boot.iso`:** deja Swiss donde está, copia `cubiboot.iso` en
+     cualquier lugar de la tarjeta y ábrelo desde el explorador de archivos de Swiss cuando
+     quieras usar cubiboot.
 3. Elige de dónde salen los juegos:
    - **De la propia tarjeta SD del ODE** (sin segundo lector): pon `swiss-gc.dol` y un
      `config.ini` con `device_order = gcldr` en la **raíz de esa misma tarjeta**. Mira

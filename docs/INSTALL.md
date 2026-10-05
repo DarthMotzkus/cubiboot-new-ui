@@ -134,14 +134,14 @@ menu.
 modchip needed.
 
 1. Download [`cubiboot.iso`](https://github.com/DarthMotzkus/cubiboot-new-ui/releases/latest/download/cubiboot.iso).
-2. Put it on your [GC Loader](https://gcloaderhq.com/)'s (or Cube ODE's) card, in one of two
-   ways:
-   - **Boot straight into cubiboot at power-on:** rename the file to
-     **`boot.iso`** and put it in the **root** of the ODE's card. The ODE loads `boot.iso`
-     automatically, so the console goes straight to the cubiboot menu every time it is turned
-     on.
-   - **Launch it from the ODE's menu:** keep the name `cubiboot.iso` and copy it into the
-     folder you boot images from, then pick it in the ODE's menu whenever you want cubiboot.
+2. Put it on your [GC Loader](https://gcloaderhq.com/)'s (or Cube ODE's) card. The ODE has no
+   menu of its own: at power-on it mounts the **`boot.iso`** in the root of its card as the
+   disc, and the console boots that like any game disc. So there are two ways:
+   - **Boot straight into cubiboot:** rename the file to **`boot.iso`** and put it in the
+     **root** of the ODE's card, replacing whatever `boot.iso` was there. The console then
+     starts straight into the cubiboot menu every time it is turned on.
+   - **Keep Swiss as `boot.iso`:** leave Swiss where it is, copy `cubiboot.iso` anywhere on
+     the card, and open it from Swiss's file browser whenever you want cubiboot.
 3. Choose where the games come from:
    - **The ODE's own SD card** (no second reader): put `swiss-gc.dol` and a `config.ini`
      containing `device_order = gcldr` in the **root of that same card**. See
