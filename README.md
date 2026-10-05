@@ -3,7 +3,7 @@
 # cubiboot-new-ui
 
 **A GameCube IPL replacement that list titles on a grid of banners, and a bunch of new features!
-It Supports Picoloader/Picoboot, FlippyDrive, GCLoader, and use Swiss to boot your games.
+It Supports Picoloader/Picoboot, FlippyDrive, GCLoader, Cube ODE, and use Swiss to boot your games.
 (FOR REAL HARDWARE ONLY and will never work on emulators like Dolphin)**
 
 <img width="320" height="286" alt="cube" src="https://github.com/user-attachments/assets/8772fe6a-3933-420a-9418-a6b2a03dd83a" />
@@ -38,7 +38,7 @@ What this fork adds on top of [makeo/cubiboot](https://github.com/makeo/cubiboot
 | **Homebrew apps with banners** | A folder holding `default.dol` next to `opening.bnr` is listed as a launchable app with its own banner, instead of a folder you have to open. See [Homebrew apps](docs/settings.md#homebrew-apps). |
 | **Remember last played** | [`remember_last_game = on`](docs/settings.md#remember_last_game) opens the menu in the folder of the last game or app you booted, already highlighted — press **A** and go. |
 | **Text scrolling** | A title longer than the info box [scrolls on its own](docs/settings.md#text_scroll); the description scrolls with **L**/**R**. |
-| **Games from the ODE / FlippyDrive SD** | [`device_order`](docs/settings.md#device_order) can point cubiboot at the SD card inside a GC Loader or a FlippyDrive, so the menu lists what is already on it with no second card reader. |
+| **Games from the ODE / FlippyDrive SD** | [`device_order`](docs/settings.md#device_order) can point cubiboot at the SD card inside a GC Loader, a Cube ODE or a FlippyDrive, so the menu lists what is already on it with no second card reader. |
 | **16:9 widescreen menu** | [`force_widescreen = on`](docs/settings.md#force_widescreen) renders the whole menu anamorphic, so it comes out proportioned on a TV set to Full/16:9. Ported from [cubeboot PR #57](https://github.com/OffBroadway/cubeboot/pull/57). |
 | **Folder name in the header** | The menu header names the folder you are browsing; at the card root it reads your device names (e.g. SD2SP2, ODE SD, FLIPPY SD, SLOT A/B SD). |
 | **Custom boot logo** | [`cube_logo`](docs/settings.md#cube_logo) swaps the "GAMECUBE" text in the boot animation for your own art. Draw it anywhere, then convert the PNG with the [cube logo converter](https://htmlpreview.github.io/?https://github.com/DarthMotzkus/cubiboot-new-ui/blob/main/tools/cube-logo-converter/index.html) — a browser page with live preview, nothing to install. |
@@ -78,7 +78,7 @@ Every tagged release (`v*`) publishes:
 | `flippydrive.dol` | The loader for a **FlippyDrive** — same binary as `ipl.dol`. **Rename it to `cubeboot.dol`** and flash it into the drive; see [Method 4](docs/INSTALL.md#method-4-flippydrive). Needs FlippyDrive firmware **1.4.6-pre-release or newer** — on older firmware games do not load. |
 | `cubiboot_picoloader_payload.uf2` | PicoLoader firmware with cubiboot **embedded**, in one file — flash just this to the RP2040 Pico (nothing to flash before it); no loader file needed on the card. Boots with a **single** animation: the factory one is patched out (hold **A** at power-on to see it). |
 | `cubiboot_picoboot_payload.uf2` | The cubiboot payload for **PicoBoot** — flash it on top of the official [PicoBoot](https://github.com/webhdx/PicoBoot/releases) firmware (≥ v0.4; Pico 2 needs v0.5.0) and it replaces the stock gekkoboot in place; no `ipl.dol` or gekkoboot needed on the card. One file for both boards. |
-| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader**, branded with the Cubiboot banner. |
+| `cubiboot.iso` | Bootable GameCube disc image for **GC Loader** and **Cube ODE**, branded with the Cubiboot banner. Rename it `boot.iso` to start at power-on. Boots with a **single** animation: the factory one is patched out (hold **A** at power-on to see it). |
 | `apploader.img` | The Swiss **In-Game-Reset** redirect. Embeds *this build's* loader, so the reset combo returns to this menu — which is why it has to be replaced on every [update](docs/INSTALL.md#updating). Goes in `SD:/swiss/patches/`, and Swiss's **In-Game Reset** setting must be set to **`Apploader`** ([details](docs/INSTALL.md#in-game-reset)). Not used on a **FlippyDrive**, which gets IGR through Swiss's **Reboot** option instead. |
 | `config.ini` | Minimal example config (`menu_grid_type = small_banners`). Goes in the card root. |
 
@@ -113,7 +113,7 @@ Every other path is in the **[install guide](docs/INSTALL.md)**:
 |---|---|
 | PicoBoot / PicoLoader with gekkoboot (the steps above, in full) | [Method 1](docs/INSTALL.md#method-1-picoboot-or-picoloader-with-gekkoboot) |
 | cubiboot flashed **into** the modchip — no loader file on the card | [Method 2](docs/INSTALL.md#method-2-cubiboot-flashed-into-the-modchip-picoboot-or-picoloader) |
-| GC Loader, no modchip | [Method 3](docs/INSTALL.md#method-3-gc-loader) |
+| GC Loader or Cube ODE, no modchip | [Method 3](docs/INSTALL.md#method-3-gc-loader-or-cube-ode) |
 | FlippyDrive — the drive boots cubiboot itself (firmware **1.4.6-pre-release** or newer) | [Method 4](docs/INSTALL.md#method-4-flippydrive) |
 | **In-Game Reset** (Z + A + START back to the menu) | [Setup](docs/INSTALL.md#in-game-reset) |
 | **Updating** — which files to replace, and why both | [Updating](docs/INSTALL.md#updating) |
@@ -210,6 +210,6 @@ This project stands on the work of others — the items below are **not** origin
 - [apploader / cubeboot-tools](https://github.com/makeo/cubeboot-tools) (GPL-2.0)
 - [packer](https://github.com/emukidid/swiss-gc/tree/master/cube/packer) (from Swiss) — used to build `apploader.img`. (GPL-2.0)
 - The **`default_folder`** config option by [wins1ey](https://github.com/wins1ey), via the [Hazado/cubiboot](https://github.com/Hazado/cubiboot) fork ([merge](https://github.com/Hazado/cubiboot/commit/c91066b4889346fec288393f6a9fe41304652e49)) — ported into this fork. (GPL-2.0)
-- The **GC Loader ODE SD** block driver, reverse-engineered from a `cubiboot-gcldr.iso` build and cross-checked against libogc2's `DVD_LowGcodeRead`. (GPL-2.0)
+- The **GC Loader / Cube ODE SD** block driver, reverse-engineered from a `cubiboot-gcldr.iso` build and cross-checked against libogc2's `DVD_LowGcodeRead`. (GPL-2.0)
 - The **stock disc screen** infrastructure by [Jpe230](https://github.com/Jpe230), from [PR #8](https://github.com/DarthMotzkus/cubiboot-new-ui/pull/8) — the renderer dispatcher and the stock-screen addresses across all seven IPL revisions, which this fork's disc screen is built on. (GPL-2.0)
 - For the full breakdown, see upstream [CREDIT.md](https://github.com/makeo/cubiboot/blob/main/CREDIT.md) and this fork's [CREDIT.md](CREDIT.md).

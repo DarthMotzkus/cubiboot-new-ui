@@ -42,7 +42,7 @@ cubeboot/source/    stage 2: the loader
   emu/              SHARED with patches (copied at build time)
     ffs/            FatFs (ChaN) + diskio glue
     tsd.c           SD over EXI (SD2SP2, SD Gecko)
-    gcode.c         SD inside a GC Loader style ODE, over the drive interface
+    gcode.c         SD inside a GC Loader style ODE (GC Loader, Cube ODE), over the drive interface
     fldrv.c         FlippyDrive native file protocol; not a FatFs volume
     drive_probe.c   one OEM inquiry decides who answers the drive bus, shared by both
     flippy_emu.c    the dvd_custom_* file API both sides call; picks the device
