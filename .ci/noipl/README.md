@@ -11,7 +11,7 @@ Both need it for the same reason. A GC Loader or Cube ODE is a drive replacement
 PicoLoader serves the payload like a disc, so in both cases the console's own IPL runs first,
 plays its animation, and only then loads cubiboot -- which plays its own. Two animations back to
 back, as GC Loader users running `cubiboot.iso` as `boot.iso` reported (releases up to
-v1.12.2 built the ISO from the classic header, on the mistaken assumption that a GC Loader
+v1.12.4 built the ISO from the classic header, on the mistaken assumption that a GC Loader
 disc is only ever started from Swiss, where the stock IPL is not in RAM). Started from
 Swiss the patch is simply a no-op -- the same fail-safe that protects unknown IPL
 revisions (see below) -- so the one header serves every way the disc is started.

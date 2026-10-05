@@ -149,14 +149,14 @@ modchip needed.
 > [!NOTE]
 > The console's own IPL always runs before a GC Loader or Cube ODE loads a disc, so it used
 > to play the factory boot animation and then cubiboot's — two animations back to back.
-> Releases after v1.12.2 ship a disc that patches the factory animation out, so a **single**
+> From v1.13.0, releases ship a disc that patches the factory animation out, so a **single**
 > (cubiboot) animation is the expected boot. Holding **A** at power-on shows the factory
 > animation instead.
 
 > [!NOTE]
-> Up to v1.12.2, every game or program picked from the grid went to a **black screen** when
+> Up to v1.12.4, every game or program picked from the grid went to a **black screen** when
 > the games lived on the ODE's own card (`device_order = ode`), while the menu itself
-> worked. That is fixed: the loader now makes sure the program it just read
+> worked. Fixed in v1.13.0: the loader now makes sure the program it just read
 > off the ODE's card is fully in memory before starting it. SD2SP2, SD Gecko and FlippyDrive
 > setups never had the problem and take exactly the path they always did.
 

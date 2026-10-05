@@ -195,14 +195,14 @@ cubiboot — sin modchip.
 > [!NOTE]
 > El IPL de la propia consola siempre corre antes de que un GC Loader o una Cube ODE cargue un
 > disco, así que antes se veía la animación de fábrica y luego la de cubiboot — dos animaciones
-> seguidas. Las versiones posteriores a v1.12.2 traen un disco que quita la animación de
+> seguidas. Desde la v1.13.0, las versiones traen un disco que quita la animación de
 > fábrica, así que lo esperado es **una sola** animación (la de cubiboot). Mantener **A** al
 > encender muestra la de fábrica.
 
 > [!NOTE]
-> Hasta la v1.12.2, cualquier juego o programa elegido en la cuadrícula terminaba en
+> Hasta la v1.12.4, cualquier juego o programa elegido en la cuadrícula terminaba en
 > **pantalla negra** cuando los juegos estaban en la propia tarjeta del ODE
-> (`device_order = ode`), aunque el menú funcionaba. Está corregido: el loader ahora se
+> (`device_order = ode`), aunque el menú funcionaba. Corregido en la v1.13.0: el loader ahora se
 > asegura de que el programa recién leído de la tarjeta del ODE esté entero en memoria antes de
 > arrancarlo. SD2SP2, SD Gecko y FlippyDrive nunca tuvieron el problema y siguen exactamente
 > el mismo camino de siempre.

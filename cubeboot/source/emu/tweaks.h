@@ -19,8 +19,10 @@ bool emu_can_boot(gm_file_entry_t *entry);
 void emu_draw_boot_error(gm_file_type_t type, u8 ui_alpha);
 bool emu_has_dvd();
 
-bool bnr_cache_get(u8 game_id[6], u8 disc_num, u8 disc_ver, BNR* bnr);
-void bnr_cache_put(u8 game_id[6], u8 disc_num, u8 disc_ver, BNR* bnr);
+// Keyed by the file (bnr_cache_key(entry->path)), not by the disc header -- see tweaks.c.
+u32 bnr_cache_key(const char *path);
+bool bnr_cache_get(u32 key, BNR* bnr);
+void bnr_cache_put(u32 key, BNR* bnr);
 
 #else
 void ensure_ipl_loaded(uint8_t* bios_buffer);
