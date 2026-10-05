@@ -646,8 +646,9 @@ check is the same device lookup `chainload_swiss_game()` already makes on every 
 is a runtime check rather than an ISO-only build on purpose: In-Game Reset reloads the menu
 from `apploader.img`, which carries the ordinary loader, and a PicoBoot/PicoLoader console
 can also read its games off an ODE card -- both would have kept the bug. The same fix, with the same diagnosis,
-is in silverstee1/cubiboot. Verified by reading the Swiss DOL header and the FatFs read
-path, not on hardware; the ack of DI interrupt bits that fork also adds before the jump
+is in silverstee1/cubiboot. Diagnosed by reading the Swiss DOL header and the FatFs read
+path, and confirmed on hardware before the v1.13.0 release; the ack of DI interrupt bits
+that fork also adds before the jump
 was examined and is not needed -- libogc's handler discards a stale transfer-complete bit.
 
 ## T. The drive stops after an In-Game Reset  (`patches/source/main.c`)
